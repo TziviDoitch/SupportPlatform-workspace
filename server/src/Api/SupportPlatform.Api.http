@@ -1,0 +1,6 @@
+@SupportPlatform.Api_HostAddress = http://localhost:5080
+
+GET {{SupportPlatform.Api_HostAddress}}/health
+Accept: text/plain
+
+###

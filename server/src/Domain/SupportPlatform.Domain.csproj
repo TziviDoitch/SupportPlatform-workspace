@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- No framework references. Entities and value objects only. -->
+
+</Project>
