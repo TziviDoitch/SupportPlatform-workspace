@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SupportPlatform.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SupportPlatform.Infrastructure.Persistence;
 namespace SupportPlatform.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SupportPlatformDbContext))]
-    partial class SupportPlatformDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260902231005_TenantAndReferenceFkDeleteBehavior")]
+    partial class TenantAndReferenceFkDeleteBehavior
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

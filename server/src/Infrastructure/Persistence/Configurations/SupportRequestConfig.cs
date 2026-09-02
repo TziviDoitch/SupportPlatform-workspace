@@ -20,7 +20,16 @@ public class SupportRequestConfig : IEntityTypeConfiguration<SupportRequest>
         builder.HasIndex(r => new { r.TenantId, r.SupportYear });
 
         builder.HasOne(r => r.SubmittingBody).WithMany().HasForeignKey(r => r.SubmittingBodyId);
-        builder.HasOne<ReferenceDomain>().WithMany().HasForeignKey(r => r.SupportDomainCode);
-        builder.HasOne<ReferenceStatus>().WithMany().HasForeignKey(r => r.StatusCode);
+
+        // Tenant scope is referential; deleting a tenant must not cascade-wipe fact rows,
+        // and NoAction keeps a single cascade path (tenant -> submitting_bodies -> support_requests).
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(r => r.TenantId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Reference/lookup rows never delete business data.
+        builder.HasOne<ReferenceDomain>().WithMany().HasForeignKey(r => r.SupportDomainCode)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ReferenceStatus>().WithMany().HasForeignKey(r => r.StatusCode)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

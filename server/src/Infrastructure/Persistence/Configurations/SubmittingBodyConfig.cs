@@ -16,7 +16,11 @@ public class SubmittingBodyConfig : IEntityTypeConfiguration<SubmittingBody>
         builder.Property(b => b.DistrictCode).HasMaxLength(64);
         builder.HasIndex(b => b.TenantId);
         builder.HasOne<Tenant>().WithMany().HasForeignKey(b => b.TenantId);
-        builder.HasOne<ReferenceBodyType>().WithMany().HasForeignKey(b => b.BodyTypeCode);
-        builder.HasOne<ReferenceDistrict>().WithMany().HasForeignKey(b => b.DistrictCode);
+
+        // Reference/lookup rows never delete business data.
+        builder.HasOne<ReferenceBodyType>().WithMany().HasForeignKey(b => b.BodyTypeCode)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ReferenceDistrict>().WithMany().HasForeignKey(b => b.DistrictCode)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
