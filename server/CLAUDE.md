@@ -47,6 +47,10 @@ dotnet test SupportPlatform.sln
 curl http://localhost:5080/health          # -> 200 Healthy
 ```
 
+Docker: `server/Dockerfile` publishes `src/Api` on the aspnet:8.0 runtime (listens on `8080`).
+Full stack (db + api + client): `cd ../infra && docker compose up --build`.
+The connection string is read from `ConnectionStrings:SqlServer` (env `ConnectionStrings__SqlServer` in Compose).
+
 ## Conventions
 
 - One public type per file.

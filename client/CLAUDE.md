@@ -33,7 +33,8 @@ test/setup.ts  Vitest setup — RTL cleanup + ResizeObserver/matchMedia stubs fo
 - Routes are declared once in `src/App/routes.tsx` as `{ path, label, element }[]`; `App.tsx`
   renders both the nav `Menu` and the `<Route>`s from that array.
 - `/` and any unknown path redirect to the first route (`/search`).
-- Dev server runs on **port 5173** (`vite.config.ts`).
+- Dev server runs on **port 5173** (`vite.config.ts`), `host: true` so it works in Docker.
+- `/api/*` is proxied to the api (`VITE_API_PROXY_TARGET`, default `http://localhost:5080`).
 
 ## Commands
 
