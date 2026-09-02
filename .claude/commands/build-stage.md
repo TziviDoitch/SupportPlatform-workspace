@@ -1,22 +1,22 @@
 ---
-name: build-stage
-description: Drive one IMPLEMENTATION_PLAN.md stage (S0–S11) end to end — confirm the stage, open a worktree via the new-task skill, assemble the task card + plan, stop for approval, then implement through the DoD gate to an open PR. Use when the user runs /build-stage or asks to start / do the next plan stage.
+description: Drive one IMPLEMENTATION_PLAN.md stage (S0–S11) end to end — confirm the stage, open a worktree via /new-task, assemble the task card + plan, stop for approval, then implement through the DoD gate to an open PR.
+argument-hint: "[stage e.g. S1 or S0-e — optional]"
 ---
 
 # build-stage
 
-Runs the per-stage loop defined in [`IMPLEMENTATION_PLAN.md`](../../../IMPLEMENTATION_PLAN.md)
-§9 for a single stage. One invocation = one stage = one PR. Never start the next stage
-in the same run.
+Run the per-stage loop defined in `IMPLEMENTATION_PLAN.md` §9 for a **single** stage.
+One invocation = one stage = one PR. Never start the next stage in the same run.
 
 The plan (§3 working agreement, §5 contracts, §6 stages, §7 fallback ladder, §9 loop,
 §10 card template) is the source of truth. Build only what the stage lists; when two
 ways exist, take the simpler one; do not invent requirements.
 
+Requested stage (may be empty): `$ARGUMENTS`
+
 ## 1 · Resolve the stage
 
-- If the user passed a stage as an argument (`/build-stage S2`, `/build-stage S0-e`),
-  use it.
+- If a stage was passed above (`S2`, `S0-e`, …), use it.
 - Otherwise consult the auto-memory `project-status` entry (via the `MEMORY.md` index
   already loaded into context — **do not hardcode any `C:\Users\...` path**; go through
   the memory mechanism). Propose the current/next stage to the user
@@ -39,7 +39,7 @@ may reply "skip" to bypass a slow container rebuild when they know it is green.
 
 ## 3 · Open the worktree
 
-Use the existing **`new-task` skill exactly as its own instructions describe**, passing
+Use the existing **`/new-task` skill exactly as its own instructions describe**, passing
 a slug derived from the stage (`s1-data-model`, `s2-query-engine`, …). Do **not** modify
 `new-task.ps1`, re-implement its worktree logic, or add another worktree mechanism.
 Report the `worktree:` / `branch:` lines it prints. If it errors (path or branch exists,
@@ -124,5 +124,5 @@ note the PR is pending review.
 - Never skip the step 4 stop.
 - Never start the next stage in the same run.
 - Never commit before the step 6 gate is green.
-- If `new-task` or the sanity check errors, show the message and stop — don't work
+- If `/new-task` or the sanity check errors, show the message and stop — don't work
   around it.
