@@ -10,8 +10,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .claude/skills/new-task/new-
 ```
 
 The script does everything: `git fetch origin main`, adds a worktree at
-`../worktrees/<task-name>` on a new branch `<task-name>` based on `origin/main`
-(monorepo — one branch covers client + server), then opens it with `code`.
+`<repo-root>/<task-name>` — directly under the repo, not in a `worktrees/`
+subfolder — on a new branch `<task-name>` based on `origin/main` (monorepo — one
+branch covers client + server), adds `/<task-name>/` to `.git/info/exclude` so the
+primary checkout stays clean, then opens it with `code`.
 
-Report the `worktree:` and `branch:` lines it prints. If it errors (worktree or
+Pick a task name that doesn't collide with a top-level repo folder (`server`,
+`client`, `docs`, `infra`) — the script refuses if the path already exists.
+
+Report the `worktree:` and `branch:` lines it prints. If it errors (path or
 branch already exists, etc.), show the message and stop — don't try to fix it.
