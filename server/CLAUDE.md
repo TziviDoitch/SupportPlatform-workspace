@@ -18,8 +18,9 @@ src/
   Domain          entities, value objects, FilterFieldRegistry — no framework refs
   Infrastructure  EF Core DbContext, repositories, DynamicQueryBuilder, migrations, seed
 tests/
-  Api.Tests           xUnit — endpoint tests via WebApplicationFactory<Program>
-  Application.Tests    xUnit
+  Api.Tests             xUnit — endpoint tests via TestApiFactory (WebApplicationFactory<Program> + SQLite)
+  Application.Tests      xUnit
+  Infrastructure.Tests   xUnit — DbContext / seeder / tenant-filter tests over in-memory SQLite
   (one test project per src project; added as each layer gains code)
 ```
 
@@ -47,6 +48,22 @@ dotnet test SupportPlatform.sln
 curl http://localhost:5080/health          # -> 200 Healthy
 ```
 
+### EF Core migrations
+
+`dotnet-ef` is a local tool — run `dotnet tool restore` once. The design-time factory
+(`Infrastructure/Persistence/DesignTimeDbContextFactory.cs`) lets Infrastructure act as its
+own startup project, so the Api project stays free of `EFCore.Design`.
+
+```bash
+dotnet tool restore
+dotnet dotnet-ef migrations add <Name> --project src/Infrastructure --startup-project src/Infrastructure --output-dir Persistence/Migrations
+dotnet dotnet-ef database update       --project src/Infrastructure --startup-project src/Infrastructure
+```
+
+On `dotnet run` in **Development** only, `Program.cs` runs `Migrate()` then `DbSeeder.Seed()`
+(needs SQL Server up — `cd ../infra && docker compose up db`). `DbSeeder` is deterministic and
+idempotent; it no-ops if `support_requests` already has rows.
+
 Docker: `server/Dockerfile` publishes `src/Api` on the aspnet:8.0 runtime (listens on `8080`).
 Full stack (db + api + client): `cd ../infra && docker compose up --build`.
 The connection string is read from `ConnectionStrings:SqlServer` (env `ConnectionStrings__SqlServer` in Compose).
@@ -59,6 +76,13 @@ The connection string is read from `ConnectionStrings:SqlServer` (env `Connectio
 - Validate input with FluentValidation.
 - Inject dependencies through the constructor; depend on interfaces.
 - Keep controllers thin — they call a service and return.
+- Tenant-scoped entities (`SupportRequest`, `SubmittingBody`) carry a **fail-closed** global
+  query filter via `ITenantContext`: no tenant set ⇒ zero rows. Reach past it only with an
+  explicit `IgnoreQueryFilters()` (tests, admin, seeding's emptiness check).
+- Seed/fixture passwords are stored as deterministic hashes (`SeedPasswordHasher`) — never
+  plaintext. S1 has no auth logic; JWT lands in S8.
+- Tests use SQLite (`TestApiFactory` for endpoints, `TestDb` in Infrastructure.Tests), not a
+  real SQL Server.
 
 ## Don't
 

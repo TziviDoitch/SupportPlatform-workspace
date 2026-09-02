@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using SupportPlatform.Application.Metadata;
+using SupportPlatform.Application.Metadata.Interfaces;
 
 namespace SupportPlatform.Application;
 
@@ -7,7 +9,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Use-case services and validators are registered here from S1 onward.
+        services.AddScoped<IMetadataService, MetadataService>();
         return services;
     }
 }
