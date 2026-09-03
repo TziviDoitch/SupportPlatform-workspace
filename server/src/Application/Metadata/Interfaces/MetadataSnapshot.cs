@@ -8,4 +8,18 @@ public record MetadataSnapshot(
     IReadOnlyList<ReferenceBodyType> BodyTypes,
     IReadOnlyList<ReferenceStatus> Statuses,
     IReadOnlyList<ReferenceDistrict> Districts,
-    IReadOnlyList<FilterFieldRegistryEntry> Registry);
+    IReadOnlyList<FilterFieldRegistryEntry> Registry)
+{
+    /// <summary>
+    /// The rows behind a registry entry's <c>referenceList</c> name; empty for an unknown name.
+    /// The one place that maps list name → rows.
+    /// </summary>
+    public IReadOnlyList<ReferenceItem> ReferenceList(string? name) => name switch
+    {
+        "domains" => Domains,
+        "bodyTypes" => BodyTypes,
+        "statuses" => Statuses,
+        "districts" => Districts,
+        _ => []
+    };
+}

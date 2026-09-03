@@ -14,7 +14,7 @@ SupportPlatform.sln
 Directory.Build.props        net8.0 · nullable · TreatWarningsAsErrors — inherited by every project
 src/
   Api             controllers, Swagger, Errors/ (IExceptionHandler + ProblemTypes), Middleware/ (correlation id)
-  Application     use-case services, DTOs, validators; Search/ = QueryDefinition + FilterValue + validator + renderer + BucketPaging (sort/page result shaping)
+  Application     use-case services, DTOs, validators; Search/ = QueryDefinition + FilterValue + validator + renderer + BucketPaging (sort/page result shaping); NlQuery/ = the AI seam + rule-based parser
   Domain          entities, value objects, FilterFieldRegistry — no framework refs
   Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = DynamicQueryBuilder + Filters/ handlers + executor (data access only — no sort/page)
 tests/
@@ -52,6 +52,8 @@ Endpoints so far: `GET /api/metadata?tenantId=` (S1) · `POST /api/search` (S2 �
 `QueryDefinition`, response has `questionText` / `rows` / `aggregations` / `page` / `executionMeta`)
 · `GET/POST/PUT/DELETE /api/saved-queries[/{id}]` + `POST /api/saved-queries/{id}/run` (S5 —
 CRUD + re-run, scoped to owner + tenant; out-of-scope ⇒ 404).
+· `POST /api/nl-queries/parse` (S6 — free text ⇒ `{ definition, interpretationText, confidence,
+unresolved }`).
 Every request echoes an `X-Correlation-Id` header; errors are `application/problem+json`.
 
 Caller identity (S5, PoC seam): `ICurrentUser` (`Application/Identity`) — `Username` / `TenantId`
@@ -112,6 +114,44 @@ The connection string is read from `ConnectionStrings:SqlServer` (env `Connectio
 - Search request/response types live in `Application/Search/`; the FluentValidation validator in
   `Application/Search/Validation/`. `QueryDefinition.Filters` values are the closed `FilterValue`
   hierarchy with `FilterValueJsonConverter` (array = codes, `{type}` object = year).
+
+## The NL layer (S6) — the AI seam
+
+`Application/NlQuery/`. `INlQueryProvider` is the **only** AI boundary:
+`Translate(text, tenantId, SearchMetadata) → NlTranslation`.
+
+- **`Translate` is the seam; `Parse` is the API use case.** The endpoint and `INlQueryService`
+  keep the contract's `parse` wording (`api-contract.md` §4); the provider interface does not,
+  because parsing is how *this* implementation works, not what the abstraction promises. The flow
+  is `API Parse → NlQueryService → provider Translate → QueryDefinition`. Don't rename either half
+  to match the other.
+- A provider **translates and nothing else** — no `DbContext`, no search, no validation. The
+  metadata is passed in as an argument so it stays free of data access.
+- `NlQueryService` does the rest: it runs the produced definition through the existing
+  `IValidator<QueryDefinition>` (a provider is never trusted), renders `interpretationText` with
+  the existing `QuestionTextRenderer`, and audits `nl-parse`. **Parsing never runs a search** —
+  `POST /api/search` stays the only execution path.
+- **Selection is configuration, not a recompile.** `AddApplication()` holds a
+  `provider key → type` map, registers each via **keyed DI** (`AddKeyedScoped` — .NET 8 built-in,
+  no hand-rolled factory), and registers `INlQueryProvider` as a resolver that reads
+  `NlQueryOptions.Provider`. The value comes from `NlQuery:Provider` in `appsettings.json`
+  (default `ruleBased`). **Adding a provider = one map entry + one config value.** An unknown key
+  fails at startup (`Program.cs` resolves the provider once after `Build()`), never as a 500 on
+  the first question. `DependencyInjectionTests` locks all three paths.
+- `RuleBasedNlQueryProvider` (key `ruleBased`) is the PoC implementation: deterministic, no
+  external LLM, no API key (`DESIGN_QA.md` §6).
+- The rules in `RuleBased/Rules/` are keyed off **metadata, never business values**:
+  `CodeListFilterRule` covers every `codeList` registry field at once, so a new domain/status/
+  district in the seed is recognised with no code change. `HebrewText` does the crude stemming —
+  strip one ending, then attached particles; both sides of a comparison go through it, so the
+  stems only have to be *consistent*, not linguistically right. It is **deliberately limited**:
+  there is no viable Hebrew NLP library for .NET 8 (`ARCHITECTURE.md` §10 decision 12), and forms
+  it cannot reduce surface in `unresolved` rather than being guessed at. Don't reach for a
+  morphology dependency without revisiting that decision.
+- Never invent a value, and never swallow one. A word that cannot be mapped goes to `unresolved`;
+  an ambiguous one (a label word shared by two fields) resolves to nothing. A field **named** in
+  the question counts as understood only if it was actually used, so "לפי סטטוס" (not segmentable)
+  is reported instead of silently dropped. `confidence` is an indication only.
 
 ## The query engine — extending it
 

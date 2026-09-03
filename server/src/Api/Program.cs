@@ -7,6 +7,9 @@ using SupportPlatform.Api.Identity;
 using SupportPlatform.Api.Middleware;
 using SupportPlatform.Application;
 using SupportPlatform.Application.Identity;
+using SupportPlatform.Application.NlQuery;
+using SupportPlatform.Application.NlQuery.Interfaces;
+using SupportPlatform.Application.NlQuery.RuleBased;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Infrastructure;
 using SupportPlatform.Infrastructure.Persistence;
@@ -45,8 +48,17 @@ builder.Services.AddSingleton(new SearchCacheOptions
 {
     TtlSeconds = builder.Configuration.GetValue("Search:CacheTtlSeconds", 60)
 });
+builder.Services.AddSingleton(new NlQueryOptions
+{
+    Provider = builder.Configuration.GetValue("NlQuery:Provider", RuleBasedNlQueryProvider.ProviderKey)!
+});
 
 var app = builder.Build();
+
+// Fail fast on a bad NlQuery:Provider — a misconfigured AI seam should stop the app here, not
+// surface as a 500 on the first question (DESIGN_QA §6).
+using (var startup = app.Services.CreateScope())
+    startup.ServiceProvider.GetRequiredService<INlQueryProvider>();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

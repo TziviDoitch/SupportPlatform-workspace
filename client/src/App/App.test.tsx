@@ -31,7 +31,7 @@ describe('App shell', () => {
   it('mounts each feature route with its heading', () => {
     for (const [path, heading] of [
       ['/saved-queries', 'שאילתות שמורות'], // real screen since S5
-      ['/nl-query', 'שאלה חופשית'], // still a placeholder
+      ['/nl-query', 'שאלה חופשית'], // real screen since S6
     ] as const) {
       renderAt(path);
       expect(screen.getByRole('heading', { name: heading })).toBeTruthy();
