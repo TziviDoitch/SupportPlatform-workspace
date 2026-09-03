@@ -56,7 +56,9 @@ export function buildQueryDefinition(
     tenantId,
     filters,
     segmentation: state.segmentation.filter((id) => segmentableIds.has(id)),
-    metrics: ['count'],
+    // Both contract metrics — count answers the question, sumAmountApproved gives the table a
+    // second real column. The server always computes both (contract §3).
+    metrics: ['count', 'sumAmountApproved'],
     paging: { pageNumber: state.pageNumber, pageSize: state.pageSize },
     sort: state.sort,
   };

@@ -11,13 +11,13 @@ const registry: FilterFieldRegistryEntry[] = [
 const state = (patch: Partial<SearchFormState>): SearchFormState => ({ ...emptyFormState, ...patch });
 
 describe('buildQueryDefinition', () => {
-  it('omits empty controls and applies the count metric + paging defaults', () => {
+  it('omits empty controls and requests both metrics + paging defaults', () => {
     const def = buildQueryDefinition(emptyFormState, registry, 'culture-sport-admin');
     expect(def).toEqual({
       tenantId: 'culture-sport-admin',
       filters: {},
       segmentation: [],
-      metrics: ['count'],
+      metrics: ['count', 'sumAmountApproved'],
       paging: { pageNumber: 1, pageSize: 50 },
       sort: [],
     });

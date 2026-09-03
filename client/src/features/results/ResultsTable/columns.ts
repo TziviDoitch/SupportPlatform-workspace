@@ -8,6 +8,16 @@ const METRIC_LABELS: Record<string, string> = {
   sumAmountApproved: 'סכום מאושר',
 };
 
+const shekels = new Intl.NumberFormat('he-IL', {
+  style: 'currency',
+  currency: 'ILS',
+  maximumFractionDigits: 0,
+});
+
+const METRIC_RENDER: Record<string, (value: unknown) => string> = {
+  sumAmountApproved: (value) => shekels.format(Number(value) || 0),
+};
+
 /**
  * Columns are derived from the query, not hard-coded: one per segmentation field (labelled from
  * the registry) followed by one per metric. Sorting is server-side — `sorter: true` only marks the
@@ -40,6 +50,7 @@ export function buildColumns(
     sorter: true,
     sortOrder: orderFor(m),
     align: 'left' as const,
+    render: METRIC_RENDER[m],
   }));
 
   return [...segColumns, ...metricColumns];

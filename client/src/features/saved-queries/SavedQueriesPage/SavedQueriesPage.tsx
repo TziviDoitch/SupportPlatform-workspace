@@ -54,13 +54,20 @@ export function SavedQueriesPage() {
   );
 }
 
-/** Read-back of a re-run: the readable question, the record count, and how many groups it split into. */
+const shekels = new Intl.NumberFormat('he-IL', {
+  style: 'currency',
+  currency: 'ILS',
+  maximumFractionDigits: 0,
+});
+
+/** Read-back of a re-run: the readable question, the record count, approved total, and group count. */
 function RunResultAlert({ response }: { response: SearchResponse }) {
-  const { records, groups } = summarizeRun(response);
-  const detail =
-    groups > 1
-      ? `${records.toLocaleString('he-IL')} רשומות ב-${groups} קבוצות`
-      : `${records.toLocaleString('he-IL')} רשומות`;
+  const { records, approved, groups } = summarizeRun(response);
+  const parts = [
+    `${records.toLocaleString('he-IL')} רשומות`,
+    `סכום מאושר ${shekels.format(approved)}`,
+    ...(groups > 1 ? [`${groups} קבוצות`] : []),
+  ];
 
   return (
     <Alert
@@ -68,7 +75,7 @@ function RunResultAlert({ response }: { response: SearchResponse }) {
       type="success"
       showIcon
       message={response.questionText}
-      description={detail}
+      description={parts.join(' · ')}
     />
   );
 }
