@@ -11,6 +11,8 @@ decisions (§2), the working agreement (§3), and the S0–S11 build order (§6)
 - Build only what the plan lists. Do not invent requirements.
 - When two ways exist, pick the simpler one.
 - One stage per PR. Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`).
+- Keep this a focused PoC. No new abstraction, layer, pattern, or infrastructure
+  without a concrete requirement or a clear code-quality benefit.
 
 ## Layout
 

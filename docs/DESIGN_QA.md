@@ -37,6 +37,10 @@ chain._
 _structured logging + correlation id · `/health` · metrics · tracing · Audit Log ·
 alerting._
 
+מומש עד כה (S2): Serilog מובנה + `CorrelationIdMiddleware` — כל בקשה נושאת
+correlation id שחוזר ב-`X-Correlation-Id`, מופיע על כל שורת לוג וכ-`traceId`
+ב-ProblemDetails. `/health` קיים מ-S0.
+
 ## 8. תשתיות רוחביות לשלב ראשון
 
 _auth מרכזי · config service · logging/monitoring · CI/CD + IaC · API gateway ·

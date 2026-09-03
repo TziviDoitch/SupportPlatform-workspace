@@ -1,19 +1,46 @@
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
+using SupportPlatform.Api.Errors;
+using SupportPlatform.Api.Middleware;
 using SupportPlatform.Application;
+using SupportPlatform.Application.Search;
 using SupportPlatform.Infrastructure;
 using SupportPlatform.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Host.UseSerilog((context, loggerConfig) => loggerConfig
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} <corr:{CorrelationId}>{NewLine}{Exception}"));
+
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new FilterValueJsonConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
+
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ctx =>
+{
+    ctx.ProblemDetails.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
+    var (type, title) = ProblemTypes.ForStatus(ctx.ProblemDetails.Status ?? 500);
+    ctx.ProblemDetails.Type ??= type;
+    ctx.ProblemDetails.Title ??= title;
+});
+builder.Services.AddExceptionHandler<ExceptionToProblemDetailsHandler>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {

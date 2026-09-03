@@ -17,6 +17,23 @@ Stages and the canonical `QueryDefinition` are defined in
 - Controllers are thin: bind, call one service, return.
 - The dynamic query builder accepts only fields in the `FilterFieldRegistry` whitelist.
 
+## Responsibility boundaries (applies to every stage)
+
+- **Business logic lives in the Service layer** (`Application/**/*Service.cs`). The application
+  flow and every business decision a use case needs — filtering decisions, aggregation,
+  segmentation, domain calculations, authorization decisions, response shaping — belong there.
+- **Controllers are HTTP-only:** receive the request, do basic model binding, call one service,
+  return the HTTP result. No business rules, no filtering/aggregation/segmentation logic, no
+  authorization decisions, no domain math in a controller.
+- **Infrastructure is data access only:** EF queries, the `DynamicQueryBuilder` + filter
+  handlers, tenant-scope mechanism, migrations, seed. It must not host application/business
+  orchestration. Applying a decision the service already made (e.g. scoping to a validated
+  tenant id) is a data-access mechanism and stays here; *making* the decision does not.
+- If logic is duplicated or naturally belongs in the service, move it to the service rather
+  than the controller. Do not push logic into Infrastructure just to thin a controller.
+- Do not add abstractions whose only purpose is to enforce this separation — keep it simple
+  and consistent with the layers above.
+
 ## Style
 
 - File-scoped namespaces: `namespace SupportPlatform.Application;`
@@ -36,7 +53,13 @@ Stages and the canonical `QueryDefinition` are defined in
 - No secrets in code or committed config — use `appsettings.*.local.json` / env vars.
 - New `.cs` files: UTF-8, no BOM.
 
-## Not yet in scope
+## Cross-cutting (landed in S2)
 
-No "never try-catch" or "no logger" bans — the global error handler and centralized logging
-don't exist yet. Revisit these rules once that infrastructure lands (S2).
+- Errors: throw; the global `IExceptionHandler` (`Api/Errors`) maps to RFC 7807 ProblemDetails
+  (`docs/contracts/error-model.md`). `FluentValidation.ValidationException` and the
+  Application `InvalidQueryException` become `400`; anything else is `500`. Don't catch to
+  build error responses by hand in controllers or services.
+- Logging: Serilog console, injected `ILogger<T>`. Every request carries a correlation id
+  (`X-Correlation-Id`, echoed on the response, emitted as `traceId` in ProblemDetails and on
+  every log line). Don't `Console.WriteLine`.
+- Input validation: FluentValidation on `QueryDefinition`, checked in the service before use.

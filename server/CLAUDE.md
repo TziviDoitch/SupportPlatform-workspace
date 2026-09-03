@@ -13,10 +13,10 @@ C# 12 / .NET 8 Web API · EF Core 8 · SQL Server (PoC) · Serilog · FluentVali
 SupportPlatform.sln
 Directory.Build.props        net8.0 · nullable · TreatWarningsAsErrors — inherited by every project
 src/
-  Api             controllers, Swagger, auth, ProblemDetails, request validation
-  Application     use-case services, DTOs, validators, QueryDefinition, NL translator
+  Api             controllers, Swagger, Errors/ (IExceptionHandler + ProblemTypes), Middleware/ (correlation id)
+  Application     use-case services, DTOs, validators; Search/ = QueryDefinition + FilterValue + validator + renderer + BucketPaging (sort/page result shaping)
   Domain          entities, value objects, FilterFieldRegistry — no framework refs
-  Infrastructure  EF Core DbContext, repositories, DynamicQueryBuilder, migrations, seed
+  Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = DynamicQueryBuilder + Filters/ handlers + executor (data access only — no sort/page)
 tests/
   Api.Tests             xUnit — endpoint tests via TestApiFactory (WebApplicationFactory<Program> + SQLite)
   Application.Tests      xUnit
@@ -47,6 +47,10 @@ dotnet run --project src/Api               # http://localhost:5080 · Swagger at
 dotnet test SupportPlatform.sln
 curl http://localhost:5080/health          # -> 200 Healthy
 ```
+
+Endpoints so far: `GET /api/metadata?tenantId=` (S1) · `POST /api/search` (S2 — body is a
+`QueryDefinition`, response has `questionText` / `rows` / `aggregations` / `page` / `executionMeta`).
+Every request echoes an `X-Correlation-Id` header; errors are `application/problem+json`.
 
 ### EF Core migrations
 
@@ -83,9 +87,27 @@ The connection string is read from `ConnectionStrings:SqlServer` (env `Connectio
   plaintext. S1 has no auth logic; JWT lands in S8.
 - Tests use SQLite (`TestApiFactory` for endpoints, `TestDb` in Infrastructure.Tests), not a
   real SQL Server.
+- Errors: throw. The global `IExceptionHandler` (`Api/Errors`) maps `ValidationException` and
+  `Application/Search/InvalidQueryException` to `400 validation`, everything else to `500`.
+  Don't hand-build error responses. Correlation id via `CorrelationIdMiddleware`; Serilog console.
+- Search request/response types live in `Application/Search/`; the FluentValidation validator in
+  `Application/Search/Validation/`. `QueryDefinition.Filters` values are the closed `FilterValue`
+  hierarchy with `FilterValueJsonConverter` (array = codes, `{type}` object = year).
+
+## The query engine — extending it
+
+- **New filter *value* (a domain, body type, district, …):** data only — reference rows + (if a
+  whole new field) a `filter_field_registry` row + `DbSeeder`. No code.
+- **New filter *field* over an existing kind:** one line in
+  `Infrastructure/Search/Filters/FilterHandlers.Default` — `new CodeListFilterHandler("<id>",
+  r => r.<column>)` — plus its registry + reference rows.
+- **New *kind* of filtering (e.g. numeric range, text):** one new `FilterHandler` subclass.
+  `DynamicQueryBuilder` and `FilterHandlerResolver` never change — no central `switch`.
 
 ## Don't
 
 - Add features, layers, or patterns not in the plan.
-- Reach across a layer or let `Application` touch EF.
-- Build the dynamic query without a `FilterFieldRegistry` whitelist.
+- Reach across a layer or let `Application` touch EF. Keep business decisions in the Service, not
+  the Controller and not Infrastructure (see the `dotnet` skill — "Responsibility boundaries").
+- Build the dynamic query without a `FilterFieldRegistry` whitelist, or with a `switch` on field
+  id, reflection, or string-parsed expressions.
