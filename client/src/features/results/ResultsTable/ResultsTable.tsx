@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
-import type { TableProps } from 'antd';
+import { Card, Space, Typography, type TableProps } from 'antd';
+import { TableOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../components/DataTable';
+import { formatIntHe } from '../../../lib/format';
 import type { FilterFieldRegistryEntry } from '../../../models/metadata';
 import { DEFAULT_PAGE_SIZE, type QueryDefinition, type SortSpec } from '../../../models/queryDefinition';
 import type { ResultRow, SearchResponse } from '../../../models/search';
@@ -56,23 +58,42 @@ export function ResultsTable({
     }
   };
 
+  const totalRows = response?.page.totalRows ?? 0;
+
   return (
-    <DataTable<ResultRow>
-      columns={columns}
-      rows={response?.rows ?? []}
-      rowKey={rowKey}
-      loading={loading}
-      onChange={interactive ? handleChange : undefined}
-      pagination={
-        interactive
-          ? {
-              current: response?.page.pageNumber ?? 1,
-              pageSize: response?.page.pageSize ?? DEFAULT_PAGE_SIZE,
-              total: response?.page.totalRows ?? 0,
-              showSizeChanger: false,
-            }
-          : false
+    <Card
+      title={
+        <Space size={8}>
+          <TableOutlined aria-hidden />
+          תוצאות
+        </Space>
       }
-    />
+      extra={
+        response ? (
+          <Typography.Text type="secondary">
+            סה״כ {formatIntHe(totalRows)} רשומות
+          </Typography.Text>
+        ) : null
+      }
+      style={{ height: '100%' }}
+    >
+      <DataTable<ResultRow>
+        columns={columns}
+        rows={response?.rows ?? []}
+        rowKey={rowKey}
+        loading={loading}
+        onChange={interactive ? handleChange : undefined}
+        pagination={
+          interactive
+            ? {
+                current: response?.page.pageNumber ?? 1,
+                pageSize: response?.page.pageSize ?? DEFAULT_PAGE_SIZE,
+                total: totalRows,
+                showSizeChanger: false,
+              }
+            : false
+        }
+      />
+    </Card>
   );
 }

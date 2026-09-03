@@ -316,11 +316,12 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 - **`QueryDefinition` נבנה בלקוח.** `buildQueryDefinition` (פונקציה טהורה) ממפה את מצב
   הטופס לאובייקט הקנוני: פקדים ריקים מושמטים, שנה עם שני קצוות → `range` ועם קצה אחד →
   `single`, `metrics` תמיד `["count","sumAmountApproved"]`. ולידציה חוצת-שדות (טווח הפוך,
-  id לא מוכר) נשארת בשרת. שדה `yearRange` (`YearRangeField`) הוא זוג `InputNumber` חסום
-  (`min`/`max` 2000–2100, `precision=0`) — בלי שדות מספר חופשיים (S7); השרת עדיין הסמכות.
-- **שאלה קריאה "חיה".** שינויי טופס עוברים debounce (~400ms, `useDebouncedValue`) ואז
-  `POST /api/search`; הפאנל מציג את `questionText` **מהשרת** (`QuestionTextRenderer`,
-  §4.5) — אין renderer שני בלקוח.
+  id לא מוכר) נשארת בשרת. שדה `yearRange` (`YearRangeField`) הוא זוג רשימות נפתחות
+  (`Select`) של שנים (2000 עד השנה הבאה), ורשימת "עד שנה" מסתירה שנים שלפני "משנה" —
+  בלי שדות מספר חופשיים; השרת עדיין הסמכות.
+- **שאלה קריאה.** המשתמש לוחץ "חיפוש" (אין הרצה אוטומטית בהקלדה); עימוד/מיון מחילים
+  `withPaging` / `withSort` על ה-`definition` שהורץ ואז `POST /api/search`. הפאנל מציג
+  את `questionText` **מהשרת** (`QuestionTextRenderer`, §4.5) — אין renderer שני בלקוח.
 - **עימוד ומיון בצד השרת.** `ResultsTable` בונה עמודות דינמית מ-`segmentation` +
   `metrics`, וממפה את `onChange` של `antd` Table ל-`paging` / `sort` ב-`QueryDefinition`;
   `page.totalRows` מזין את סה"כ העמודים. מצבי loading / empty / error מטופלים

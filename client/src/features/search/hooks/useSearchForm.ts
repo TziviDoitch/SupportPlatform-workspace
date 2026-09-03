@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FilterFieldRegistryEntry } from '../../../models/metadata';
-import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
+import type { QueryDefinition } from '../../../models/queryDefinition';
 import {
   buildQueryDefinition,
   emptyFormState,
@@ -14,8 +14,8 @@ export interface SearchForm {
   definition: QueryDefinition;
   setFieldValue: (fieldId: string, value: FieldValue | undefined) => void;
   setSegmentation: (ids: string[]) => void;
-  setPage: (pageNumber: number, pageSize: number) => void;
-  setSort: (sort: SortSpec[]) => void;
+  /** Back to the empty form (the "clear filters" action). */
+  reset: () => void;
 }
 
 /** Holds the search-form state and rebuilds the canonical {@link QueryDefinition} from it. */
@@ -35,18 +35,12 @@ export function useSearchForm(registry: FilterFieldRegistryEntry[], tenantId: st
     setState((s) => ({ ...s, segmentation: ids, sort: [], pageNumber: 1 }));
   }, []);
 
-  const setPage = useCallback((pageNumber: number, pageSize: number) => {
-    setState((s) => ({ ...s, pageNumber, pageSize }));
-  }, []);
-
-  const setSort = useCallback((sort: SortSpec[]) => {
-    setState((s) => ({ ...s, sort, pageNumber: 1 }));
-  }, []);
+  const reset = useCallback(() => setState(emptyFormState), []);
 
   const definition = useMemo(
     () => buildQueryDefinition(state, registry, tenantId),
     [state, registry, tenantId],
   );
 
-  return { state, definition, setFieldValue, setSegmentation, setPage, setSort };
+  return { state, definition, setFieldValue, setSegmentation, reset };
 }

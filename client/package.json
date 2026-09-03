@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.3.4",
     "@tanstack/react-query": "^5.102.8",
     "antd": "^6.6.2",
     "chart.js": "^4.5.1",

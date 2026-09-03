@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Input, Space, Typography } from 'antd';
+import { BulbOutlined, SendOutlined } from '@ant-design/icons';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import { PageLoader } from '../../../components/PageLoader';
 import type { MetadataResponse } from '../../../models/metadata';
@@ -18,19 +19,24 @@ export function NlQueryPage() {
   const { data: metadata, isLoading, error } = useMetadata(DEFAULT_TENANT_ID);
 
   return (
-    <Card size="small">
-      <Typography.Title level={4} style={{ marginTop: 0 }}>
-        שאלה חופשית
+    <Space direction="vertical" size={20} style={{ display: 'flex' }}>
+      <Typography.Title level={3} style={{ margin: 0 }}>
+        <Space size={10}>
+          <BulbOutlined aria-hidden />
+          שאלה חופשית
+        </Space>
       </Typography.Title>
 
       {isLoading ? (
-        <PageLoader />
+        <Card>
+          <PageLoader />
+        </Card>
       ) : error || !metadata ? (
         <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />
       ) : (
         <NlQueryView metadata={metadata} />
       )}
-    </Card>
+    </Space>
   );
 }
 
@@ -56,24 +62,27 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
   const setSort = (sort: SortSpec[]) => setDefinition((d) => d && withSort(d, sort));
 
   return (
-    <>
-      <Space direction="vertical" size="middle" style={{ width: '100%', marginBottom: 16 }}>
-        <Input.TextArea
-          rows={2}
-          aria-label="שאלה חופשית"
-          placeholder={EXAMPLE}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <Button
-          type="primary"
-          onClick={submit}
-          loading={parse.isPending}
-          disabled={question.length === 0}
-        >
-          פרש שאלה
-        </Button>
-      </Space>
+    <Space direction="vertical" size={16} style={{ display: 'flex' }}>
+      <Card>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Input.TextArea
+            rows={2}
+            aria-label="שאלה חופשית"
+            placeholder={EXAMPLE}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <Button
+            type="primary"
+            icon={<SendOutlined aria-hidden />}
+            onClick={submit}
+            loading={parse.isPending}
+            disabled={question.length === 0}
+          >
+            פרש שאלה
+          </Button>
+        </Space>
+      </Card>
 
       {parse.data && (
         <InterpretationPanel
@@ -96,6 +105,6 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
           onSortChange={setSort}
         />
       )}
-    </>
+    </Space>
   );
 }

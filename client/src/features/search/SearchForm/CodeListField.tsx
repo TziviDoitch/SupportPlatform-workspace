@@ -20,6 +20,7 @@ export function CodeListField({ entry, references, value, onChange }: Props) {
         value={value}
         onChange={onChange}
         options={items.map((i) => ({ value: i.code, label: i.label }))}
+        style={{ width: '100%' }}
       />
     </Form.Item>
   );
