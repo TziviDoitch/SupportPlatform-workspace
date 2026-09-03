@@ -30,8 +30,9 @@ test/setup.ts  Vitest setup — RTL cleanup + ResizeObserver/matchMedia stubs fo
 ```
 
 Search results are shown **inline on `SearchPage`** — there is no `/results` route (removed in S3;
-S7 may reintroduce a dedicated view with the chart). `features/results/` still holds the results
-components (`ResultsTable`, `ResultsPanel`, `QuestionPanel`) and `useSearch`.
+S7 kept it inline and added the chart to `ResultsPanel` instead). `features/results/` holds the
+results components (`ResultsTable`, `ResultsPanel`, `ResultsChart`, `QuestionPanel`), `useSearch`,
+and the pure `buildChartData`.
 
 ## Routing
 
@@ -64,8 +65,12 @@ npm run lint         # oxlint
 ## API seam (`src/api/`)
 
 - `http.get` / `http.post` / `http.put` / `http.del` are the only callers of `fetch`. On a non-2xx
-  response `http.ts` parses RFC 7807 ProblemDetails, raises one `notification.error` (title + detail
-  + `traceId`), and throws `ApiError` — hooks/components surface it from that, they don't re-notify.
+  response `http.ts` parses RFC 7807 ProblemDetails, raises one error toast (title + detail +
+  `traceId`), and throws `ApiError` — hooks/components surface it from that, they don't re-notify.
+- The toast goes through `api/notificationHost` (`notifyError`), not a direct `notification.error`.
+  `App/NotificationBridge` (rendered inside antd `<App>` in `main.tsx`) registers the context-aware
+  `notification` instance so toasts inherit theme + RTL; `notificationHost` falls back to antd's
+  static API when nothing is registered (unit tests). Don't `import { notification }` in `src/api`.
 - Every request carries an `X-User` header (`DEFAULT_USER`, `api/config.ts`) — the PoC identity seam
   until S8. `http.post` body is optional (for `POST .../run`).
 - One service per resource (`metadataApi`, `searchApi`, `savedQueriesApi`), each returning a
@@ -82,6 +87,12 @@ npm run lint         # oxlint
 - Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into
   `QueryDefinition.paging` / `.sort` and refetches; `SearchResponse.page.totalRows` drives the pager.
 - `questionText` always comes from the server (`POST /api/search`) — no client-side Hebrew renderer.
+- `ResultsPanel` renders `ResultsChart` above the table. The chart shows **only** when the query has
+  exactly one segmentation field; `buildChartData` (pure, in `features/results/`) is the single
+  aggregations → `{labels, values}` mapping — unit-test chart logic there, not in the component.
+  `components/BarChart` is a generic `react-chartjs-2` wrapper (registers `chart.js` modules once).
+- `YearRangeField` emits bounded integers (`min`/`max` 2000–2100, `precision=0`) — no free-form
+  number inputs. The server still validates the range.
 
 ## The saved-queries slice (S5)
 
@@ -91,10 +102,13 @@ npm run lint         # oxlint
   (per-row re-run / rename / delete), `RenameQueryModal` (parent keys it by query id — no sync
   effect), `SaveQueryButton` saves `form.definition`.
 - `savedQueriesApi` is the only HTTP caller. Re-run returns a `SearchResponse`; `summarizeRun`
-  turns it into `{ records, groups }` — records is the `count` metric summed over the returned
-  groups (all groups fit one page in this PoC), groups is `page.totalRows`. Note the search engine
-  aggregates: no `segmentation` ⇒ one group ⇒ `lastRunRowCount` is a group count, not a record
-  count.
+  turns it into `{ records, approved, groups }` — records is the `count` metric summed over the
+  returned groups (all groups fit one page in this PoC), groups is `page.totalRows`. Note the search
+  engine aggregates: no `segmentation` ⇒ one group ⇒ `lastRunRowCount` is a group count, not a
+  record count.
+- Since S7 the re-run shows the summary headline **and** the full `ResultsPanel` (chart + table),
+  built from the response + the row's stored `definition` + `useMetadata`. No paging/sort there —
+  `POST /{id}/run` takes no definition override; adjust a query on the search screen.
 - Scope errors are 404s surfaced by `http.ts` like any other `ApiError` — no special handling.
 
 ## The NL slice (S6)

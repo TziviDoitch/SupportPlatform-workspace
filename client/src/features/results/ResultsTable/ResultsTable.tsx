@@ -29,6 +29,13 @@ export function ResultsTable({
     [definition.segmentation, definition.metrics, definition.sort, registry],
   );
 
+  // Result rows have no id — key them by their segmentation values (unique per bucket on a page);
+  // an unsegmented query has a single total row.
+  const rowKey = (row: ResultRow) =>
+    definition.segmentation.length > 0
+      ? definition.segmentation.map((id) => row[id]).join('|')
+      : 'total';
+
   const handleChange: TableProps<ResultRow>['onChange'] = (pagination, _filters, sorter) => {
     const active = Array.isArray(sorter) ? sorter[0] : sorter;
     const nextSort: SortSpec[] =
@@ -47,7 +54,7 @@ export function ResultsTable({
     <DataTable<ResultRow>
       columns={columns}
       rows={response?.rows ?? []}
-      rowKey={(_row, index) => String(index)}
+      rowKey={rowKey}
       loading={loading}
       onChange={handleChange}
       pagination={{

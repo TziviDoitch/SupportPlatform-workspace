@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { App as AntdApp } from 'antd';
 import { describe, expect, it, vi } from 'vitest';
 import { queryClient } from '../state/queryClient';
 import { App } from './App';
@@ -12,9 +13,11 @@ vi.mock('../api/savedQueriesApi', () => ({ savedQueriesApi: { list: () => new Pr
 function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
+      <AntdApp>
+        <MemoryRouter initialEntries={[path]}>
+          <App />
+        </MemoryRouter>
+      </AntdApp>
     </QueryClientProvider>,
   );
 }

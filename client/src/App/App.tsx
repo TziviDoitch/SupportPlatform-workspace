@@ -1,5 +1,6 @@
 import { Layout, Menu, Typography } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { NotificationBridge } from './NotificationBridge';
 import { routes } from './routes';
 
 const { Header, Content } = Layout;
@@ -10,6 +11,7 @@ export function App() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
+      <NotificationBridge />
       <Header style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
         <Typography.Text strong style={{ color: '#fff' }}>
           SupportPlatform

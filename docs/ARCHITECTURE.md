@@ -294,20 +294,23 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 
 `metadata → טופס דינמי → QueryDefinition → POST /api/search → משפט שאלה + טבלה`, הכל
 במסך אחד (`features/search/SearchPage`). התוצאות מוצגות **inline** מתחת לטופס; אין מסך
-`/results` נפרד (יוחזר ב-S7 אם צריך).
+`/results` נפרד — ב-S7 הוחלט להשאיר אותן inline, והגרף (§6.4) נוסף מעל הטבלה באותו מסך.
 
 - **`api/` — ה-seam היחיד ל-HTTP.** `http.ts` עוטף `fetch`: על תשובה לא-2xx הוא מנתח
-  `application/problem+json` ([`error-model.md`](contracts/error-model.md)), מרים
-  `notification.error` (ה-"interceptor" של §4 בתוכנית) וזורק `ApiError`. שירותים
-  (`metadataApi`, `searchApi`) מחזירים טיפוסים מ-`models/`; קומפוננטות לא קוראות `fetch`.
+  `application/problem+json` ([`error-model.md`](contracts/error-model.md)), מרים באנר
+  שגיאה (ה-"interceptor" של §4 בתוכנית) וזורק `ApiError`. הבאנר עובר דרך
+  `api/notificationHost` — instance של `notification` מתוך antd `<App>` (מודע ל-theme ו-RTL,
+  §6.4), עם נפילה ל-API הסטטי מחוץ לעץ ה-UI. שירותים (`metadataApi`, `searchApi`) מחזירים
+  טיפוסים מ-`models/`; קומפוננטות לא קוראות `fetch`.
 - **טופס דינמי מ-`filterFieldRegistry`.** `SearchForm` מרנדר פקד אחד לכל רשומת registry
   לפי סדר המערך — `codeList` → multi-select מ-`references[referenceList]`, `yearRange` →
   זוג from/to. פקד הפילוח מציע רק רשומות `segmentable`. שום שדה לא מקודד קשיח; שורת
   registry חדשה = פקד חדש בטעינה הבאה (§8 Q1, צד הלקוח).
 - **`QueryDefinition` נבנה בלקוח.** `buildQueryDefinition` (פונקציה טהורה) ממפה את מצב
   הטופס לאובייקט הקנוני: פקדים ריקים מושמטים, שנה עם שני קצוות → `range` ועם קצה אחד →
-  `single`, `metrics` תמיד `["count"]` ב-S3. ולידציה חוצת-שדות (טווח הפוך, id לא מוכר)
-  נשארת בשרת.
+  `single`, `metrics` תמיד `["count","sumAmountApproved"]`. ולידציה חוצת-שדות (טווח הפוך,
+  id לא מוכר) נשארת בשרת. שדה `yearRange` (`YearRangeField`) הוא זוג `InputNumber` חסום
+  (`min`/`max` 2000–2100, `precision=0`) — בלי שדות מספר חופשיים (S7); השרת עדיין הסמכות.
 - **שאלה קריאה "חיה".** שינויי טופס עוברים debounce (~400ms, `useDebouncedValue`) ואז
   `POST /api/search`; הפאנל מציג את `questionText` **מהשרת** (`QuestionTextRenderer`,
   §4.5) — אין renderer שני בלקוח.
@@ -315,6 +318,8 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
   `metrics`, וממפה את `onChange` של `antd` Table ל-`paging` / `sort` ב-`QueryDefinition`;
   `page.totalRows` מזין את סה"כ העמודים. מצבי loading / empty / error מטופלים
   (`ResultsPanel` — באנר שגיאה עם `traceId`; ריק / טעינה — ברירת המחדל של הטבלה).
+  `ResultsPanel` מציג גם את `ResultsChart` (§6.4) מעל הטבלה. אותו `ResultsPanel` משמש את
+  מסך החיפוש, מסך השאלה החופשית (§6.3) ותצוגת ההרצה-מחדש (§6.2).
 - **Tenant + user.** `DEFAULT_TENANT_ID` ו-`DEFAULT_USER` קבועים זמניים (`api/config.ts`);
   `http.ts` שולח `X-User` בכל בקשה. אין `login` עדיין — S8 יחליף בזהות המאומתת.
 
@@ -323,10 +328,12 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 `features/saved-queries/`: `useSavedQueries` (TanStack Query — list + rename/delete/run) למסך עצמו,
 `useCreateSavedQuery` (mutation בלבד, בלי query — כדי ש-`SaveQueryButton` במסך החיפוש לא ימשוך את
 הרשימה), `SavedQueriesTable` (הרצה מחדש / שינוי שם / מחיקה לכל שורה), `RenameQueryModal`. שירות HTTP יחיד `savedQueriesApi` דרך
-`http` (נוספו `put` / `del`). הרצה מחדש מציגה את `questionText` + סיכום מ-`summarizeRun`:
-מספר הרשומות (סכום ה-`count` מעל הקבוצות) ומספר הקבוצות. מנוע החיפוש הוא מנוע אגרגציה —
-שאילתה בלי `segmentation` מחזירה קבוצה אחת (הסך הכולל); לכן `lastRunRowCount` הוא מספר
-**קבוצות**, לא רשומות. הטבלה המלאה של התוצאה במסך זה — S7 (§7 בתוכנית).
+`http` (נוספו `put` / `del`). הרצה מחדש מציגה כותרת סיכום מ-`summarizeRun` (`questionText` +
+מספר הרשומות + סכום מאושר + מספר קבוצות) **ומתחתיה את `ResultsPanel` המלא** — גרף + טבלה —
+מ-`SearchResponse` שחזר ומ-`definition` השמור (S7). עימוד/מיון לא מוצעים שם: `POST
+/{id}/run` לא מקבל override ל-`definition` (`api-contract.md` §5) — כוונון שאילתה נעשה במסך
+החיפוש. מנוע החיפוש הוא מנוע אגרגציה — שאילתה בלי `segmentation` מחזירה קבוצה אחת (הסך
+הכולל); לכן `lastRunRowCount` הוא מספר **קבוצות**, לא רשומות.
 
 ### 6.3 מסך השאלה החופשית (מומש ב-S6)
 
@@ -338,6 +345,24 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 `describeDefinition` (טהור) מתרגם `QueryDefinition` לרשימת תווית/ערך לפי אותן תוויות
 registry ורשימות ייחוס שמזינות את הטופס — קריאה של הגדרה, לא ניסוח עברית: המשפט תמיד
 מגיע מהשרת (§10 החלטה 9).
+
+### 6.4 גרף ולטישת UI (מומש ב-S7)
+
+- **גרף עמודות.** `components/BarChart` — עטיפה גנרית ל-`react-chartjs-2` (רישום מודולים
+  של `chart.js` פעם אחת, ללא ידע דומיין). `features/results/ResultsChart` מרנדר אותו רק
+  כשיש **פילוח יחיד** ולפחות קבוצה אחת; אחרת לא מרנדר כלום (הטבלה מכסה את שאר המצבים).
+  `buildChartData` (טהורה, בדוקה) ממפה `SearchResponse.aggregations` ל-`{labels, values}`:
+  התוויות נפתרות מרשימות הייחוס כמו הטופס, מטריקה = `count`. הגרף מתחלף עם הפילוח כי
+  המידע מגיע ישירות מהתשובה.
+- **`notificationHost`.** `http.ts` הוא לא-קומפוננטה, ולכן `api/notificationHost` מחזיק
+  instance של `notification` מ-antd `<App>` (`App/NotificationBridge` רושם אותו ב-effect).
+  כך באנרי השגיאה יורשים theme ו-RTL; מחוץ לעץ ה-UI (טסטים) יש נפילה ל-API הסטטי.
+  ב-`main.tsx` נוסף `<AntdApp>` בתוך ה-`ConfigProvider`.
+- **שדה שנה חסום** — ראה §6.1 (`YearRangeField`).
+- **מצבים אחידים + אפס console errors.** כל מסך: `Spin` בטעינה, `Alert` `type="error"` עם
+  `traceId` בשגיאה, `Alert` `type="info"` בריק. `ResultsTable` `rowKey` נגזר מערכי הפילוח
+  של השורה (במקום `index` — הפרמטר הוצא משימוש ב-antd v6). `Swagger` פעיל ב-Development;
+  `server/src/Api/*.http` כולל בקשה לכל endpoint.
 
 ## 7. הרחבה עתידית
 

@@ -1,17 +1,26 @@
 import { useState } from 'react';
 import { Alert, Card, Spin, Typography } from 'antd';
+import { DEFAULT_TENANT_ID } from '../../../api/config';
+import type { MetadataResponse } from '../../../models/metadata';
+import type { QueryDefinition } from '../../../models/queryDefinition';
 import type { SavedQuery } from '../../../models/savedQuery';
 import type { SearchResponse } from '../../../models/search';
+import { ResultsPanel } from '../../results/ResultsPanel';
+import { useMetadata } from '../../search/hooks/useMetadata';
 import { RenameQueryModal } from '../RenameQueryModal';
 import { SavedQueriesTable } from '../SavedQueriesTable';
 import { summarizeRun } from '../runSummary';
 import { useSavedQueries } from '../hooks/useSavedQueries';
 
+const noop = () => {};
+
 /** S5 screen: list saved queries, re-run / rename / delete them. Saving happens on the search screen. */
 export function SavedQueriesPage() {
   const { list, rename, remove, run } = useSavedQueries();
+  const { data: metadata } = useMetadata(DEFAULT_TENANT_ID);
   const [renaming, setRenaming] = useState<SavedQuery | null>(null);
   const rows = list.data ?? [];
+  const ranQuery = rows.find((q) => q.id === run.variables);
 
   return (
     <Card size="small">
@@ -19,7 +28,9 @@ export function SavedQueriesPage() {
         שאילתות שמורות
       </Typography.Title>
 
-      {run.data && <RunResultAlert response={run.data} />}
+      {run.data && (
+        <RunResult response={run.data} definition={ranQuery?.definition} metadata={metadata} />
+      )}
 
       {list.isLoading ? (
         <Spin />
@@ -60,8 +71,21 @@ const shekels = new Intl.NumberFormat('he-IL', {
   maximumFractionDigits: 0,
 });
 
-/** Read-back of a re-run: the readable question, the record count, approved total, and group count. */
-function RunResultAlert({ response }: { response: SearchResponse }) {
+/**
+ * A re-run's result: the server's readable question + record/approved/group headline, then the full
+ * results (chart + table) once metadata is available. Paging and sorting aren't offered here — the
+ * run endpoint takes no definition override (`api-contract.md` §5); the search screen is where a
+ * query is adjusted.
+ */
+function RunResult({
+  response,
+  definition,
+  metadata,
+}: {
+  response: SearchResponse;
+  definition: QueryDefinition | undefined;
+  metadata: MetadataResponse | undefined;
+}) {
   const { records, approved, groups } = summarizeRun(response);
   const parts = [
     `${records.toLocaleString('he-IL')} רשומות`,
@@ -70,12 +94,26 @@ function RunResultAlert({ response }: { response: SearchResponse }) {
   ];
 
   return (
-    <Alert
-      style={{ marginBottom: 16 }}
-      type="success"
-      showIcon
-      message={response.questionText}
-      description={parts.join(' · ')}
-    />
+    <div style={{ marginBottom: 16 }}>
+      <Alert
+        style={{ marginBottom: 16 }}
+        type="success"
+        showIcon
+        message={response.questionText}
+        description={parts.join(' · ')}
+      />
+      {definition && metadata && (
+        <ResultsPanel
+          response={response}
+          error={undefined}
+          isFetching={false}
+          registry={metadata.filterFieldRegistry}
+          references={metadata.references}
+          definition={definition}
+          onPageChange={noop}
+          onSortChange={noop}
+        />
+      )}
+    </div>
   );
 }

@@ -89,6 +89,7 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
           error={error}
           isFetching={isFetching}
           registry={metadata.filterFieldRegistry}
+          references={metadata.references}
           definition={definition}
           onPageChange={setPage}
           onSortChange={setSort}

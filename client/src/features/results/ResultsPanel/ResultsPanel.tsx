@@ -1,8 +1,9 @@
 import { Alert } from 'antd';
 import { ApiError } from '../../../models/problemDetails';
-import type { FilterFieldRegistryEntry } from '../../../models/metadata';
+import type { FilterFieldRegistryEntry, References } from '../../../models/metadata';
 import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
 import type { SearchResponse } from '../../../models/search';
+import { ResultsChart } from '../ResultsChart';
 import { ResultsTable } from '../ResultsTable';
 
 interface Props {
@@ -10,17 +11,19 @@ interface Props {
   error: unknown;
   isFetching: boolean;
   registry: FilterFieldRegistryEntry[];
+  references: References;
   definition: QueryDefinition;
   onPageChange: (pageNumber: number, pageSize: number) => void;
   onSortChange: (sort: SortSpec[]) => void;
 }
 
-/** Owns the results-area states: error banner, otherwise the table (which shows its own loading/empty). */
+/** Owns the results-area states: error banner, otherwise the chart (when segmented) + the table. */
 export function ResultsPanel({
   response,
   error,
   isFetching,
   registry,
+  references,
   definition,
   onPageChange,
   onSortChange,
@@ -40,13 +43,21 @@ export function ResultsPanel({
   }
 
   return (
-    <ResultsTable
-      response={response}
-      registry={registry}
-      definition={definition}
-      loading={isFetching}
-      onPageChange={onPageChange}
-      onSortChange={onSortChange}
-    />
+    <>
+      <ResultsChart
+        response={response}
+        segmentation={definition.segmentation}
+        registry={registry}
+        references={references}
+      />
+      <ResultsTable
+        response={response}
+        registry={registry}
+        definition={definition}
+        loading={isFetching}
+        onPageChange={onPageChange}
+        onSortChange={onSortChange}
+      />
+    </>
   );
 }

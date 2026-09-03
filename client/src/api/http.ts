@@ -1,6 +1,6 @@
-import { notification } from 'antd';
 import { ApiError, type ProblemDetails } from '../models/problemDetails';
 import { DEFAULT_USER } from './config';
+import { notifyError } from './notificationHost';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -43,8 +43,9 @@ async function safeParseProblem(res: Response): Promise<ProblemDetails> {
 
 function toApiError(problem: ProblemDetails): ApiError {
   const error = new ApiError(problem);
-  // S7 (UI polish / RTL): switch to an antd `<App>` notification instance so it picks up theme + dir.
-  notification.error({
+  // Routed through `notificationHost` so the toast is raised by the antd `<App>` instance
+  // (theme + RTL aware); it falls back to the static API outside the UI tree.
+  notifyError({
     message: problem.title,
     description: [problem.detail, problem.traceId && `traceId: ${problem.traceId}`]
       .filter(Boolean)
