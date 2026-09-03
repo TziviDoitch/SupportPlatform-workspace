@@ -1,28 +1,99 @@
 # ארכיטקטורה — מערכת תמיכות רוחבית (PoC)
 
-> **סטטוס: כותרות פרקים בלבד (S0-f).** התוכן נכתב ב-S4 ומתעדכן בכל שלב לפי
-> ה-DoD (`IMPLEMENTATION_PLAN.md` §3.8). מקור לתוכן: §4 (ארכיטקטורת יעד) ו-§2
+> **סטטוס: טיוטה (S4).** התוכן נכתב ב-S4 ומתעדכן בכל שלב לפי ה-DoD
+> (`IMPLEMENTATION_PLAN.md` §3.8). מקור לתוכן: §4 (ארכיטקטורת יעד) ו-§2
 > (החלטות טכנולוגיות נעולות).
+>
+> **מומש מול מתוכנן.** המסמך מסמן במפורש מה כבר קיים בקוד ומה יעד עתידי:
+> פסקאות המתחילות ב-**מומש (S#)** מתארות קוד קיים; פסקאות **יעד (S#)** מתארות
+> כיוון שטרם מומש. PoC — ההיקף מכוון, לא שלם.
 
 ## 1. סקירה כללית
 
-_מה המערכת עושה, ה-vertical slice המרכזי (`metadata → QueryDefinition → /search →
-results`), ותרשים הקשרים ברמה גבוהה._
+המערכת מאחסנת בקשות תמיכה ממשלתיות ממספר ארגונים ומאפשרת לתחקר אותן: המשתמש
+בוחר פילטרים בטופס, המערכת מתרגמת אותם לשאילתה בטוחה, מריצה אותה מול מסד הנתונים,
+ומחזירה ספירה/סכום בפילוח נבחר יחד עם ניסוח השאלה בעברית.
+
+**ה-vertical slice המרכזי** (מומש S1–S3, רץ מקצה-לקצה):
+
+```
+GET /api/metadata ──▶ טופס דינמי בלקוח ──▶ QueryDefinition ──▶ POST /api/search
+                                                                     │
+                        משפט שאלה בעברית + טבלת תוצאות בפילוח ◀───────┘
+```
+
+`QueryDefinition` הוא האובייקט הקנוני היחיד שעובר בין כל החלקים (§4.1, §10 החלטה 3):
+הטופס בונה אותו, מנוע ה-SQL מתרגם אותו, מנסח השאלה קורא אותו, ובשלבים הבאים גם
+ה-NL parser יפיק אותו והשאילתה השמורה *תהיה* הוא.
+
+**רמות** (פירוט ב-§9.2): דפדפן ◀▶ Client (React/Vite) ◀▶ API (.NET 8) ◀▶ SQL Server.
+הרצה בפקודה אחת דרך Docker Compose (`infra/docker-compose.yml`).
 
 ## 2. שכבות ה-Backend
 
-_ארבע שכבות: `Api` · `Application` · `Domain` · `Infrastructure`. חלוקת אחריות
-וכיוון תלות חד-כיווני (`Application` לא מכיר EF Core)._
+ארבעה פרויקטים ב-`server/SupportPlatform.sln` (`SupportPlatform.<Layer>`), פרויקט
+טסטים אחד לכל שכבה שיש בה קוד. כיוון התלות חד-כיווני:
+
+```
+Api ──▶ Application ──▶ Domain
+Infrastructure ──▶ Application ──▶ Domain
+Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
+```
+
+`Application` **לא מפנה ל-EF Core**; `Domain` בלי הפניות framework כלל. כל שכבה חושפת
+הרחבת `IServiceCollection` אחת (`AddApplication()` / `AddInfrastructure()`) ו-`Program.cs`
+הוא ה-composition root היחיד.
 
 ### 2.1 Api
+
+`SupportPlatform.Api` — HTTP בלבד. Controllers דקים (`MetadataController`,
+`SearchController`) שעושים bind → קריאה ל-service → `Ok(...)`. בנוסף: Swagger,
+`CorrelationIdMiddleware` (`Middleware/`), ומיפוי חריגות ל-RFC 7807 דרך
+`IExceptionHandler` + `ProblemTypes` (`Errors/`). אין לוגיקה עסקית ואין גישת נתונים
+ב-controller.
+
 ### 2.2 Application
+
+`SupportPlatform.Application` — לוגיקת ה-use-cases, DTOs, ולידטורים. מכילה את
+`QueryDefinition` הקנוני ואת המשפחה הסגורה `FilterValue` (+`FilterValueJsonConverter`),
+את `QueryDefinitionValidator` (FluentValidation), את `QuestionTextRenderer` (משפט
+עברית), את `BucketPaging` (מיון/עימוד תוצאה בזיכרון), את `DefinitionHasher`, ואת
+`SearchService` / `MetadataService` שבהם כל ההחלטות העסקיות. תלויה על ממשקים בלבד
+(`ISearchQueryExecutor`, `ISearchMetadataProvider`, `IMetadataRepository`) שממומשים
+ב-Infrastructure.
+
 ### 2.3 Domain
+
+`SupportPlatform.Domain` — ישויות ורשומות ייחוס, בלי framework. `Tenant`, `User`,
+`SubmittingBody`, `SupportRequest`, ארבע רשומות `Reference*` (בסיס `ReferenceItem`),
+ו-`FilterFieldRegistryEntry` — ה-whitelist שממנו נגזרים כל שדות ה-`QueryDefinition`
+(§3.4 קו אדום). אין כאן שירותים או לוגיקה — רק המודל.
+
 ### 2.4 Infrastructure
+
+`SupportPlatform.Infrastructure` — גישת נתונים ומימושי הממשקים של Application.
+`SupportPlatformDbContext` + `IEntityTypeConfiguration` לכל ישות + מיגרציות + `DbSeeder`
+(`Persistence/`); `MetadataRepository` (`Repositories/`); ומנוע ה-SQL (`Search/`):
+`DynamicQueryBuilder`, היררכיית ה-`FilterHandler` (`Filters/`), `SearchQueryExecutor`,
+`SearchMetadataProvider`. גם ה-Global Query Filter של ה-tenant יושב כאן דרך
+`ITenantContext`. אין כאן החלטות עסקיות — רק תרגום ל-EF וחזרה.
 
 ## 3. מודולים אנכיים
 
-_Metadata · Search · SavedQueries · NlQuery · Audit · Identity (stub) — מה כל
-מודול מכסה ואיפה הוא יושב בשכבות._
+כל מודול חוצה את השכבות (endpoint ב-Api → service ב-Application → נתונים ב-Infrastructure).
+שישה מודולים; שלושה מומשו, שלושה עם seams בלבד:
+
+| מודול | סטטוס | מכסה | היכן |
+|---|---|---|---|
+| **Metadata** | מומש (S1) | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
+| **Search** | מומש (S2–S3) | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
+| **Identity** | יעד (S8) | login → JWT/`X-User` → זיהוי משתמש → פתירת `TenantId` → הרשאה | קיימת ישות `User` בלבד (§8.1). אין `AuthController`, אין token |
+| **SavedQueries** | יעד (S5) | CRUD על שאילתות שמורות (scoped ל-owner+tenant) + `POST /{id}/run` + `last_run` | חוזה ב-`api-contract.md` §5; טרם מומש |
+| **NlQuery** | יעד (S6) | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryTranslator` + Factory | חוזה ב-`api-contract.md` §4; טרם מומש |
+| **Audit** | יעד (S5) | `IAuditService` — קריאות מפורשות ב-handlers (לא interceptor) על mutations + search | טרם מומש |
+
+חתכים רוחביים (Correlation Id, Serilog, ProblemDetails, Validation) משותפים לכל
+המודולים ומפורטים ב-§8.
 
 ## 4. מנוע השאילתות
 
@@ -96,9 +167,20 @@ Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת
 
 ## 5. מסד נתונים
 
-_SQL Server ל-PoC (נימוק: היכרות/רישוי) · PostgreSQL כיעד קוד-פתוח מועדף · המודל
-provider-agnostic (EF Core, מעבר = החלפת provider + connection string) · JSON
-כ-`nvarchar(max)` + `ToJson()`._
+**המימוש: SQL Server** (`mcr.microsoft.com/mssql/server:2022` ב-Compose). הבחירה
+מעשית ל-PoC — היכרות ורישוי קיימים מקצרים את זמן ההקמה, שהוא המשאב הקריטי כאן (§3.1
+בתוכנית).
+
+**היעד המועדף: PostgreSQL** כמסד קוד-פתוח, ללא עלות רישוי, מתאים לפריסה ממשלתית.
+המודל **provider-agnostic**: הגישה כולה דרך EF Core 8 עם `IQueryable`, בלי SQL גולמי
+ובלי פיצ'רים ספציפיים לספק. מעבר ל-PostgreSQL = החלפת חבילת ה-provider
+(`Npgsql.EntityFrameworkCore.PostgreSQL`), עדכון connection string, והרצת המיגרציות
+מחדש. שדות JSON עתידיים (למשל `audit_log.payload`) נשמרים כ-`nvarchar(max)` + `ToJson()`,
+מבנה שמתמפה ל-`jsonb` ב-PostgreSQL.
+
+הסכומים (`AmountRequested` / `AmountApproved`) הם `decimal` נייטיב ב-SQL Server;
+בטסטים (provider SQLite) ה-aggregate מחושב מעל `double` כדי שה-provider יתרגם אותו
+(§4.4). הסכומים קטנים דיים כדי שזה יישאר מדויק לאגורה.
 
 ### 5.1 מודל הנתונים (מומש ב-S1)
 
@@ -163,8 +245,52 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 
 ## 7. הרחבה עתידית
 
-_הוספת תחום תמיכה / סוג גוף / שדה סינון שלם = שינוי **נתונים** בלבד (שורות ייחוס +
-שורת registry + seed), ללא שינוי קוד. דוגמת metadata קונקרטית מקצה לקצה._
+המערכת מונעת-metadata: הטופס, ה-whitelist, ומשפט השאלה כולם נגזרים מרשומות במסד
+(`reference_*` + `filter_field_registry`), לא מקוד. שלוש רמות הרחבה, מהזולה לכואבת:
+
+### 7.1 ערך חדש לשדה קיים — **אפס קוד** (הדגמת §11 / DESIGN_QA §1)
+
+תרחיש: משרד התרבות מוסיף תחום תמיכה **"חינוך"**. כל מה שנדרש הוא שורת נתונים:
+
+```
+reference_domains: { code: "education", label: "חינוך" }
+```
+
+(דרך `DbSeeder`, מיגרציית data, או INSERT). מה שקורה מקצה-לקצה **בלי לגעת בקוד**:
+
+1. `GET /api/metadata` — `MetadataRepository` קורא את `reference_domains`; התשובה
+   מחזירה כעת `references.domains` עם `education`. ה-`filterFieldRegistry` לא משתנה
+   (`supportDomain` כבר שם).
+2. **טופס הלקוח** — `SearchForm` מרנדר את פקד `supportDomain` מ-`references.domains`;
+   האופציה "חינוך" מופיעה מעצמה. אף קומפוננטה לא משתנה.
+3. **`QueryDefinition`** — `buildQueryDefinition` מייצר `filters.supportDomain =
+   ["education"]` כמו לכל code אחר.
+4. **ולידציה** — `QueryDefinitionValidator` בודק ש-`supportDomain` ב-registry (כן)
+   ושצורת הערך תואמת ל-`kind` (מערך codes). עובר.
+5. **מנוע ה-SQL** — `DynamicQueryBuilder` מוצא ש-`supportDomain` ב-registry ומעביר
+   ל-`CodeListFilterHandler` הקיים של השדה (selector `r => r.SupportDomainCode`),
+   שמפיק `WHERE SupportDomainCode IN ('education')`.
+6. **משפט השאלה** — `QuestionTextRenderer` לוקח את התווית מרשימת הייחוס → "בתחום חינוך".
+
+אותו נתיב תקף לכל code חדש של `bodyTypes` / `statuses` / `districts`.
+
+### 7.2 שדה סינון חדש מעל `kind` קיים — **שורת רישום אחת**
+
+תרחיש: להוסיף פילטר "מקור מימון" (code list). נדרש:
+
+- שורות ב-`reference_*` החדשה + שורה ב-`filter_field_registry`
+  (`id: "fundingSource", kind: "codeList", referenceList: "fundingSources", …`);
+- **שורה אחת** ב-`Infrastructure/Search/Filters/FilterHandlers.Default`:
+  `new CodeListFilterHandler("fundingSource", r => r.FundingSourceCode)` (+ העמודה
+  על הישות).
+
+הטופס, ה-validator, ה-builder, ה-resolver, ומנסח השאלה — לא משתנים.
+
+### 7.3 סוג סינון חדש (`kind` חדש — טווח מספרי, טקסט חופשי) — **תת-מחלקה אחת**
+
+תת-מחלקה חדשה של `FilterHandler` (כמו `YearRangeFilterHandler`) + שורת registry עם
+ה-`kind` החדש + פקד תואם בלקוח. `DynamicQueryBuilder` ו-`FilterHandlerResolver` לא
+משתנים — אין `switch` על סוג handler (§10 החלטה 4).
 
 ## 8. חתכים רוחביים
 
@@ -196,11 +322,160 @@ authentication → זיהוי User → פתירת TenantId מה-User → הרש�
 
 ## 9. דיאגרמות
 
-_Mermaid — נוספות ב-S4._
-
 ### 9.1 ERD
+
+מודל S1 (§5.1). `tenants` הוא ה-scope; `support_requests` היא טבלת העובדות שמנוע
+השאילתות רץ עליה. רשומות ה-`reference_*` מקושרות ב-code (מחרוזת יציבה), עם
+`OnDelete(Restrict)` — מחיקת שורת ייחוס לא מוחקת נתונים עסקיים. `filter_field_registry`
+עומד בפני עצמו (ה-whitelist), `ReferenceList` שלו הוא שם רשימה, לא FK.
+
+```mermaid
+erDiagram
+    tenants ||--o{ users : "TenantId"
+    tenants ||--o{ submitting_bodies : "TenantId"
+    tenants ||--o{ support_requests : "TenantId (NoAction)"
+    submitting_bodies ||--o{ support_requests : "SubmittingBodyId"
+    reference_domains ||--o{ support_requests : "SupportDomainCode"
+    reference_statuses ||--o{ support_requests : "StatusCode"
+    reference_body_types ||--o{ submitting_bodies : "BodyTypeCode"
+    reference_districts ||--o{ submitting_bodies : "DistrictCode"
+
+    tenants {
+        string Id PK "slug"
+        string Name
+    }
+    users {
+        guid Id PK
+        string Username UK
+        string PasswordHash "PBKDF2-SHA256, never plaintext"
+        string TenantId FK
+        string Role
+    }
+    submitting_bodies {
+        guid Id PK
+        string Name
+        string TenantId FK "global query filter"
+        string BodyTypeCode FK
+        string DistrictCode FK
+    }
+    support_requests {
+        guid Id PK
+        string TenantId FK "global query filter"
+        guid SubmittingBodyId FK
+        string SupportDomainCode FK
+        string StatusCode FK
+        int SupportYear
+        decimal AmountRequested
+        decimal AmountApproved
+    }
+    reference_domains {
+        string Code PK
+        string Label
+    }
+    reference_statuses {
+        string Code PK
+        string Label
+    }
+    reference_body_types {
+        string Code PK
+        string Label
+    }
+    reference_districts {
+        string Code PK
+        string Label
+    }
+    filter_field_registry {
+        string Id PK "canonical field id"
+        string Label
+        string Kind "codeList | yearRange"
+        string ReferenceList "list name, not FK"
+        string Operators "csv"
+        bool Segmentable
+        int SortOrder
+    }
+```
+
+> ישויות של שלבים הבאים (`saved_queries`, `audit_log`) — יעד S5, לא במודל הנוכחי.
+
 ### 9.2 Container diagram
+
+```mermaid
+flowchart TD
+    user([משתמש / דפדפן])
+    subgraph compose["Docker Compose (infra/docker-compose.yml)"]
+        client["client<br/>React 19 + Vite + antd RTL<br/>port 5173"]
+        api["api<br/>.NET 8 Web API<br/>Api / Application / Domain / Infrastructure<br/>port 5080/8080"]
+        db[("mssql<br/>SQL Server 2022")]
+    end
+    user -->|HTTP| client
+    client -->|"/api/* (proxy)"| api
+    api -->|EF Core 8| db
+    api -.->|"Serilog console + Correlation Id"| logs[/stdout/]
+```
+
+יעד (לא ב-Compose הנוכחי): API gateway / reverse proxy, מסד logs מרוכז, ספק AI
+חיצוני מאחורי `INlQueryTranslator` (§10 החלטה 8, DESIGN_QA §8).
 
 ## 10. Decision Log
 
-_החלטות ארכיטקטוניות מהותיות: מה הוחלט, למה, ואילו חלופות נשקלו. מתעדכן תוך כדי._
+החלטות מהותיות: מה הוחלט, למה, ואילו חלופות נשקלו. מתעדכן תוך כדי.
+
+### 1. SQL Server למימוש, PostgreSQL כיעד
+
+מימוש מול SQL Server (§5): היכרות ורישוי קיימים — זמן הקמה הוא המשאב הקריטי ב-PoC.
+כדי שזה לא ינעל, כל הגישה דרך EF Core `IQueryable` בלבד, בלי SQL גולמי. במסמך היעד
+PostgreSQL הוא המומלץ (קוד פתוח, ללא רישוי). **חלופה שנדחתה:** SQLite למימוש — פשוט
+יותר להרים, אבל לא מייצג עומס/concurrency אמיתיים ולא נפרס בפרודקשן. SQLite כן משמש
+בטסטים בלבד.
+
+### 2. ארבע שכבות עם תלות חד-כיוונית
+
+`Api / Application / Domain / Infrastructure`, `Application` לא מכיר EF (§2). זה
+אוצר-המילים של המטלה ומאפשר להחליף provider או לבודד לוגיקה בטסט בלי framework.
+**חלופה שנדחתה:** פרויקט יחיד — פחות ceremony, אבל מטשטש את הגבול Service↔גישת-נתונים
+שהמטלה מודדת עליו.
+
+### 3. `QueryDefinition` כאובייקט קנוני יחיד
+
+מבנה אחד ([`contracts/query-definition.md`](contracts/query-definition.md)) שהטופס
+בונה, מנוע ה-SQL מתרגם, מנסח השאלה קורא, ובהמשך ה-NL parser יפיק והשאילתה השמורה
+תאחסן. מונע שכפול לוגיקה ו-drift בין הצרכנים. **חלופה שנדחתה:** DTO נפרד לכל endpoint.
+
+### 4. Whitelist מ-`FilterFieldRegistry` + היררכיית handlers, בלי `switch`
+
+`DynamicQueryBuilder` דוחה כל `fieldId` שאינו ב-registry לפני שרץ handler (§3.4 קו
+אדום, §4.3). לכל שדה instance אחד של `FilterHandler` הנושא selector חזק
+(`Expression<Func<…>>`); `kind` חדש = תת-מחלקה, שדה חדש = שורת רישום. **חלופות
+שנדחו:** (א) `switch (fieldId)` מרכזי — נשבר עם כל שדה; (ב) בניית expression
+ממחרוזת / reflection — משטח התקפה של injection, בדיוק מה שהמטלה בודקת.
+
+### 5. בידוד tenant fail-closed דרך Global Query Filter
+
+`e => tenant.HasTenant && e.TenantId == tenant.TenantId` על `SupportRequest` +
+`SubmittingBody` (§5.1). בלי tenant context — אפס שורות, לא "הכל". חוצה-tenant רק
+דרך `IgnoreQueryFilters()` מפורש. **חלופה שנדחתה:** סינון ידני בכל repository — שכחה
+אחת = דליפת נתונים בין ארגונים.
+
+### 6. `?tenantId=` כחוזה פיתוח זמני ל-S1
+
+`GET /api/metadata?tenantId=` מקבל את ה-tenant מ-query param עד S8 (§8.1). ב-S8
+המשתמש המאומת הוא מקור הסמכות וה-API לא יבטח `tenantId` מהלקוח. תועד במפורש כדי
+שלא ייחשב כמנגנון הרשאה.
+
+### 7. עיצוב תוצאה (מיון/עימוד) ב-Application, לא ב-Infrastructure
+
+`SearchQueryExecutor` מחזיר את כל קבוצות ה-aggregation; `BucketPaging` (Application)
+ממיין וחותך עמוד בזיכרון (§4.4). שומר את Infrastructure "גישת-נתונים בלבד".
+**פשטת PoC מודעת:** 2+ שדות פילוח → GroupBy בזיכרון; שאילתות כבדות אמיתיות =
+DESIGN_QA §4.
+
+### 8. חתכים רוחביים מוזרקים ב-S2 יחד עם `/search`
+
+Correlation Id + Serilog + ProblemDetails (RFC 7807) נכנסו כשהיה endpoint אמיתי
+לתלות בו (§8), לא כתשתית מוקדמת בלי צרכן. Auth, Audit, ו-cache נשארים seams עד
+השלב שבו הם נדרשים (S5/S8) — §3.2 בתוכנית, "אפס over-engineering".
+
+### 9. הלקוח בונה `QueryDefinition`, השרת מנסח את השאלה
+
+`buildQueryDefinition` (טהור) בלקוח בונה את המבנה; `questionText` מגיע תמיד מהשרת
+(`QuestionTextRenderer`) — אין renderer עברית שני בלקוח (§6.1). מקור אמת אחד למשפט.
