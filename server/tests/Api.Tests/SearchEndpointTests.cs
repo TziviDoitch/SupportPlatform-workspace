@@ -116,4 +116,16 @@ public class SearchEndpointTests(TestApiFactory factory) : IClassFixture<TestApi
 
         Assert.False(string.IsNullOrWhiteSpace(Assert.Single(response.Headers.GetValues("X-Correlation-Id"))));
     }
+
+    [Fact]
+    public async Task An_over_long_correlation_id_is_bounded_so_the_audit_write_does_not_overflow()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/search") { Content = Json(WorkedExample) };
+        request.Headers.Add("X-Correlation-Id", new string('x', 200));
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(Assert.Single(response.Headers.GetValues("X-Correlation-Id")).Length <= 64);
+    }
 }

@@ -39,7 +39,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(o => o.SizeLimit = 1000); // bound the search dedup cache (§ DESIGN_QA 5)
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddSingleton(new SearchCacheOptions
 {

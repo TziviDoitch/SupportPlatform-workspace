@@ -228,13 +228,14 @@ owner + tenant.
 **Dedup (`DESIGN_QA` §5).** `SearchService` מחשב `DefinitionHasher.Hash` (מפתחות filters,
 codes ו-metrics ממוינים; `segmentation`/`sort` נשמרים כסדרם) ומשתמש בו כמפתח `IMemoryCache`.
 פגיעה → מוחזרת התוצאה השמורה עם `executionMeta.cacheHit = true`. TTL מ-`Search:CacheTtlSeconds`
-(ברירת מחדל 60ש'); `0` מכבה dedup לגמרי (מנוף ה-fallback §7.3). ה-cache הוא per-instance
-בזיכרון — מכוון ל-PoC.
+(ברירת מחדל 60ש'); `0` מכבה dedup לגמרי (מנוף ה-fallback §7.3). ה-cache חסום —
+`SizeLimit = 1000` entries + פקיעה ב-TTL — ו-per-instance בזיכרון (מכוון ל-PoC).
 
 **`audit_log`.** `IAuditService.Record(action, entityType, entityId, payload)` — קריאות
 מפורשות ב-services (לא EF interceptor): `search` על כל חיפוש, ו-`create`/`update`/`delete`/`run`
 על שאילתות שמורות. `AuditService` (Infrastructure) חותם `User` + `CorrelationId` מ-`ICurrentUser`
-ושומר `payload` כ-JSON. `occurred_at` מאונדקס.
+(ה-id חסום ל-64 תווים ב-`CorrelationIdMiddleware` כדי שייכנס לעמודה) ושומר `payload` כ-JSON.
+`occurred_at` מאונדקס. מגבלות נפח ואטומיות מודעות — `DESIGN_QA` §7.
 
 ## 6. Client
 

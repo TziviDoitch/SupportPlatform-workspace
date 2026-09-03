@@ -75,13 +75,27 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     }
 
     [Fact]
-    public async Task Another_users_saved_query_is_a_404()
+    public async Task Another_users_saved_query_is_a_404_across_tenants()
     {
         var id = (await Create(Client("sarah"), "sarah private")).GetProperty("id").GetString();
 
         var asMichal = await Client("michal").GetAsync($"/api/saved-queries/{id}");
 
         Assert.Equal(HttpStatusCode.NotFound, asMichal.StatusCode);
+    }
+
+    [Fact]
+    public async Task Another_users_saved_query_is_a_404_within_the_same_tenant()
+    {
+        // dan and sarah are both in culture-sport-admin — scope is owner AND tenant, not tenant alone.
+        var id = (await Create(Client("sarah"), "sarah only")).GetProperty("id").GetString();
+        var dan = Client("dan");
+
+        Assert.Equal(HttpStatusCode.NotFound, (await dan.GetAsync($"/api/saved-queries/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await dan.DeleteAsync($"/api/saved-queries/{id}")).StatusCode);
+
+        var danList = JsonDocument.Parse(await dan.GetStringAsync("/api/saved-queries")).RootElement;
+        Assert.DoesNotContain(danList.EnumerateArray(), e => e.GetProperty("id").GetString() == id);
     }
 
     [Fact]

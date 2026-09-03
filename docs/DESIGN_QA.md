@@ -130,7 +130,9 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 - **`IMemoryCache` עם TTL (S5):** `SearchService` בודק את ה-hash לפני הרצה; פגיעה →
   מוחזרת התוצאה השמורה עם `executionMeta.cacheHit = true`. TTL מ-`Search:CacheTtlSeconds`
   (ברירת מחדל 60ש'). `0` מכבה dedup — זה מנוף ה-fallback של §7.3, ומה שהטסטים של
-  ה-endpoint משתמשים בו כדי להישאר דטרמיניסטיים.
+  ה-endpoint משתמשים בו כדי להישאר דטרמיניסטיים. ה-cache **חסום**: `SizeLimit = 1000`
+  entries (`Program.cs`) + פקיעה ב-TTL — הגדרות שונות בתוך החלון לא מנפחות זיכרון בלי גבול.
+  הוא per-instance בזיכרון — מכוון ל-PoC (ראה "הצעד הבא").
 - **`saved_queries.last_run_at` / `last_run_row_count` (S5):** מתעדכנים ב-`POST /{id}/run`
   ומוצגים במסך השאילתות השמורות — המשתמש רואה שהשאילתה כבר רצה ומתי.
 - הלקוח עושה debounce (~400ms, `useDebouncedValue`) בהקלדה בטופס (`ARCHITECTURE.md` §6.1).
@@ -185,8 +187,18 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 
 **מומש (S5):** **Audit Log** — `IAuditService.Record(...)` נכתב על כל `search` ועל
 `create`/`update`/`delete`/`run` של שאילתות שמורות; כל שורה נושאת `User`, `CorrelationId`
-(אותו id של §7 מעלה), `OccurredAt` ו-`payload` JSON. זה עונה על "מי הריץ מה ומתי"
-וקושר חזרה ללוגים דרך ה-correlation id.
+(אותו id של §7 מעלה, חסום ל-64 תווים ב-`CorrelationIdMiddleware`), `OccurredAt` ו-`payload`
+JSON. זה עונה על "מי הריץ מה ומתי" וקושר חזרה ללוגים דרך ה-correlation id.
+
+**מגבלות מודעות ב-PoC:**
+
+- **נפח.** audit על *כל* `/search` (כולל cache hit) עם ה-`QueryDefinition` המלא ב-payload
+  הוא גס — עם debounce של 400ms בלקוח זו שורה לכל עצירת-הקלדה. ל-PoC זה מקובל ונותן הדגמה
+  מלאה של "מי הריץ מה"; בפרודקשן: sampling / תור אסינכרוני, הפרדת audit-קריאה מ-audit-mutation,
+  ו-payload רזה (hash בלבד) ל-reads.
+- **אטומיות.** `Record(...)` מבצע `SaveChanges` משלו — שורת ה-audit לא נכתבת באותה טרנזקציה
+  של הפעולה שהיא מתעדת. ל-PoC בלי טרנזקציות זה בסדר; בפרודקשן: אותה טרנזקציה, או outbox
+  pattern, כדי שלא ייווצר audit ל-פעולה שנכשלה (או להפך).
 
 **הצעד הבא:** metrics (latency, rowCount, cacheHit — כבר נאספים ב-`executionMeta`,
 נותר לייצא ל-Prometheus/OTel); distributed tracing (OpenTelemetry על אותו

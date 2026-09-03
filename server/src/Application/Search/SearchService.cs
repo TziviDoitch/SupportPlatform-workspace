@@ -66,7 +66,11 @@ public sealed class SearchService(
                 DefinitionHash: hash));
 
         if (caching)
-            cache.Set(hash, response, cacheOptions.Ttl);
+            cache.Set(hash, response, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = cacheOptions.Ttl,
+                Size = 1
+            });
         return response;
     }
 

@@ -50,7 +50,7 @@ public class SavedQueryServiceTests
     }
 
     [Fact]
-    public async Task Another_users_record_is_not_found()
+    public async Task Another_users_record_is_not_found_across_tenants()
     {
         var created = await Service().Create(Request());
 
@@ -59,6 +59,18 @@ public class SavedQueryServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => Service().Get(created.Id));
         await Assert.ThrowsAsync<NotFoundException>(() => Service().Delete(created.Id));
         await Assert.ThrowsAsync<NotFoundException>(() => Service().Run(created.Id));
+    }
+
+    [Fact]
+    public async Task Another_users_record_is_not_found_within_the_same_tenant()
+    {
+        var created = await Service().Create(Request());
+
+        // Same tenant, different owner — scope is owner AND tenant.
+        _user = new FakeCurrentUser("dan", "culture-sport-admin");
+
+        await Assert.ThrowsAsync<NotFoundException>(() => Service().Get(created.Id));
+        Assert.Empty(await Service().List());
     }
 
     [Fact]
