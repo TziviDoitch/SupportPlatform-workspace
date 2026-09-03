@@ -165,6 +165,16 @@ src/
 גרף עמודות (Chart.js) על `aggregations`, מתחלף לפי הפילוח · layout עקבי, מצבים אחידים, RTL, אפס console errors · Swagger + `api.http` · שדה `supportYear` בטופס: `Select` של השנים מה‑metadata (או `InputNumber` עם `min`/`max`/`precision=0`) במקום שני שדות מספר חופשיים · הרצה מחדש במסך השאילתות השמורות מציגה את `ResultsTable` המלא (לא רק סיכום).
 *רזה: גרף סטטי יחיד, מיזוג מסך NL לתוך החיפוש, עיצוב מינימלי אבל עקבי.*
 
+### S7‑b · תצוגת רשימת רשומות (פירוט) — 2.5 / 1.5
+כרגע מנוע השאילתות הוא אגרגציה בלבד (`count` / `sumAmountApproved` לפי `segmentation`). המטלה
+מזכירה גם *"הצג את כלל בקשות התמיכה"* — לכן מצב פירוט נפרד:
+- **חוזה:** `QueryDefinition` מקבל `resultKind: "aggregate" | "list"` (ברירת מחדל `aggregate`).
+  עדכון `docs/contracts/query-definition.md` + `api-contract.md` §3 — **שינוי חוזה מוקפא, דורש אישור.**
+- **שרת:** ב‑`list`, `/api/search` מחזיר שורות `support_requests` גולמיות (שם גוף, תחום, סטטוס,
+  שנה, סכום מבוקש, סכום מאושר) עם paging אמיתי במקום buckets; וריאנט משפט ל‑`QuestionTextRenderer`.
+- **לקוח:** מתג "סיכום / פירוט" במסך החיפוש; `ResultsTable` מרנדר עמודות פירוט ב‑`list`.
+האגרגציה נשארת ברירת המחדל. *רזה: לדלג — הפרשנות האגרגטיבית מגובה ב"פילוחים" + "גרף".*
+
 ### S8 · Repos/Cross‑cutting hardening + Auth stub — 2.0 / 1.0
 `IRepository<T>` + 2–3 ספציפיים (ניקוי הזרקות זמניות מ‑S2) · `ICurrentUser` + tenant scoping + בדיקת role אחת שמדגימה הפרדת גופים.
 *רזה: `X-User` header במקום JWT.*
@@ -239,7 +249,7 @@ Unit: `DynamicQueryBuilder` (כל פילטר + **דחיית שדה זר**), Aggr
 S0‑a → S0‑b → S0‑c → S0‑d → S0‑e → S0‑f      (skeleton + חוזים)
 S1  (מודל + seed)  →  S2 ⭐ (מנוע שאילתות)  →  S3 (slice ב‑Client)  →  S4 ⭐ (מסמכים draft)
 ── 🚩 יש הגשה מתגוננת ──
-S5 (Saved+Audit)  →  S6 (NL+AI)  →  S7 (גרף+polish)  →  S8 (hardening+auth)
+S5 (Saved+Audit)  →  S6 (NL+AI)  →  S7 (גרף+polish)  →  S7‑b (רשימת רשומות, מותנה)  →  S8 (hardening+auth)
 S9 (בדיקות)  →  S10 (DevOps+CI)  →  S11 (review+README+הגשה)
 ```
 אם נגמר הזמן: עוצרים איפה שאפשר, מפעילים Fallback (§7) על השלבים שנשארו, מוודאים שהקו האדום שלם.
