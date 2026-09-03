@@ -47,7 +47,8 @@ export function buildColumns(
     title: METRIC_LABELS[m] ?? m,
     dataIndex: m,
     key: m,
-    align: 'left' as const,
+    // No physical `align` — the cells inherit `text-align: start`, i.e. right under RTL, so the
+    // numbers line up with their headers instead of drifting to the far edge.
     render: METRIC_RENDER[m],
     ...sortProps(m),
   }));

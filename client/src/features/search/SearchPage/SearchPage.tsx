@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Card, Space, Typography } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import { DEFAULT_TENANT_ID } from '../../../api/config';
+import { getActiveUser } from '../../../api/activeUser';
 import { PageLoader } from '../../../components/PageLoader';
 import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
@@ -16,7 +16,7 @@ import { useSearchForm } from '../hooks/useSearchForm';
 
 /** The S3 vertical slice: metadata → dynamic form → QueryDefinition → /api/search → question + table. */
 export function SearchPage() {
-  const { data: metadata, isLoading, error } = useMetadata(DEFAULT_TENANT_ID);
+  const { data: metadata, isLoading, error } = useMetadata(getActiveUser().tenantId);
 
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
@@ -38,7 +38,7 @@ export function SearchPage() {
 }
 
 function SearchView({ metadata }: { metadata: MetadataResponse }) {
-  const form = useSearchForm(metadata.filterFieldRegistry, DEFAULT_TENANT_ID);
+  const form = useSearchForm(metadata.filterFieldRegistry, getActiveUser().tenantId);
 
   // The query only runs on an explicit "search" — `submitted` is the last definition the user ran.
   // Paging and sorting patch that snapshot directly (the form above stays free to be re-edited).

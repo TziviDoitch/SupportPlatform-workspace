@@ -19,7 +19,7 @@ antd v6 is CSS-in-JS — no stylesheet import. RTL comes from `<html dir="rtl">`
 src/
   main.tsx     entry — providers: QueryClientProvider > ConfigProvider(rtl, he_IL) > BrowserRouter > App
   App/         app shell — Layout + Menu nav + ErrorBoundary + <Routes>; routes.tsx is the route list (data)
-  api/         http.ts (fetch wrapper + ProblemDetails→notification interceptor), config.ts, typed services
+  api/         http.ts (fetch wrapper + ProblemDetails→notification interceptor), config.ts (seed users), activeUser.ts, typed services
   components/  generic reusable components (DataTable, BarChart, PageLoader, ...)
   hooks/       cross-feature hooks (useMetadata) — a hook used by one feature lives under that feature
   lib/         pure, framework-free helpers: format.ts (he-IL currency/date), labels.ts (code/field → label), queryDefinition.ts (withPaging/withSort)
@@ -87,13 +87,17 @@ npm run lint         # oxlint
   anywhere outside `notificationHost`.
 - `queryClient` retries only network/parse failures once; a real HTTP answer (`ApiError`) is surfaced
   immediately, not retried.
-- Every request carries an `X-User` header (`DEFAULT_USER`, `api/config.ts`) — the PoC identity seam
-  (the server derives tenant + role from it and 403s on a body `tenantId` mismatch). `http.post` body
-  is optional (for `POST .../run`).
+- Every request carries an `X-User` header — `getActiveUser().username` (`api/activeUser.ts`), the
+  PoC identity seam (the server derives tenant + role from it and 403s on a body `tenantId`
+  mismatch). `http.post` body is optional (for `POST .../run`).
 - One service per resource (`metadataApi`, `searchApi`, `savedQueriesApi`, `nlQueryApi`), each
   returning a `models/` type.
-- `DEFAULT_TENANT_ID` / `DEFAULT_USER` (`api/config.ts`) are fixed stand-ins until a real login flow
-  lands — do not scatter tenant/user literals elsewhere.
+- **Identity is a fixed stand-in until `/api/auth/login` lands.** `api/config.ts` lists the seeded
+  users (`SEED_USERS`, each with its `tenantId`); `api/activeUser.ts` holds the chosen one
+  (localStorage-backed) for `http.ts`. The header `<Select>` in `App.tsx` is the only writer — on
+  change it calls `setActiveUser`, `queryClient.clear()`, and remounts the screens (a `key` on the
+  content container) so nothing leaks between identities. Screens read the tenant with
+  `getActiveUser().tenantId`; don't scatter tenant/user literals elsewhere.
 
 ## The search slice
 

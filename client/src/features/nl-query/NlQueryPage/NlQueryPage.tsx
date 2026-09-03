@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Input, Space, Typography } from 'antd';
 import { BulbOutlined, EditOutlined, SendOutlined } from '@ant-design/icons';
-import { DEFAULT_TENANT_ID } from '../../../api/config';
+import { getActiveUser } from '../../../api/activeUser';
 import { PageLoader } from '../../../components/PageLoader';
 import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
@@ -17,7 +17,7 @@ const EXAMPLE = 'לדוגמה: כמה עמותות בתחום התרבות או�
 
 /** The S6 screen: question → interpretation → the user runs it → the existing search slice. */
 export function NlQueryPage() {
-  const { data: metadata, isLoading, error } = useMetadata(DEFAULT_TENANT_ID);
+  const { data: metadata, isLoading, error } = useMetadata(getActiveUser().tenantId);
 
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
@@ -51,7 +51,7 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
   const submit = () => {
     if (question.length === 0) return;
     setDefinition(undefined); // a new question invalidates the previous results
-    parse.mutate({ text: question, tenantId: DEFAULT_TENANT_ID });
+    parse.mutate({ text: question, tenantId: getActiveUser().tenantId });
   };
 
   const setPage = (pageNumber: number, pageSize: number) =>
