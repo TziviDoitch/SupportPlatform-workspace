@@ -20,7 +20,7 @@ Proof of Concept למערכת לניהול וחיפוש בקשות תמיכה ע
 ```
 server/    ASP.NET Core solution (Api / Application / Domain / Infrastructure)
 client/    React + TypeScript (Vite)
-docs/      ARCHITECTURE.md, DESIGN_QA.md, DEVOPS.md, contracts/
+docs/      ARCHITECTURE.md, DESIGN_QA.md, DEVOPS.md, TEST_PLAN.md, contracts/
 infra/     docker-compose ופריטי DevOps
 ```
 
@@ -51,3 +51,13 @@ docker compose up --build
 - **api:** `cd server && dotnet run --project src/Api` → http://localhost:5080
 - **client:** `cd client && npm install && npm run dev` → http://localhost:5173
 - **db:** SQL Server מקומי; עדכנו `ConnectionStrings:SqlServer` ב‑`server/src/Api/appsettings.Development.json`.
+
+## בדיקות
+
+```bash
+cd server && dotnet test SupportPlatform.sln
+```
+
+Unit על מנוע השאילתות / מנסח השאלה / המנתח / `definitionHash`, ומסלול happy-path אחד מקצה‑לקצה
+(`HappyPathIntegrationTests`) מעל `WebApplicationFactory` + SQLite. בדיקות ידניות וקצוות:
+[`docs/TEST_PLAN.md`](docs/TEST_PLAN.md).

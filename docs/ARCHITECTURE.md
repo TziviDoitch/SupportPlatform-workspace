@@ -458,6 +458,24 @@ Fallback §7.6 המוצהר ונשארים יעד production.
 - **`SavedQuery`:** ה-scoping (owner + tenant) כבר נאכף ב-S5 ב-`SavedQueryRepository`; on save
   ה-`TenantId` של ה-definition נכפה לזה של הקורא. גישה חוצת-scope נשארת 404 (לא 403).
 
+### 8.2 בדיקות (מומש ב-S9)
+
+- **Unit** (`SupportPlatform.Application.Tests`, `SupportPlatform.Infrastructure.Tests`) על ליבת
+  הלוגיקה: `DynamicQueryBuilder` — כל שדה ב-Registry (`Every_code_list_registry_field_narrows_on_its_own_column`)
+  ודחיית שדה זר לפני כל handler · Aggregation (`SearchQueryExecutorTests`) · `QuestionTextRenderer`
+  כולל משפט הדוגמה מהמטלה · המנתח (`RuleBasedNlQueryProviderTests`, `HebrewTextTests`, `NlQueryServiceTests`)
+  · יציבות `definitionHash` תחת שינוי סדר (`DefinitionHasherTests`).
+- **Integration** — מסלול happy-path יחיד מקצה-לקצה מעל HTTP
+  (`SupportPlatform.Api.Tests/HappyPathIntegrationTests`): זהות (`X-User`) ⇒ `/api/metadata` ⇒
+  `/api/search` ⇒ `/api/saved-queries` ⇒ `/{id}/run` ⇒ `/api/nl-queries/parse`, כשכל שלב מזין
+  את הבא (ה-Registry בונה את ה-definition, ה-hash של ה-run שווה ל-hash של החיפוש הישיר).
+- **סביבת הטסטים:** SQLite in-memory, לא SQL Server אמיתי. `TestApiFactory`
+  (`WebApplicationFactory<Program>`) מחליף את ה-`DbContext` ומכבה dedup (`TtlSeconds = 0`) כדי
+  שהרצות זהות יישארו דטרמיניסטיות; `TestDb` עושה את המקביל ב-`Infrastructure.Tests`. ה-seed
+  הדטרמיניסטי (`DbSeeder`) משותף לשתי הסביבות.
+- **ידני:** [`TEST_PLAN.md`](TEST_PLAN.md) — תרחישי UI לכל מסך + קצוות (טווח הפוך, אפס תוצאות,
+  NL לא מזוהה, מחיקת שאילתה של משתמש אחר).
+
 ## 9. דיאגרמות
 
 ### 9.1 ERD

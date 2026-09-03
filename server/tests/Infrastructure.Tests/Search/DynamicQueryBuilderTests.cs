@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Domain.Entities;
@@ -107,6 +108,33 @@ public class DynamicQueryBuilderTests
             Assert.Equal(2025, r.SupportYear);
         });
     }
+
+    [Theory]
+    [InlineData("bodyType", "association")]
+    [InlineData("supportDomain", "culture")]
+    [InlineData("status", "approved")]
+    [InlineData("district", "north")]
+    public void Every_code_list_registry_field_narrows_on_its_own_column(string field, string code)
+    {
+        var arranged = Arrange();
+        using var db = arranged.Db;
+
+        var q = arranged.Builder.Apply(
+            db.Context.SupportRequests, Def((field, new FilterValue.Codes([code]))), arranged.Registry);
+
+        var expected = db.Context.SupportRequests.Count(ColumnEquals(field, code));
+        Assert.True(expected is > 0 and < 320, $"seed should partially match {field}={code}, got {expected}");
+        Assert.Equal(expected, q.Count());
+    }
+
+    private static Expression<Func<SupportRequest, bool>> ColumnEquals(string field, string code) => field switch
+    {
+        "bodyType" => r => r.SubmittingBody!.BodyTypeCode == code,
+        "supportDomain" => r => r.SupportDomainCode == code,
+        "status" => r => r.StatusCode == code,
+        "district" => r => r.SubmittingBody!.DistrictCode == code,
+        _ => throw new ArgumentOutOfRangeException(nameof(field), field, "not a code-list field")
+    };
 
     [Fact]
     public void An_unknown_field_id_is_rejected_before_any_handler_runs()

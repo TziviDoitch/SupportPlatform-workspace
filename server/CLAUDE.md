@@ -133,7 +133,10 @@ The connection string is read from `ConnectionStrings:SqlServer` (env `Connectio
 - Seed/fixture passwords are stored as deterministic hashes (`SeedPasswordHasher`) — never
   plaintext. S1 has no auth logic; JWT lands in S8.
 - Tests use SQLite (`TestApiFactory` for endpoints, `TestDb` in Infrastructure.Tests), not a
-  real SQL Server.
+  real SQL Server. Unit tests cover the query engine, `QuestionTextRenderer`, the NL parser and
+  `DefinitionHasher`; `Api.Tests/HappyPathIntegrationTests` is the single end-to-end chain
+  (metadata → search → save → run → nl-parse). Manual scenarios + edge cases live in
+  `docs/TEST_PLAN.md` — keep its "covered automatically" table in sync when you add a named edge test.
 - Errors: throw. The global `IExceptionHandler` (`Api/Errors`) maps `ValidationException` and
   `Application/Search/InvalidQueryException` to `400 validation`, everything else to `500`.
   Don't hand-build error responses. Correlation id via `CorrelationIdMiddleware`; Serilog console.
