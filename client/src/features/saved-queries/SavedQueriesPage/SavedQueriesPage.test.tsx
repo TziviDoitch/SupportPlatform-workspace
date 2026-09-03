@@ -59,15 +59,15 @@ vi.mock('../../../hooks/useMetadata', () => ({
 const { SavedQueriesPage } = await import('./SavedQueriesPage');
 
 describe('SavedQueriesPage', () => {
-  it('shows the full results table for a re-run, not just the summary', () => {
+  it('shows the same full results view as the search screen for a re-run', () => {
     render(
       <ConfigProvider locale={heIL}>
         <SavedQueriesPage />
       </ConfigProvider>,
     );
 
-    // summary headline
-    expect(screen.getByText(/12 רשומות/)).toBeTruthy();
+    // the server's readable question (QuestionPanel), same as the search screen
+    expect(screen.getByText(runResponse.questionText)).toBeTruthy();
     // full table: the segmentation label + the bucket row from the response
     expect(screen.getAllByText('שנת תמיכה').length).toBeGreaterThan(0);
     expect(screen.getByText('2023')).toBeTruthy();

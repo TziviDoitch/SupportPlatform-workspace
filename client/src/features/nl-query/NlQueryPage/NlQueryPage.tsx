@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Input, Space, Typography } from 'antd';
-import { BulbOutlined, SendOutlined } from '@ant-design/icons';
+import { BulbOutlined, EditOutlined, SendOutlined } from '@ant-design/icons';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import { PageLoader } from '../../../components/PageLoader';
+import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
 import { withPaging, withSort } from '../../../lib/queryDefinition';
-import { ResultsPanel } from '../../results/ResultsPanel';
+import { ResultsSection } from '../../results/ResultsSection';
 import { useSearch } from '../../results/hooks/useSearch';
 import { useMetadata } from '../../../hooks/useMetadata';
 import { InterpretationPanel } from '../InterpretationPanel';
@@ -21,10 +22,7 @@ export function NlQueryPage() {
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        <Space size={10}>
-          <BulbOutlined aria-hidden />
-          שאלה חופשית
-        </Space>
+        <SectionTitle icon={<BulbOutlined />}>שאלה חופשית</SectionTitle>
       </Typography.Title>
 
       {isLoading ? (
@@ -63,7 +61,7 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
 
   return (
     <Space direction="vertical" size={16} style={{ display: 'flex' }}>
-      <Card>
+      <Card title={<SectionTitle icon={<EditOutlined />}>ניסוח השאלה</SectionTitle>}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Input.TextArea
             rows={2}
@@ -94,7 +92,7 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
       )}
 
       {definition && (
-        <ResultsPanel
+        <ResultsSection
           response={data}
           error={error}
           isFetching={isFetching}

@@ -35,7 +35,7 @@ function renderForm(overrides: Partial<Parameters<typeof SearchForm>[0]> = {}) {
 describe('SearchForm', () => {
   it('renders one labelled control per registry entry, in order, plus a segmentation picker', () => {
     renderForm();
-    for (const label of ['סוג גוף', 'סטטוס', 'שנת תמיכה', 'פילוח']) {
+    for (const label of ['סוג גוף', 'סטטוס', 'שנת תמיכה', 'הוספת גרף לפי']) {
       expect(screen.getByText(label)).toBeTruthy();
     }
     // two code-list selects + from/to year selects + the segmentation select

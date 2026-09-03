@@ -336,12 +336,12 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 `features/saved-queries/`: `useSavedQueries` (TanStack Query — list + rename/delete/run) למסך עצמו,
 `useCreateSavedQuery` (mutation בלבד, בלי query — כדי ש-`SaveQueryButton` במסך החיפוש לא ימשוך את
 הרשימה), `SavedQueriesTable` (הרצה מחדש / שינוי שם / מחיקה לכל שורה), `RenameQueryModal`. שירות HTTP יחיד `savedQueriesApi` דרך
-`http` (נוספו `put` / `del`). הרצה מחדש מציגה כותרת סיכום מ-`summarizeRun` (`questionText` +
-מספר הרשומות + סכום מאושר + מספר קבוצות) **ומתחתיה את `ResultsPanel` המלא** — גרף + טבלה —
-מ-`SearchResponse` שחזר ומ-`definition` השמור (S7). עימוד/מיון לא מוצעים שם: `POST
-/{id}/run` לא מקבל override ל-`definition` (`api-contract.md` §5) — כוונון שאילתה נעשה במסך
-החיפוש. מנוע החיפוש הוא מנוע אגרגציה — שאילתה בלי `segmentation` מחזירה קבוצה אחת (הסך
-הכולל); לכן `lastRunRowCount` הוא מספר **קבוצות**, לא רשומות.
+`http` (נוספו `put` / `del`). הרצה מחדש מרנדרת את **אותו `ResultsSection`** של מסך החיפוש
+(משפט השאלה + גרף/גרפים + טבלה) במצב קריאה-בלבד, מ-`SearchResponse` שחזר ומ-`definition`
+השמור. עימוד/מיון לא מוצעים שם: `POST /{id}/run` לא מקבל override ל-`definition`
+(`api-contract.md` §5) — כוונון שאילתה נעשה במסך החיפוש. כותרת הטבלה מציגה את מספר הרשומות
+ואת סכום המאושר (סכימה על `aggregations`). מנוע החיפוש הוא מנוע אגרגציה — שאילתה בלי
+`segmentation` מחזירה קבוצה אחת (הסך הכולל); לכן `lastRunRowCount` הוא מספר **קבוצות**, לא רשומות.
 
 ### 6.3 מסך השאלה החופשית (מומש ב-S6)
 
@@ -357,11 +357,11 @@ registry ורשימות ייחוס שמזינות את הטופס — קריאה
 ### 6.4 גרף ולטישת UI (מומש ב-S7)
 
 - **גרף עמודות.** `components/BarChart` — עטיפה גנרית ל-`react-chartjs-2` (רישום מודולים
-  של `chart.js` פעם אחת, ללא ידע דומיין). `features/results/ResultsChart` מרנדר אותו רק
-  כשיש **פילוח יחיד** ולפחות קבוצה אחת; אחרת לא מרנדר כלום (הטבלה מכסה את שאר המצבים).
-  `buildChartData` (טהורה, בדוקה) ממפה `SearchResponse.aggregations` ל-`{labels, values}`:
-  התוויות נפתרות מרשימות הייחוס כמו הטופס, מטריקה = `count`. הגרף מתחלף עם הפילוח כי
-  המידע מגיע ישירות מהתשובה.
+  של `chart.js` פעם אחת, ללא ידע דומיין). פקד ה"הוספת גרף לפי" (הוא ה-`segmentation`)
+  מוסיף לכל שדה גם עמודה בטבלה וגם `ResultsChart` **לצד** הטבלה (`ResultsPanel` פורש
+  אותם ב-`Row`/`Col`, לעולם לא נופל לטבלה-בלבד). `buildCharts` (טהורה, בדוקה,
+  `buildChartData.ts`) ממפה את `SearchResponse.aggregations` ל-`ChartData[]` — לכל שדה,
+  סכימת `count` לכל דלי תוך מרג'ינליזציה על שאר השדות; התוויות נפתרות מרשימות הייחוס.
 - **`notificationHost`.** `http.ts` הוא לא-קומפוננטה, ולכן `api/notificationHost` מחזיק
   instance של `notification` מ-antd `<App>` (`App/NotificationBridge` רושם אותו ב-effect).
   כך באנרי השגיאה יורשים theme ו-RTL; מחוץ לעץ ה-UI (טסטים) יש נפילה ל-API הסטטי.

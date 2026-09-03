@@ -13,9 +13,9 @@ vi.mock('../../../components/BarChart', () => ({
 const data: ChartData = { labels: ['צפון', 'דרום'], values: [13, 4], seriesLabel: 'מחוז' };
 
 describe('ResultsChart', () => {
-  it('frames the pre-built series in a titled card', () => {
+  it('frames the pre-built series in a card titled by the field label', () => {
     render(<ResultsChart data={data} />);
-    expect(screen.getByText('גרף')).toBeTruthy();
+    expect(screen.getByText('מחוז')).toBeTruthy(); // card title = seriesLabel
     expect(screen.getByTestId('bar-chart').textContent).toBe('מחוז:צפון,דרום');
   });
 });

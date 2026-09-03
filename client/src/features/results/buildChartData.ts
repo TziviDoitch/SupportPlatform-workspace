@@ -5,39 +5,60 @@ import type { AggregationRow } from '../../models/search';
 export interface ChartData {
   labels: string[];
   values: number[];
-  /** Registry label of the single segmentation field — the dataset / axis title. */
+  /** Registry label of the segmentation field this chart is for — the card title + dataset label. */
   seriesLabel: string;
 }
 
-/** The metric the bar chart plots. Fixed to `count` in this PoC (one static chart, §7). */
+/** The metric the bar charts plot. Fixed to `count` in this PoC. */
 const CHART_METRIC = 'count';
 
 /**
- * Maps a search response's `aggregations` to bar-chart series. Returns `null` unless the query has
- * exactly one segmentation field and at least one group — the only shape a single bar chart can
- * show. Bucket labels are resolved through the same reference lists the form is built from; a
- * `yearRange` field has no reference list, so its numeric key is shown as-is.
+ * One bar chart per segmentation field: the marginal distribution of `count` over that field's
+ * buckets, summed across the other segmentation fields. Returns `[]` when there is nothing to plot
+ * (no groups, no segmentation, or none of the fields are in the registry).
+ *
+ * Summing the returned `aggregations` is exact because the server's groups partition the data and
+ * `count` is additive — and in this PoC every group fits on the first page (see `summarizeRun`).
+ * Bucket labels resolve through the same reference lists the form is built from; a `yearRange`
+ * field has no list, so its numeric key shows as-is.
  */
-export function buildChartData(
+export function buildCharts(
   aggregations: AggregationRow[],
   segmentation: string[],
   registry: FilterFieldRegistryEntry[],
   references: References,
-): ChartData | null {
-  if (segmentation.length !== 1 || aggregations.length === 0) return null;
+): ChartData[] {
+  if (aggregations.length === 0) return [];
 
-  const fieldId = segmentation[0];
-  const entry = registry.find((e) => e.id === fieldId);
-  if (!entry) return null;
+  const charts: ChartData[] = [];
 
-  const refList = entry.referenceList ? references[entry.referenceList] : undefined;
+  for (const fieldId of segmentation) {
+    const entry = registry.find((e) => e.id === fieldId);
+    if (!entry) continue;
 
-  const labels: string[] = [];
-  const values: number[] = [];
-  for (const agg of aggregations) {
-    labels.push(labelForCode(refList, agg.key[fieldId]));
-    values.push(Number(agg.metrics[CHART_METRIC] ?? 0));
+    const refList = entry.referenceList ? references[entry.referenceList] : undefined;
+
+    // Sum the metric per bucket, keyed by the raw code so distinct codes never merge.
+    const totals = new Map<string, { label: string; value: number }>();
+    for (const agg of aggregations) {
+      const raw = agg.key[fieldId];
+      if (raw === undefined) continue;
+      const code = String(raw);
+      const current = totals.get(code);
+      const add = Number(agg.metrics[CHART_METRIC] ?? 0);
+      if (current) current.value += add;
+      else totals.set(code, { label: labelForCode(refList, raw), value: add });
+    }
+
+    if (totals.size === 0) continue;
+
+    const buckets = [...totals.values()];
+    charts.push({
+      labels: buckets.map((b) => b.label),
+      values: buckets.map((b) => b.value),
+      seriesLabel: entry.label,
+    });
   }
 
-  return { labels, values, seriesLabel: entry.label };
+  return charts;
 }

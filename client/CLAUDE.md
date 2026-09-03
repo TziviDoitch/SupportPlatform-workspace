@@ -33,9 +33,13 @@ test/setup.ts  Vitest setup — RTL cleanup + ResizeObserver/matchMedia stubs fo
 
 Search results are shown **inline on `SearchPage`** — there is no `/results` route (removed in S3;
 S7 kept it inline and added the chart to `ResultsPanel` instead). The app theme (antd tokens) lives
-in `src/theme.ts` and is applied once via `ConfigProvider` in `main.tsx`. `features/results/` holds the
-results components (`ResultsTable`, `ResultsPanel`, `ResultsChart`, `QuestionPanel`), `useSearch`,
-and the pure `buildChartData`.
+in `src/theme.ts` and is applied once via `ConfigProvider` in `main.tsx`; cards are borderless with a
+faint dark-purple `boxShadowTertiary`, and `components/SectionTitle` renders the dark-purple leading
+icon used by every card title and page heading. `features/results/` holds the results components
+(`ResultsSection`, `ResultsPanel`, `ResultsTable`, `ResultsChart`, `QuestionPanel`), `useSearch`, and
+the pure `buildCharts` (`buildChartData.ts`). **Every screen that shows search results renders
+`ResultsSection`** (search / nl-query / saved-queries re-run) so they look identical — question panel,
+a spinner until the first response, then the table with a chart per graph field.
 
 ## Routing
 
@@ -103,11 +107,13 @@ npm run lint         # oxlint
 - Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into a
   `withPaging` / `withSort` patch on `submitted`; `SearchResponse.page.totalRows` drives the pager.
 - `questionText` always comes from the server (`POST /api/search`) — no client-side Hebrew renderer.
-- `ResultsPanel` lays the table and the chart **side by side** (antd `Row`/`Col`, stacked on
-  narrow). It calls `buildChartData` (pure, in `features/results/`) — the single aggregations →
-  `{labels, values}` mapping — to decide whether a chart applies (exactly one segmentation field)
-  and passes the result to `ResultsChart`. Unit-test chart logic in `buildChartData`, not the
-  component. `components/BarChart` is a generic `react-chartjs-2` wrapper (registers `chart.js` once).
+- The segmentation control is labelled **"הוספת גרף לפי"**: each field it adds gets a bucket column
+  in the table **and** a bar chart. `ResultsPanel` lays the table first, then one `ResultsChart` per
+  field **beside** it (antd `Row`/`Col`, wraps; stacks on narrow) — it never falls back to a
+  table-only view. `buildCharts` (pure, `buildChartData.ts`) is the single aggregations → per-field
+  `ChartData[]` mapping: for each field it sums `count` per bucket, marginalising over the other
+  fields. Unit-test chart logic there, not in the component. `components/BarChart` is a generic
+  `react-chartjs-2` wrapper (registers `chart.js` once).
 - `YearRangeField` is two year `Select`s (2000 – next year), "to" hiding years before "from" — no
   free-form number inputs. The server still validates the range.
 
@@ -118,14 +124,11 @@ npm run lint         # oxlint
   query) so `SaveQueryButton` on the search screen doesn't also fetch the list. `SavedQueriesTable`
   (per-row re-run / rename / delete), `RenameQueryModal` (parent keys it by query id — no sync
   effect), `SaveQueryButton` saves `form.definition`.
-- `savedQueriesApi` is the only HTTP caller. Re-run returns a `SearchResponse`; `summarizeRun`
-  turns it into `{ records, approved, groups }` — records is the `count` metric summed over the
-  returned groups (all groups fit one page in this PoC), groups is `page.totalRows`. Note the search
-  engine aggregates: no `segmentation` ⇒ one group ⇒ `lastRunRowCount` is a group count, not a
-  record count.
-- Since S7 the re-run shows the summary headline **and** the full `ResultsPanel` (chart + table),
-  built from the response + the row's stored `definition` + `useMetadata`. No paging/sort there —
-  `POST /{id}/run` takes no definition override; adjust a query on the search screen.
+- `savedQueriesApi` is the only HTTP caller. Re-run returns a `SearchResponse`; the screen renders
+  the **same `ResultsSection`** the search screen uses (question + chart(s) + table), read-only —
+  `POST /{id}/run` takes no definition override, so no paging/sort; adjust a query on the search
+  screen. `ResultsTable`'s header shows the record count and, when `sumAmountApproved` is a metric,
+  the total approved (summed over `aggregations`; all groups fit one page in this PoC).
 - Scope errors are 404s surfaced by `http.ts` like any other `ApiError` — no special handling.
 
 ## The NL slice (S6)

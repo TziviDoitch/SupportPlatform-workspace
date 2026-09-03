@@ -3,12 +3,12 @@ import { Alert, Card, Space, Typography } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import { PageLoader } from '../../../components/PageLoader';
+import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
 import { withPaging, withSort } from '../../../lib/queryDefinition';
 import { SaveQueryButton } from '../../saved-queries/SaveQueryButton';
-import { QuestionPanel } from '../../results/QuestionPanel';
-import { ResultsPanel } from '../../results/ResultsPanel';
+import { ResultsSection } from '../../results/ResultsSection';
 import { useSearch } from '../../results/hooks/useSearch';
 import { SearchForm } from '../SearchForm';
 import { useMetadata } from '../../../hooks/useMetadata';
@@ -21,10 +21,7 @@ export function SearchPage() {
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        <Space size={10}>
-          <SearchOutlined aria-hidden />
-          חיפוש בקשות תמיכה
-        </Space>
+        <SectionTitle icon={<SearchOutlined />}>חיפוש בקשות תמיכה</SectionTitle>
       </Typography.Title>
 
       {isLoading ? (
@@ -72,8 +69,7 @@ function SearchView({ metadata }: { metadata: MetadataResponse }) {
 
       {submitted && (
         <Space direction="vertical" size={16} style={{ display: 'flex' }}>
-          <QuestionPanel text={data?.questionText} isFetching={isFetching} />
-          <ResultsPanel
+          <ResultsSection
             response={data}
             error={error}
             isFetching={isFetching}

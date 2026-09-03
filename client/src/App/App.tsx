@@ -10,14 +10,15 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { ErrorBoundary } from './ErrorBoundary';
 import { NotificationBridge } from './NotificationBridge';
 import { routes } from './routes';
+import { SECTION_ICON_COLOR } from '../theme';
 
 const { Header, Content } = Layout;
 
 /** Nav icon per route path — kept here so `routes.tsx` stays a plain data list. */
 const NAV_ICONS: Record<string, ReactNode> = {
-  '/search': <SearchOutlined aria-hidden />,
-  '/saved-queries': <StarOutlined aria-hidden />,
-  '/nl-query': <BulbOutlined aria-hidden />,
+  '/search': <SearchOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />,
+  '/saved-queries': <StarOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />,
+  '/nl-query': <BulbOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />,
 };
 
 export function App() {
