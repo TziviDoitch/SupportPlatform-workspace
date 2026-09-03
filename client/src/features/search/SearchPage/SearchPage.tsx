@@ -46,6 +46,7 @@ function SearchView({ metadata }: { metadata: MetadataResponse }) {
         error={error}
         isFetching={isFetching}
         registry={metadata.filterFieldRegistry}
+        references={metadata.references}
         definition={definition}
         onPageChange={form.setPage}
         onSortChange={form.setSort}

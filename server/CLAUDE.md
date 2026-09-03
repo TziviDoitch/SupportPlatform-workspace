@@ -55,6 +55,8 @@ CRUD + re-run, scoped to owner + tenant; out-of-scope ⇒ 404).
 · `POST /api/nl-queries/parse` (S6 — free text ⇒ `{ definition, interpretationText, confidence,
 unresolved }`).
 Every request echoes an `X-Correlation-Id` header; errors are `application/problem+json`.
+`src/Api/SupportPlatform.Api.http` has a ready request per endpoint (S7); Swagger UI at `/swagger`
+in Development lists them all.
 
 Caller identity (S5, PoC seam): `ICurrentUser` (`Application/Identity`) — `Username` / `TenantId`
 / `Role` / `CorrelationId`. Impl `HttpCurrentUser` (`Api/Identity`) reads the `X-User` header and

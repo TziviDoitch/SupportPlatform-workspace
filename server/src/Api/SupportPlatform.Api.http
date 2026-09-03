@@ -1,6 +1,97 @@
 @SupportPlatform.Api_HostAddress = http://localhost:5080
+@tenantId = culture-sport-admin
+@user = sarah
 
+### Health
 GET {{SupportPlatform.Api_HostAddress}}/health
 Accept: text/plain
 
-###
+### Metadata — reference lists + filter-field registry that build the search form
+GET {{SupportPlatform.Api_HostAddress}}/api/metadata?tenantId={{tenantId}}
+X-User: {{user}}
+
+### Search — a QueryDefinition; response has questionText / rows / aggregations / page / executionMeta
+POST {{SupportPlatform.Api_HostAddress}}/api/search
+Content-Type: application/json
+X-User: {{user}}
+
+{
+  "tenantId": "{{tenantId}}",
+  "filters": {
+    "bodyType": ["association"],
+    "supportDomain": ["culture"],
+    "status": ["approved"],
+    "supportYear": { "type": "single", "value": 2024 }
+  },
+  "segmentation": ["district"],
+  "metrics": ["count", "sumAmountApproved"],
+  "paging": { "pageSize": 50, "pageNumber": 1 },
+  "sort": [{ "field": "district", "direction": "asc" }]
+}
+
+### NL parse — free text -> reviewable QueryDefinition (+ interpretation). Does NOT run the query.
+POST {{SupportPlatform.Api_HostAddress}}/api/nl-queries/parse
+Content-Type: application/json
+X-User: {{user}}
+
+{
+  "text": "כמה עמותות בתחום התרבות אושרו בשנת 2024 לפי מחוז",
+  "tenantId": "{{tenantId}}"
+}
+
+### Saved queries — list (scoped to owner + tenant)
+GET {{SupportPlatform.Api_HostAddress}}/api/saved-queries
+X-User: {{user}}
+
+### Saved queries — create; capture the new id for the calls below
+# @name createSavedQuery
+POST {{SupportPlatform.Api_HostAddress}}/api/saved-queries
+Content-Type: application/json
+X-User: {{user}}
+
+{
+  "name": "עמותות תרבות מאושרות לפי מחוז",
+  "definition": {
+    "tenantId": "{{tenantId}}",
+    "filters": {
+      "bodyType": ["association"],
+      "supportDomain": ["culture"],
+      "status": ["approved"]
+    },
+    "segmentation": ["district"],
+    "metrics": ["count"],
+    "paging": { "pageSize": 50, "pageNumber": 1 },
+    "sort": []
+  }
+}
+
+@savedQueryId = {{createSavedQuery.response.body.id}}
+
+### Saved queries — get one
+GET {{SupportPlatform.Api_HostAddress}}/api/saved-queries/{{savedQueryId}}
+X-User: {{user}}
+
+### Saved queries — update (rename / redefine)
+PUT {{SupportPlatform.Api_HostAddress}}/api/saved-queries/{{savedQueryId}}
+Content-Type: application/json
+X-User: {{user}}
+
+{
+  "name": "עמותות תרבות מאושרות — לפי מחוז",
+  "definition": {
+    "tenantId": "{{tenantId}}",
+    "filters": { "bodyType": ["association"], "supportDomain": ["culture"], "status": ["approved"] },
+    "segmentation": ["district"],
+    "metrics": ["count"],
+    "paging": { "pageSize": 50, "pageNumber": 1 },
+    "sort": []
+  }
+}
+
+### Saved queries — re-run; returns a full SearchResponse and bumps last_run
+POST {{SupportPlatform.Api_HostAddress}}/api/saved-queries/{{savedQueryId}}/run
+X-User: {{user}}
+
+### Saved queries — delete
+DELETE {{SupportPlatform.Api_HostAddress}}/api/saved-queries/{{savedQueryId}}
+X-User: {{user}}
