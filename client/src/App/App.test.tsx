@@ -5,8 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { queryClient } from '../state/queryClient';
 import { App } from './App';
 
-// The search screen fetches /api/metadata on mount; the shell tests don't exercise that path.
+// The feature screens fetch on mount; the shell tests don't exercise those paths.
 vi.mock('../api/metadataApi', () => ({ metadataApi: { get: () => new Promise(() => {}) } }));
+vi.mock('../api/savedQueriesApi', () => ({ savedQueriesApi: { list: () => new Promise(() => {}) } }));
 
 function renderAt(path: string) {
   return render(
@@ -27,10 +28,10 @@ describe('App shell', () => {
     expect(screen.queryByRole('menuitem', { name: 'תוצאות' })).toBeNull();
   });
 
-  it('renders the placeholder feature routes', () => {
+  it('mounts each feature route with its heading', () => {
     for (const [path, heading] of [
-      ['/saved-queries', 'שאילתות שמורות'],
-      ['/nl-query', 'שאלה חופשית'],
+      ['/saved-queries', 'שאילתות שמורות'], // real screen since S5
+      ['/nl-query', 'שאלה חופשית'], // still a placeholder
     ] as const) {
       renderAt(path);
       expect(screen.getByRole('heading', { name: heading })).toBeTruthy();

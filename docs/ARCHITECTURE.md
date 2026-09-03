@@ -87,10 +87,11 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 |---|---|---|---|
 | **Metadata** | מומש (S1) | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
 | **Search** | מומש (S2–S3) | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
-| **Identity** | יעד (S8) | login → JWT/`X-User` → זיהוי משתמש → פתירת `TenantId` → הרשאה | קיימת ישות `User` בלבד (§8.1). אין `AuthController`, אין token |
-| **SavedQueries** | יעד (S5) | CRUD על שאילתות שמורות (scoped ל-owner+tenant) + `POST /{id}/run` + `last_run` | חוזה ב-`api-contract.md` §5; טרם מומש |
+| **Identity** | חלקי (S5 seam; JWT ב-S8) | login → JWT/`X-User` → זיהוי משתמש → פתירת `TenantId` → הרשאה | `ICurrentUser` (Application) + `HttpCurrentUser` (Api, קורא `X-User`, ברירת מחדל seed user). אין `AuthController`/token/role check עד S8 (§8.1) |
+| **Search** (dedup) | מומש (S5) | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
+| **SavedQueries** | מומש (S5) | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
 | **NlQuery** | יעד (S6) | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryTranslator` + Factory | חוזה ב-`api-contract.md` §4; טרם מומש |
-| **Audit** | יעד (S5) | `IAuditService` — קריאות מפורשות ב-handlers (לא interceptor) על mutations + search | טרם מומש |
+| **Audit** | מומש (S5) | `IAuditService.Record(...)` — קריאות מפורשות ב-services (לא interceptor) על mutations + search | `AuditService` (Infrastructure) → `audit_log` (§5.2) |
 
 חתכים רוחביים (Correlation Id, Serilog, ProblemDetails, Validation) משותפים לכל
 המודולים ומפורטים ב-§8.
@@ -199,14 +200,41 @@ Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת
   `e => tenant.HasTenant && e.TenantId == tenant.TenantId`. בלי tenant context מוגדר —
   אפס שורות, לא "הכל". גישה חוצת-tenant רק דרך `IgnoreQueryFilters()` מפורש (טסטים / admin).
   `ITenantContext` נקבע ב-S1 מפרמטר הפיתוח `?tenantId=`; ב-S8 מהמשתמש המאומת.
-- **Migration:** `InitialCreate` תחת `Infrastructure/Persistence/Migrations/`. כלי:
-  `dotnet-ef` כ-local tool (`server/.config/dotnet-tools.json`).
+- **Migrations:** `InitialCreate` · `TenantAndReferenceFkDeleteBehavior` · `SavedQueriesAndAudit`
+  (S5 — additive: רק `saved_queries` + `audit_log`, ללא שינוי טבלה קיימת) תחת
+  `Infrastructure/Persistence/Migrations/`. כלי: `dotnet-ef` כ-local tool
+  (`server/.config/dotnet-tools.json`).
 - **Seed (`DbSeeder`, דטרמיניסטי ו-idempotent):** שורות ייחוס + 5 שורות registry (מ-`metadata-model.md`
   מילה במילה) · 2 tenants (`culture-sport-admin`, `welfare-admin`) · 3 משתמשי seed עם hash דטרמיניסטי
   (`SeedPasswordHasher`, PBKDF2-SHA256, ללא סיסמאות גולמיות) · ~40 `submitting_bodies` · ~500
   `support_requests` בהתפלגות מכוונת (שנים 2023–2025 30/40/30, סטטוס 55/25/20, תחום 60/40, שני tenants
   320/180). מופעל ב-`Program.cs` ב-Development בלבד (`Migrate()` + `Seed()`).
 - **`?tenantId=` הוא חוזה פיתוח זמני ל-S1** — ראה §8.
+
+### 5.2 שאילתות שמורות, Audit ו-dedup (מומש ב-S5)
+
+**זהות הקורא (seam).** `ICurrentUser` (Application: `Username` / `TenantId` / `Role` /
+`CorrelationId`) עם מימוש `HttpCurrentUser` (Api) שקורא את הכותרת `X-User` ומאתר את שורת
+ה-`users` ה-seeded; כותרת חסרה או לא מוכרת → ברירת המחדל `sarah`. זה חוזה ה-PoC
+מ-`api-contract.md` §Auth; JWT ובדיקת role אמיתית — S8. אין הרשאה מעבר ל-scoping של
+owner + tenant.
+
+**`saved_queries`.** `SavedQueryService` (Application) מבצע CRUD + `run`; `SavedQueryRepository`
+(Infrastructure) מסנן **תמיד** לפי `OwnerUsername` + `TenantId`. גישה לרשומה מחוץ ל-scope →
+`NotFoundException` → 404 (לא 403 — לא מדליף קיום, `api-contract.md` §5). ה-`definition`
+נשמר כ-JSON קנוני + `DefinitionHash`, ומאומת ב-POST/PUT דרך אותו `IValidator<QueryDefinition>`
+כמו `/api/search`. `run` מריץ דרך `ISearchService`, מעדכן `LastRunAt` / `LastRunRowCount`.
+
+**Dedup (`DESIGN_QA` §5).** `SearchService` מחשב `DefinitionHasher.Hash` (מפתחות filters,
+codes ו-metrics ממוינים; `segmentation`/`sort` נשמרים כסדרם) ומשתמש בו כמפתח `IMemoryCache`.
+פגיעה → מוחזרת התוצאה השמורה עם `executionMeta.cacheHit = true`. TTL מ-`Search:CacheTtlSeconds`
+(ברירת מחדל 60ש'); `0` מכבה dedup לגמרי (מנוף ה-fallback §7.3). ה-cache הוא per-instance
+בזיכרון — מכוון ל-PoC.
+
+**`audit_log`.** `IAuditService.Record(action, entityType, entityId, payload)` — קריאות
+מפורשות ב-services (לא EF interceptor): `search` על כל חיפוש, ו-`create`/`update`/`delete`/`run`
+על שאילתות שמורות. `AuditService` (Infrastructure) חותם `User` + `CorrelationId` מ-`ICurrentUser`
+ושומר `payload` כ-JSON. `occurred_at` מאונדקס.
 
 ## 6. Client
 
@@ -240,8 +268,15 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
   `metrics`, וממפה את `onChange` של `antd` Table ל-`paging` / `sort` ב-`QueryDefinition`;
   `page.totalRows` מזין את סה"כ העמודים. מצבי loading / empty / error מטופלים
   (`ResultsPanel` — באנר שגיאה עם `traceId`; ריק / טעינה — ברירת המחדל של הטבלה).
-- **Tenant.** `DEFAULT_TENANT_ID` קבוע זמני (`api/config.ts`) — אין `login` עדיין; S8
-  יחליף אותו בזהות המאומתת.
+- **Tenant + user.** `DEFAULT_TENANT_ID` ו-`DEFAULT_USER` קבועים זמניים (`api/config.ts`);
+  `http.ts` שולח `X-User` בכל בקשה. אין `login` עדיין — S8 יחליף בזהות המאומתת.
+
+### 6.2 מסך שאילתות שמורות (מומש ב-S5)
+
+`features/saved-queries/`: `useSavedQueries` (TanStack Query — list + rename/delete/run) למסך עצמו,
+`useCreateSavedQuery` (mutation בלבד, בלי query — כדי ש-`SaveQueryButton` במסך החיפוש לא ימשוך את
+הרשימה), `SavedQueriesTable` (הרצה מחדש / שינוי שם / מחיקה לכל שורה), `RenameQueryModal`. שירות HTTP יחיד `savedQueriesApi` דרך
+`http` (נוספו `put` / `del`). הרצה מחדש מציגה את `questionText` + סה"כ שורות מהתשובה.
 
 ## 7. הרחבה עתידית
 
@@ -306,8 +341,9 @@ reference_domains: { code: "education", label: "חינוך" }
   מתועד. ה-`type`/`title` מ-`ProblemTypes`.
 - **Validation** — FluentValidation על `QueryDefinition`, נבדק ב-service לפני שימוש.
 
-עדיין לפי הבנייה: Auth (JWT / `X-User` + role check) — S8 · Audit Log · caching/dedup
-(`definitionHash` כבר מחושב ב-`executionMeta`, ה-cache עצמו — S5).
+נוספו ב-S5: **Audit Log** (`IAuditService.Record`, קריאות מפורשות — §5.2) · **caching/dedup**
+(`definitionHash` → `IMemoryCache` — §5.2) · **seam זהות** (`ICurrentUser` מ-`X-User`).
+עדיין לפי הבנייה: Auth מלא (JWT + הנפקת token + role check) — S8.
 
 ### 8.1 גבול האימות (יעד S8; ב-S1 רק הנתונים)
 
@@ -393,9 +429,31 @@ erDiagram
         bool Segmentable
         int SortOrder
     }
+    saved_queries {
+        guid Id PK
+        string Name
+        string DefinitionJson "canonical QueryDefinition"
+        string DefinitionHash
+        string OwnerUsername "scope: owner + tenant"
+        string TenantId
+        datetimeoffset CreatedAt
+        datetimeoffset LastRunAt "nullable"
+        int LastRunRowCount "nullable"
+    }
+    audit_log {
+        guid Id PK
+        string User
+        string Action "search | create | update | delete | run"
+        string EntityType
+        string EntityId "nullable"
+        datetimeoffset OccurredAt
+        string CorrelationId
+        string Payload "JSON, nullable"
+    }
 ```
 
-> ישויות של שלבים הבאים (`saved_queries`, `audit_log`) — יעד S5, לא במודל הנוכחי.
+> `saved_queries` ו-`audit_log` נוספו ב-S5 (§5.2). אין להן FK ל-`tenants`/`users` — ה-scoping
+> נאכף מפורשות ב-repository / service, לא דרך Global Query Filter.
 
 ### 9.2 Container diagram
 
@@ -472,10 +530,21 @@ DESIGN_QA §4.
 ### 8. חתכים רוחביים מוזרקים ב-S2 יחד עם `/search`
 
 Correlation Id + Serilog + ProblemDetails (RFC 7807) נכנסו כשהיה endpoint אמיתי
-לתלות בו (§8), לא כתשתית מוקדמת בלי צרכן. Auth, Audit, ו-cache נשארים seams עד
-השלב שבו הם נדרשים (S5/S8) — §3.2 בתוכנית, "אפס over-engineering".
+לתלות בו (§8), לא כתשתית מוקדמת בלי צרכן. **Audit ו-cache נכנסו ב-S5** עם הצרכן הראשון
+שלהם (שאילתות שמורות + חיפוש חוזר); Auth מלא נשאר seam עד S8 — §3.2 בתוכנית,
+"אפס over-engineering".
 
 ### 9. הלקוח בונה `QueryDefinition`, השרת מנסח את השאלה
 
 `buildQueryDefinition` (טהור) בלקוח בונה את המבנה; `questionText` מגיע תמיד מהשרת
 (`QuestionTextRenderer`) — אין renderer עברית שני בלקוח (§6.1). מקור אמת אחד למשפט.
+
+### 10. זהות PoC דרך `X-User`, scoping ב-service, לא interceptor (S5)
+
+שאילתות שמורות ו-audit דורשים "מי הקורא". במקום JWT מוקדם (S8), `ICurrentUser` נגזר
+מכותרת `X-User` מול ה-seed users, עם ברירת מחדל. ה-scoping (owner + tenant) נאכף
+מפורשות ב-`SavedQueryRepository`/`SavedQueryService`, וה-audit נכתב בקריאות
+`IAuditService.Record` מפורשות מה-service — **לא** EF `SaveChanges` interceptor: הקריאה
+המפורשת נראית בקוד ה-use-case, נושאת payload סמנטי, ולא מפעילה audit על כתיבות פנימיות.
+**חלופה שנדחתה:** interceptor גלובלי — "קסום", קשה לצרף לו action/payload נכונים, וכותב
+גם על שמירת שורת ה-audit עצמה.

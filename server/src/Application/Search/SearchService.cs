@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using FluentValidation;
+using Microsoft.Extensions.Caching.Memory;
+using SupportPlatform.Application.Auditing;
 using SupportPlatform.Application.Search.Interfaces;
 
 namespace SupportPlatform.Application.Search;
@@ -8,12 +10,19 @@ namespace SupportPlatform.Application.Search;
 /// The S2 use case: validate a <see cref="QueryDefinition"/>, run it, and shape the response
 /// (question text, rows, aggregations, paging, execution meta). All business decisions for
 /// <c>POST /api/search</c> live here; the controller only forwards.
+///
+/// S5 adds dedup: identical definitions (by canonical <see cref="DefinitionHasher"/> hash) are
+/// served from an in-memory cache with <c>executionMeta.cacheHit = true</c>, and every run is
+/// recorded via <see cref="IAuditService"/>.
 /// </summary>
 public sealed class SearchService(
     ISearchMetadataProvider metadata,
     IValidator<QueryDefinition> validator,
     ISearchQueryExecutor executor,
-    QuestionTextRenderer questionText) : ISearchService
+    QuestionTextRenderer questionText,
+    IMemoryCache cache,
+    SearchCacheOptions cacheOptions,
+    IAuditService audit) : ISearchService
 {
     public async Task<SearchResponse> Search(QueryDefinition definition, CancellationToken ct = default)
     {
@@ -21,6 +30,19 @@ public sealed class SearchService(
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
 
+        var hash = DefinitionHasher.Hash(definition);
+        var caching = cacheOptions.TtlSeconds > 0;
+
+        var response = caching && cache.TryGetValue(hash, out SearchResponse? cached) && cached is not null
+            ? cached with { ExecutionMeta = cached.ExecutionMeta with { CacheHit = true } }
+            : await Run(definition, hash, caching, ct);
+
+        await audit.Record("search", "QueryDefinition", null, definition, ct);
+        return response;
+    }
+
+    private async Task<SearchResponse> Run(QueryDefinition definition, string hash, bool caching, CancellationToken ct)
+    {
         var meta = await metadata.Get(ct);
 
         var watch = Stopwatch.StartNew();
@@ -30,7 +52,7 @@ public sealed class SearchService(
 
         var metrics = definition.EffectiveMetrics;
 
-        return new SearchResponse(
+        var response = new SearchResponse(
             QuestionText: questionText.Render(definition, meta.Snapshot),
             Rows: execution.Buckets.Select(b => Row(b, metrics)).ToList(),
             Aggregations: execution.Buckets
@@ -41,7 +63,11 @@ public sealed class SearchService(
                 DurationMs: watch.ElapsedMilliseconds,
                 RowCount: execution.Buckets.Count,
                 CacheHit: false,
-                DefinitionHash: DefinitionHasher.Hash(definition)));
+                DefinitionHash: hash));
+
+        if (caching)
+            cache.Set(hash, response, cacheOptions.Ttl);
+        return response;
     }
 
     private static IReadOnlyDictionary<string, object> Metrics(AggregateBucket bucket, IReadOnlyList<string> requested)

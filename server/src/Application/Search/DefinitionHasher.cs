@@ -5,9 +5,10 @@ using System.Text.Json;
 namespace SupportPlatform.Application.Search;
 
 /// <summary>
-/// Canonical SHA-256 of a <see cref="QueryDefinition"/> — filter keys and list items are ordered
-/// so logically equal definitions hash the same. Feeds <c>executionMeta.definitionHash</c>; the
-/// full canonicalization/cache story is S5.
+/// Canonical SHA-256 of a <see cref="QueryDefinition"/> — filter keys, filter codes and metrics
+/// are ordered so logically equal definitions hash the same, while order-significant lists
+/// (<c>segmentation</c>, <c>sort</c>) are kept as-is. Feeds <c>executionMeta.definitionHash</c>
+/// and is the key for the S5 search cache.
 /// </summary>
 public static class DefinitionHasher
 {

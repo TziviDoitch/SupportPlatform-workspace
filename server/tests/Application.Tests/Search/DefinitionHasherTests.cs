@@ -41,6 +41,32 @@ public class DefinitionHasherTests
     }
 
     [Fact]
+    public void Code_order_within_a_filter_does_not_change_the_hash()
+    {
+        var a = Def(new Dictionary<string, FilterValue>
+        {
+            ["status"] = new FilterValue.Codes(["approved", "pending"])
+        });
+        var b = Def(new Dictionary<string, FilterValue>
+        {
+            ["status"] = new FilterValue.Codes(["pending", "approved"])
+        });
+
+        Assert.Equal(DefinitionHasher.Hash(a), DefinitionHasher.Hash(b));
+    }
+
+    [Fact]
+    public void Metric_order_does_not_change_the_hash()
+    {
+        var filters = new Dictionary<string, FilterValue> { ["status"] = new FilterValue.Codes(["approved"]) };
+
+        var a = Def(filters) with { Metrics = ["count", "sumAmountApproved"] };
+        var b = Def(filters) with { Metrics = ["sumAmountApproved", "count"] };
+
+        Assert.Equal(DefinitionHasher.Hash(a), DefinitionHasher.Hash(b));
+    }
+
+    [Fact]
     public void Different_definitions_hash_differently()
     {
         var a = Def(new Dictionary<string, FilterValue> { ["status"] = new FilterValue.Codes(["approved"]) });

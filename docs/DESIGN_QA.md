@@ -67,22 +67,24 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 **הגישה:** שתי שכבות — RBAC (מה מותר לתפקיד) + data-scoping (על אילו שורות).
 העיקרון: least-privilege, נאכף בשרת בלבד, לעולם לא בסמכות הלקוח.
 
-**מומש (S1–S3):**
+**מומש (S1–S5):**
 
 - data-scoping ברמת ה-tenant — ה-Global Query Filter (שאלה 2). זו כבר הפרדת גופים
   אכיפה: משתמש של `welfare-admin` לא יכול לראות שורות של `culture-sport-admin`
   גם אם ינחש מזהים.
-- ל-`User` יש שדה `Role` במודל (`Domain/Entities/User.cs`), עדיין בלי לוגיקה
-  שנשענת עליו.
+- **ownership scoping (S5):** שאילתה שמורה שייכת ל-`OwnerUsername` + `TenantId`;
+  `SavedQueryRepository` מסנן תמיד לפי שניהם, ופעולה על רשומה מחוץ ל-scope מחזירה
+  **404** (לא 403 — לא מדליף קיום, `api-contract.md` §5).
+- **seam זהות (S5):** `ICurrentUser` נגזר מכותרת `X-User` (`ARCHITECTURE.md` §5.2).
+- ל-`User` יש שדה `Role` במודל, עדיין בלי לוגיקה שנשענת עליו.
 
 **הצעד הבא (S8):**
 
 - אימות → זהות → תפקיד: `login` → אימות מול `User.PasswordHash` → JWT עם
   `tenantId` + `role` → אכיפה ב-`ICurrentUser` + policy/authorization ב-controller
-  (`ARCHITECTURE.md` §8.1).
-- scoping דק יותר מ-tenant: ownership (שאילתה שמורה שייכת ל-`ownerUsername`,
-  פעולה על של אחר → 404 ולא 403 כדי לא לחשוף קיום — `api-contract.md` §5),
-  ואופציונלית scoping לפי `supportDomain` (למשל רפרנט תרבות לא רואה ספורט).
+  (`ARCHITECTURE.md` §8.1). ה-`X-User` של S5 הופך למקור לא-מהימן.
+- scoping דק יותר מ-tenant: אופציונלית לפי `supportDomain` (למשל רפרנט תרבות לא
+  רואה ספורט).
 - בדיקת role אחת קונקרטית שתדגים הפרדה (§6 S8 "רזה: `X-User` header").
 
 **איפה זה נאכף:** תמיד ב-Application/Infrastructure — הבנאי הדינמי מקבל את ה-tenant
@@ -119,24 +121,22 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 **הגישה:** hash קנוני של ה-`QueryDefinition` כמפתח cache + מטא-דאטה של הרצה
 אחרונה + debounce בלקוח.
 
-**מומש (S2–S3):**
+**מומש (S2–S5):**
 
-- `DefinitionHasher` (`Application/Search/`) מחשב SHA-256 של ה-definition ומחזיר
-  אותו כ-`executionMeta.definitionHash` בכל תשובת `/search`.
-- הלקוח כבר עושה debounce (~400ms, `useDebouncedValue`) לפני שהוא שולח בקשה בזמן
-  הקלדה בטופס (`ARCHITECTURE.md` §6.1).
+- `DefinitionHasher` (`Application/Search/`) מחשב SHA-256 **קנוני** של ה-definition:
+  מפתחות `filters`, ה-codes בתוך כל ערך, ו-`metrics` ממוינים; `segmentation` ו-`sort`
+  נשמרים כסדרם (הסדר משמעותי לתוצאה). `[]` ו-`["count"]` נותנים אותו hash. מוחזר
+  כ-`executionMeta.definitionHash` בכל תשובת `/search`.
+- **`IMemoryCache` עם TTL (S5):** `SearchService` בודק את ה-hash לפני הרצה; פגיעה →
+  מוחזרת התוצאה השמורה עם `executionMeta.cacheHit = true`. TTL מ-`Search:CacheTtlSeconds`
+  (ברירת מחדל 60ש'). `0` מכבה dedup — זה מנוף ה-fallback של §7.3, ומה שהטסטים של
+  ה-endpoint משתמשים בו כדי להישאר דטרמיניסטיים.
+- **`saved_queries.last_run_at` / `last_run_row_count` (S5):** מתעדכנים ב-`POST /{id}/run`
+  ומוצגים במסך השאילתות השמורות — המשתמש רואה שהשאילתה כבר רצה ומתי.
+- הלקוח עושה debounce (~400ms, `useDebouncedValue`) בהקלדה בטופס (`ARCHITECTURE.md` §6.1).
 
-**הצעד הבא (S5):**
-
-- **נורמליזציה קנונית** לפני ה-hash — מיון מפתחות `filters`, מיון codes בתוך כל
-  ערך, סדר קבוע ל-`segmentation`/`metrics`/`sort` — כך ששתי הגדרות שקולות סמנטית
-  נותנות אותו hash.
-- `IMemoryCache` עם TTL: פגיעה → מחזירים תוצאה שמורה ומסמנים `executionMeta.cacheHit
-  = true` (הדגל כבר קיים בחוזה, `api-contract.md` §3).
-- `saved_queries.last_run_at` / `last_run_row_count` מתעדכנים ב-`POST /{id}/run`
-  כדי להראות למשתמש שהשאילתה כבר רצה ומתי.
-
-זהו סעיף fallback (§7.3 בתוכנית): אם הזמן נגמר, ה-cache יורד וזו התשובה שנשארת.
+**הצעד הבא (מעבר ל-PoC):** cache מבוזר (Redis) משותף בין instances במקום ה-per-instance
+בזיכרון; invalidation מכוון כשנתוני המקור משתנים; מדדי hit-rate.
 
 ---
 
@@ -183,10 +183,15 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 - **error model אחיד** — כל שגיאה RFC 7807 עם `traceId` לציטוט בדיווח באג
   (`error-model.md`).
 
+**מומש (S5):** **Audit Log** — `IAuditService.Record(...)` נכתב על כל `search` ועל
+`create`/`update`/`delete`/`run` של שאילתות שמורות; כל שורה נושאת `User`, `CorrelationId`
+(אותו id של §7 מעלה), `OccurredAt` ו-`payload` JSON. זה עונה על "מי הריץ מה ומתי"
+וקושר חזרה ללוגים דרך ה-correlation id.
+
 **הצעד הבא:** metrics (latency, rowCount, cacheHit — כבר נאספים ב-`executionMeta`,
 נותר לייצא ל-Prometheus/OTel); distributed tracing (OpenTelemetry על אותו
-correlation id); Audit Log (שאלה 8 / S5) לשאלה "מי הריץ מה ומתי"; alerting על
-שיעור 5xx / latency; sink מרוכז (Seq / ELK) במקום console.
+correlation id); alerting על שיעור 5xx / latency; sink מרוכז (Seq / ELK) במקום
+console; שאילתות/דוחות מעל ה-`audit_log`.
 
 ---
 
@@ -199,9 +204,10 @@ correlation id); Audit Log (שאלה 8 / S5) לשאלה "מי הריץ מה ומ
 | מודל metadata גנרי | **מומש (S1)** | `filter_field_registry` + `reference_*` — שאלה 1 |
 | logging + correlation id | **מומש (S2)** | Serilog + `CorrelationIdMiddleware` — שאלה 7 |
 | error model אחיד (RFC 7807) | **מומש (S2)** | `IExceptionHandler` + `ProblemTypes` |
+| dedup / cache | **מומש (S5)** | `DefinitionHasher` → `IMemoryCache` — שאלה 5 |
 | שכבת AI מופשטת | seam (S6) | `INlQueryTranslator` + Factory — שאלה 6 |
-| auth מרכזי | יעד (S8) | JWT / `X-User`, tenant + role — שאלות 2–3 |
-| Audit | יעד (S5) | `IAuditService`, קריאות מפורשות ב-handlers |
+| auth מרכזי | חלקי (S5 seam; S8 מלא) | `ICurrentUser` מ-`X-User` + scoping owner/tenant; JWT + role — S8, שאלות 2–3 |
+| Audit | **מומש (S5)** | `IAuditService.Record(...)`, קריאות מפורשות ב-services (לא interceptor) |
 | config management + Secrets | חלקי | `appsettings*.json` + `.env.example` + env ב-Compose; יעד: config service + secret store (Key Vault / Secrets Manager) |
 | CI/CD + IaC | יעד (S10) | `.github/workflows/ci.yml` (build+test); IaC לא בהיקף |
 | API gateway | יעד | reverse proxy לניתוב, rate-limit, TLS termination — `ARCHITECTURE.md` §9.2 |

@@ -22,6 +22,8 @@ public class SupportPlatformDbContext(
     public DbSet<ReferenceStatus> ReferenceStatuses => Set<ReferenceStatus>();
     public DbSet<ReferenceDistrict> ReferenceDistricts => Set<ReferenceDistrict>();
     public DbSet<FilterFieldRegistryEntry> FilterFieldRegistry => Set<FilterFieldRegistryEntry>();
+    public DbSet<SavedQuery> SavedQueries => Set<SavedQuery>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

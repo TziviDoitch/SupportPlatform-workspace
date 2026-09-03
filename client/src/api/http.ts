@@ -1,15 +1,21 @@
 import { notification } from 'antd';
 import { ApiError, type ProblemDetails } from '../models/problemDetails';
+import { DEFAULT_USER } from './config';
+
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 /**
  * The one HTTP seam. Every `src/api` service goes through here; components never call `fetch`.
  * On a non-2xx response it parses RFC 7807 ProblemDetails, surfaces it as a notification
  * (the "interceptor"), and throws {@link ApiError} so callers still see the failure.
  */
-async function request<T>(method: 'GET' | 'POST', url: string, body?: unknown): Promise<T> {
+async function request<T>(method: Method, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    headers: {
+      'X-User': DEFAULT_USER,
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
@@ -49,5 +55,7 @@ function toApiError(problem: ProblemDetails): ApiError {
 
 export const http = {
   get: <T>(url: string) => request<T>('GET', url),
-  post: <T>(url: string, body: unknown) => request<T>('POST', url, body),
+  post: <T>(url: string, body?: unknown) => request<T>('POST', url, body),
+  put: <T>(url: string, body: unknown) => request<T>('PUT', url, body),
+  del: <T>(url: string) => request<T>('DELETE', url),
 };

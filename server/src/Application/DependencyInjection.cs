@@ -2,6 +2,8 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SupportPlatform.Application.Metadata;
 using SupportPlatform.Application.Metadata.Interfaces;
+using SupportPlatform.Application.SavedQueries;
+using SupportPlatform.Application.SavedQueries.Interfaces;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Application.Search.Interfaces;
 using SupportPlatform.Application.Search.Validation;
@@ -18,6 +20,8 @@ public static class DependencyInjection
         services.AddScoped<ISearchService, SearchService>();
         services.AddScoped<IValidator<QueryDefinition>, QueryDefinitionValidator>();
         services.AddSingleton<QuestionTextRenderer>();
+
+        services.AddScoped<ISavedQueryService, SavedQueryService>();
 
         return services;
     }

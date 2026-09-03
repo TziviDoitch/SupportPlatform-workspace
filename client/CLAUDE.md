@@ -63,12 +63,15 @@ npm run lint         # oxlint
 
 ## API seam (`src/api/`)
 
-- `http.get` / `http.post` are the only callers of `fetch`. On a non-2xx response `http.ts` parses
-  RFC 7807 ProblemDetails, raises one `notification.error` (title + detail + `traceId`), and throws
-  `ApiError` — hooks/components surface it from that, they don't re-notify.
-- One service per resource (`metadataApi`, `searchApi`), each returning a `models/` type.
-- `DEFAULT_TENANT_ID` (`api/config.ts`) is a temporary stand-in until auth lands in S8 — do not
-  scatter tenant literals elsewhere.
+- `http.get` / `http.post` / `http.put` / `http.del` are the only callers of `fetch`. On a non-2xx
+  response `http.ts` parses RFC 7807 ProblemDetails, raises one `notification.error` (title + detail
+  + `traceId`), and throws `ApiError` — hooks/components surface it from that, they don't re-notify.
+- Every request carries an `X-User` header (`DEFAULT_USER`, `api/config.ts`) — the PoC identity seam
+  until S8. `http.post` body is optional (for `POST .../run`).
+- One service per resource (`metadataApi`, `searchApi`, `savedQueriesApi`), each returning a
+  `models/` type.
+- `DEFAULT_TENANT_ID` / `DEFAULT_USER` (`api/config.ts`) are temporary stand-ins until auth lands in
+  S8 — do not scatter tenant/user literals elsewhere.
 
 ## The search slice
 
@@ -79,3 +82,14 @@ npm run lint         # oxlint
 - Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into
   `QueryDefinition.paging` / `.sort` and refetches; `SearchResponse.page.totalRows` drives the pager.
 - `questionText` always comes from the server (`POST /api/search`) — no client-side Hebrew renderer.
+
+## The saved-queries slice (S5)
+
+- `features/saved-queries/`: `useSavedQueries` (list query + `rename` / `remove` / `run` mutations,
+  all invalidating `['saved-queries']`) for the screen; `useCreateSavedQuery` (mutation only, no
+  query) so `SaveQueryButton` on the search screen doesn't also fetch the list. `SavedQueriesTable`
+  (per-row re-run / rename / delete), `RenameQueryModal` (parent keys it by query id — no sync
+  effect), `SaveQueryButton` saves `form.definition`.
+- `savedQueriesApi` is the only HTTP caller. Re-run returns a `SearchResponse`; the page shows its
+  `questionText` + `page.totalRows`.
+- Scope errors are 404s surfaced by `http.ts` like any other `ApiError` — no special handling.

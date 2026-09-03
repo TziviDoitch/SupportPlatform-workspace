@@ -1,0 +1,1 @@
+export { SavedQueriesTable } from './SavedQueriesTable';
