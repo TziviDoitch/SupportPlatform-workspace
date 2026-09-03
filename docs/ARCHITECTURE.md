@@ -167,13 +167,31 @@ Controller (`SearchController`) = HTTP בלבד: bind → `ISearchService` → �
 Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת ה-tenant scope).
 ### 4.7 שכבת ה-NL (מומש ב-S6)
 
-`INlQueryProvider` הוא הגבול היחיד של ה-AI: `text + tenantId + SearchMetadata → NlParseResult`.
+`INlQueryProvider` הוא הגבול היחיד של ה-AI: `text + tenantId + SearchMetadata → NlTranslation`.
 ספק **לא** ניגש למסד, לא מריץ חיפוש ולא מוודא — ה-metadata נמסר לו כקלט, ו-`NlQueryService`
 מריץ את אותו `IValidator<QueryDefinition>` ואת אותו `QuestionTextRenderer` ש-`/api/search`
 משתמש בהם, ורושם audit (`nl-parse`). פרסור לא מריץ שאילתה.
 
-`RuleBasedNlQueryProvider` דק: בונה `NlText`, מפעיל שלושה כללים ב-`RuleBased/Rules/`, ומרכיב
-`QueryDefinition`:
+**מונחים:** `Parse` הוא ה-use case בגובה ה-API (`POST /api/nl-queries/parse`, `INlQueryService`),
+ו-`Translate` הוא ה-seam. הזרימה: `API Parse → NlQueryService → provider Translate → QueryDefinition`.
+המילה "parse" מתארת את מקרה השימוש בחוזה, לא את הדרך שבה ספק עובד: מנתח כללים מפרסר, ספק
+LLM מתרגם. לכן הממשק מתאר תפקיד ולא מימוש.
+
+#### בחירת ספק — קונפיגורציה, לא קומפילציה
+
+`AddApplication` מחזיק מפה קטנה של `provider key → סוג מימוש`, רושם כל אחד ב-**keyed DI**
+(`AddKeyedScoped`, מובנה ב-.NET 8 — בלי Factory תוצרת בית), ורושם את `INlQueryProvider` כ-resolver
+שקורא את `NlQueryOptions.Provider` ומחזיר את הספק בעל המפתח הזה. הערך מגיע מ-`NlQuery:Provider`
+ב-`appsettings.json` (ברירת מחדל `ruleBased`).
+
+**הוספת ספק = שתי נגיעות:** שורה במפה + הערך בקונפיג. `SearchService`, `QueryDefinition`,
+ה-validator, `SearchQueryExecutor`, המסד וחוזה `/api/search` לא משתנים.
+
+מפתח לא מוכר נכשל **בעליית האפליקציה** (`Program.cs` פותר את הספק פעם אחת אחרי `Build()`) עם
+הודעה שמציינת את המפתח שהוגדר ואת הספקים המובנים — ולא כ-500 בשאלה הראשונה.
+
+`RuleBasedNlQueryProvider` (מפתח `ruleBased`) דק: בונה `NlText`, מפעיל שלושה כללים
+ב-`RuleBased/Rules/`, ומרכיב `QueryDefinition`:
 
 | כלל | מה מזהה | מקור אוצר המילים |
 |---|---|---|
@@ -184,6 +202,7 @@ Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת
 כלל **אחד** לכל השדות מסוג `codeList` — לא כלל לכל שדה עסקי — כך שתחום/סטטוס/מחוז חדש
 ב-seed מזוהה בלי שינוי קוד (§7.1). `HebrewText` מבצע נרמול מורפולוגי גס (תחיליות ב/ה/ו/ל/מ/כ/ש,
 ריבוי, סיומות חלשות); שני הצדדים עוברים את אותה פונקציה, ולכן די שהגזעים יהיו **עקביים**.
+הנרמול **מוגבל בכוונה** — ראה §10 החלטה 12.
 
 מה שאף כלל לא תבע חוזר ב-`unresolved`, ו-`confidence` הוא היחס שנתבע — אינדיקציה בלבד.
 שם שדה נחשב "מובן" רק אם השדה באמת שימש: "לפי סטטוס" (סטטוס אינו `segmentable`) חוזר
@@ -592,7 +611,7 @@ Correlation Id + Serilog + ProblemDetails (RFC 7807) נכנסו כשהיה endpo
 **חלופה שנדחתה:** interceptor גלובלי — "קסום", קשה לצרף לו action/payload נכונים, וכותב
 גם על שמירת שורת ה-audit עצמה.
 
-### 11. מנתח דטרמיניסטי כספק ה-AI ל-PoC (S6)
+### 11. מנתח דטרמיניסטי כספק ה-AI ל-PoC, נבחר בקונפיגורציה (S6)
 
 מאחורי `INlQueryProvider` יושב `RuleBasedNlQueryProvider` — parser שקוף שאוצר המילים
 שלו הוא ה-metadata, ולא ספק LLM חיצוני. הנימוקים: (א) המטלה מבקשת ש**החלפת ספק AI**
@@ -601,5 +620,29 @@ Correlation Id + Serilog + ProblemDetails (RFC 7807) נכנסו כשהיה endpo
 (ג) `docker compose up` מ-clone נקי חייב לעבוד אצל הבודק בלי הרשמה לשירות.
 המימוש **לעולם לא ממציא ערך**: מה שלא זוהה חוזר ב-`unresolved` והמשתמש רואה אותו לפני
 ההרצה. **חלופה שנדחתה:** אינטגרציית Gemini/OpenAI ב-S6 — מוסיפה תשתית (מפתחות, מכסות,
-retries, timeouts) שאינה נמדדת, ומחלישה את הרפרודוקטיביות. ספק LLM נכנס כמימוש נוסף
-של אותו ממשק — שורת DI אחת (DESIGN_QA §6).
+retries, timeouts) שאינה נמדדת, ומחלישה את הרפרודוקטיביות.
+
+כדי שהמשפט "ספק LLM נכנס כמימוש נוסף" יהיה **נכון בקוד ולא רק במסמך**, הבחירה היא
+קונפיגורציה: keyed DI מובנה של .NET 8 + `NlQuery:Provider` (§4.7). ספק נוסף = שורה במפה
++ ערך בקונפיג, בלי קומפילציה מחדש. **חלופות שנדחו:** (א) רישום DI קשיח יחיד — מימוש שני
+פשוט לא נגיש, ושני רישומים לאותו ממשק נפתרים בשקט לאחרון; (ב) מחלקת `Factory` תוצרת בית —
+keyed DI כבר עושה את זה, ומחלקה נוספת היא ceremony בלי תועלת.
+
+### 12. נרמול עברי בקוד, לא ספריית NLP (S6)
+
+התאמת "בתחום התרבות" לתווית "תרבות" דורשת מורפולוגיה כלשהי. **אין ל-.NET 8 אופציה שפויה:**
+[HebMorph](https://github.com/synhershko/HebMorph) היא היחידה — ברישיון **AGPL-3.0** (copyleft
+ויראלי, לא מתאים למסירת קוד לחברה), ה-port ל-.NET תקוע על Lucene.NET 3.0.3 עם באגים ידועים
+שתוקנו רק בענף ה-Java, ואין חבילת NuGet מתוחזקת. כל מחסניות ה-NLP העברי המתוחזקות
+(HebSpacy, AlephBERT/DictaBERT, Stanza) הן Python + הורדת מודלים — runtime שלם של ML כדי
+להתאים עשר תוויות.
+
+לכן `HebrewText`: ~40 שורות שמקלפות סיומת אחת ואז תחיליות. **שני צדי ההשוואה עוברים את אותה
+פונקציה**, ולכן הגזעים חייבים להיות עקביים בלבד — לא נכונים לשונית; זו הסיבה שזה עובד בלי
+מילון. מכוסה ב-`HebrewTextTests`, כולל הזוגות שהמנתח באמת נשען עליהם והמילים שאסור לו לטשטש.
+
+**המחיר, במודע:** אין למטיזציה אמיתית — צורות חריגות פשוט לא יותאמו. זה **גלוי ולא שגוי**:
+הן חוזרות ב-`unresolved` והמשתמש רואה אותן לפני ההרצה, במקום שהמערכת תנחש. **פתח מילוט:**
+הנרמול חי כולו תחת `RuleBased/`, כך שספק LLM (§4.7) הופך אותו ללא רלוונטי בלי לגעת בשום
+דבר אחר. **חלופה שנדחתה:** עמודת `aliases` בשורות הייחוס — תואמת את פילוסופיית ה-metadata,
+אבל דורשת שינוי חוזה מוקפא + migration, ועדיין לא פותרת תחיליות ("בתחום").

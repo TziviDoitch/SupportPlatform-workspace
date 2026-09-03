@@ -34,7 +34,7 @@ public sealed class NlQueryService(
         var tenantId = string.IsNullOrWhiteSpace(request.TenantId) ? user.TenantId : request.TenantId;
 
         var meta = await metadata.Get(ct);
-        var result = await provider.Parse(text, tenantId, meta, ct);
+        var result = await provider.Translate(text, tenantId, meta, ct);
 
         // A provider is not trusted to produce a runnable query — the whitelist decides.
         await validator.ValidateAndThrowAsync(result.Definition, ct);

@@ -80,8 +80,8 @@ public class NlQueryServiceTests
     /// <summary>A provider that returns a fixed definition — the seam under test, not the parser.</summary>
     private sealed class StubProvider(QueryDefinition definition) : INlQueryProvider
     {
-        public Task<NlParseResult> Parse(
+        public Task<NlTranslation> Translate(
             string text, string tenantId, SearchMetadata metadata, CancellationToken ct = default) =>
-            Task.FromResult(new NlParseResult(definition, 1, []));
+            Task.FromResult(new NlTranslation(definition, 1, []));
     }
 }

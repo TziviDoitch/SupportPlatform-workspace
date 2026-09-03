@@ -16,7 +16,7 @@ public class RuleBasedNlQueryProviderTests
     private async Task<(QueryDefinition Definition, double Confidence, IReadOnlyList<string> Unresolved)> Parse(
         string text)
     {
-        var result = await _provider.Parse(text, Tenant, TestMetadata.SearchMetadata);
+        var result = await _provider.Translate(text, Tenant, TestMetadata.SearchMetadata);
         return (result.Definition, result.Confidence, result.Unresolved);
     }
 

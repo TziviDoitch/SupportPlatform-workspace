@@ -8,14 +8,17 @@ namespace SupportPlatform.Application.NlQuery.RuleBased;
 /// The PoC provider: a deterministic parser over a deliberately limited subset of Hebrew. The
 /// same question always yields the same <see cref="QueryDefinition"/>, and every value it emits
 /// came from the metadata — when a word cannot be mapped it is reported in
-/// <see cref="NlParseResult.Unresolved"/>, never replaced by a guess.
+/// <see cref="NlTranslation.Unresolved"/>, never replaced by a guess.
 ///
 /// It stays thin on purpose: build the text, run the rules, assemble the definition. The matching
 /// lives in <c>Rules/</c>.
 /// </summary>
 public sealed class RuleBasedNlQueryProvider : INlQueryProvider
 {
-    public Task<NlParseResult> Parse(
+    /// <summary>Selects this provider via <c>NlQuery:Provider</c>.</summary>
+    public const string ProviderKey = "ruleBased";
+
+    public Task<NlTranslation> Translate(
         string text, string tenantId, SearchMetadata metadata, CancellationToken ct = default)
     {
         var question = new NlText(text);
@@ -34,7 +37,7 @@ public sealed class RuleBasedNlQueryProvider : INlQueryProvider
             Metrics = [Metric.Count, Metric.SumAmountApproved]
         };
 
-        return Task.FromResult(new NlParseResult(definition, question.Coverage(), question.Unclaimed()));
+        return Task.FromResult(new NlTranslation(definition, question.Coverage(), question.Unclaimed()));
     }
 
     /// <summary>
