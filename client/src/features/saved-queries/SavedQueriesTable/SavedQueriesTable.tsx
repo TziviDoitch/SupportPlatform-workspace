@@ -27,7 +27,7 @@ export function SavedQueriesTable({ rows, loading, runningId, onRun, onRename, o
         render: (_, row) => formatDate(row.lastRunAt),
       },
       {
-        title: 'שורות בהרצה האחרונה',
+        title: 'קבוצות בהרצה האחרונה',
         dataIndex: 'lastRunRowCount',
         key: 'lastRunRowCount',
         render: (value: number | null) => value ?? '—',

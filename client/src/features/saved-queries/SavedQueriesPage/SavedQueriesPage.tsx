@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Alert, Card, Spin, Typography } from 'antd';
 import type { SavedQuery } from '../../../models/savedQuery';
+import type { SearchResponse } from '../../../models/search';
 import { RenameQueryModal } from '../RenameQueryModal';
 import { SavedQueriesTable } from '../SavedQueriesTable';
+import { summarizeRun } from '../runSummary';
 import { useSavedQueries } from '../hooks/useSavedQueries';
 
 /** S5 screen: list saved queries, re-run / rename / delete them. Saving happens on the search screen. */
@@ -17,15 +19,7 @@ export function SavedQueriesPage() {
         שאילתות שמורות
       </Typography.Title>
 
-      {run.data && (
-        <Alert
-          style={{ marginBottom: 16 }}
-          type="success"
-          showIcon
-          message={run.data.questionText}
-          description={`סה"כ שורות: ${run.data.page.totalRows}`}
-        />
-      )}
+      {run.data && <RunResultAlert response={run.data} />}
 
       {list.isLoading ? (
         <Spin />
@@ -57,5 +51,24 @@ export function SavedQueriesPage() {
         }}
       />
     </Card>
+  );
+}
+
+/** Read-back of a re-run: the readable question, the record count, and how many groups it split into. */
+function RunResultAlert({ response }: { response: SearchResponse }) {
+  const { records, groups } = summarizeRun(response);
+  const detail =
+    groups > 1
+      ? `${records.toLocaleString('he-IL')} רשומות ב-${groups} קבוצות`
+      : `${records.toLocaleString('he-IL')} רשומות`;
+
+  return (
+    <Alert
+      style={{ marginBottom: 16 }}
+      type="success"
+      showIcon
+      message={response.questionText}
+      description={detail}
+    />
   );
 }

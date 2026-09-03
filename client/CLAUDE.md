@@ -90,6 +90,9 @@ npm run lint         # oxlint
   query) so `SaveQueryButton` on the search screen doesn't also fetch the list. `SavedQueriesTable`
   (per-row re-run / rename / delete), `RenameQueryModal` (parent keys it by query id — no sync
   effect), `SaveQueryButton` saves `form.definition`.
-- `savedQueriesApi` is the only HTTP caller. Re-run returns a `SearchResponse`; the page shows its
-  `questionText` + `page.totalRows`.
+- `savedQueriesApi` is the only HTTP caller. Re-run returns a `SearchResponse`; `summarizeRun`
+  turns it into `{ records, groups }` — records is the `count` metric summed over the returned
+  groups (all groups fit one page in this PoC), groups is `page.totalRows`. Note the search engine
+  aggregates: no `segmentation` ⇒ one group ⇒ `lastRunRowCount` is a group count, not a record
+  count.
 - Scope errors are 404s surfaced by `http.ts` like any other `ApiError` — no special handling.

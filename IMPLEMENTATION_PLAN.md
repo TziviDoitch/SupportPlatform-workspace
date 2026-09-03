@@ -162,7 +162,7 @@ src/
 *רזה: Mock בלבד + ההפשטה + פסקה "הצעד הבא".*
 
 ### S7 · גרף + UI polish — 3.0 / 1.5
-גרף עמודות (Chart.js) על `aggregations`, מתחלף לפי הפילוח · layout עקבי, מצבים אחידים, RTL, אפס console errors · Swagger + `api.http` · שדה `supportYear` בטופס: `Select` של השנים מה‑metadata (או `InputNumber` עם `min`/`max`/`precision=0`) במקום שני שדות מספר חופשיים.
+גרף עמודות (Chart.js) על `aggregations`, מתחלף לפי הפילוח · layout עקבי, מצבים אחידים, RTL, אפס console errors · Swagger + `api.http` · שדה `supportYear` בטופס: `Select` של השנים מה‑metadata (או `InputNumber` עם `min`/`max`/`precision=0`) במקום שני שדות מספר חופשיים · הרצה מחדש במסך השאילתות השמורות מציגה את `ResultsTable` המלא (לא רק סיכום).
 *רזה: גרף סטטי יחיד, מיזוג מסך NL לתוך החיפוש, עיצוב מינימלי אבל עקבי.*
 
 ### S8 · Repos/Cross‑cutting hardening + Auth stub — 2.0 / 1.0

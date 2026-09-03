@@ -277,7 +277,10 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 `features/saved-queries/`: `useSavedQueries` (TanStack Query — list + rename/delete/run) למסך עצמו,
 `useCreateSavedQuery` (mutation בלבד, בלי query — כדי ש-`SaveQueryButton` במסך החיפוש לא ימשוך את
 הרשימה), `SavedQueriesTable` (הרצה מחדש / שינוי שם / מחיקה לכל שורה), `RenameQueryModal`. שירות HTTP יחיד `savedQueriesApi` דרך
-`http` (נוספו `put` / `del`). הרצה מחדש מציגה את `questionText` + סה"כ שורות מהתשובה.
+`http` (נוספו `put` / `del`). הרצה מחדש מציגה את `questionText` + סיכום מ-`summarizeRun`:
+מספר הרשומות (סכום ה-`count` מעל הקבוצות) ומספר הקבוצות. מנוע החיפוש הוא מנוע אגרגציה —
+שאילתה בלי `segmentation` מחזירה קבוצה אחת (הסך הכולל); לכן `lastRunRowCount` הוא מספר
+**קבוצות**, לא רשומות. הטבלה המלאה של התוצאה במסך זה — S7 (§7 בתוכנית).
 
 ## 7. הרחבה עתידית
 
