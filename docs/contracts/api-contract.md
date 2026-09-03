@@ -10,6 +10,10 @@
   (§2, §7.6): an `X-User: <username>` header instead of a JWT. Either way the
   server derives `tenantId` and role from the caller — a mismatching `tenantId`
   in the body is a 403.
+- **PoC status:** `/api/auth/login`, JWT bearer auth, and every `401` below are the
+  **production target and are not implemented**. The PoC ships only the `X-User`
+  seam; a missing/unknown header resolves to a seed user, so no request ever
+  returns `401` (`ARCHITECTURE.md` §8.1). All other rows match the running server.
 
 ## Endpoints
 
@@ -25,6 +29,9 @@
 ---
 
 ### 1. `POST /api/auth/login`
+
+> **Not implemented in the PoC** — documented as the production target. The PoC
+> authenticates via the `X-User` header only (see the Auth note above).
 
 Request:
 

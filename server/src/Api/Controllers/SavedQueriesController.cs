@@ -11,17 +11,23 @@ namespace SupportPlatform.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/saved-queries")]
+[ProducesErrorResponseType(typeof(ProblemDetails))]
 public class SavedQueriesController(ISavedQueryService queries) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType<IReadOnlyList<SavedQueryDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<SavedQueryDto>>> List(CancellationToken ct)
         => Ok(await queries.List(ct));
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType<SavedQueryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SavedQueryDto>> Get(Guid id, CancellationToken ct)
         => Ok(await queries.Get(id, ct));
 
     [HttpPost]
+    [ProducesResponseType<SavedQueryDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<SavedQueryDto>> Create([FromBody] SaveSavedQueryRequest request, CancellationToken ct)
     {
         var created = await queries.Create(request, ct);
@@ -29,11 +35,17 @@ public class SavedQueriesController(ISavedQueryService queries) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [ProducesResponseType<SavedQueryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SavedQueryDto>> Update(
         Guid id, [FromBody] SaveSavedQueryRequest request, CancellationToken ct)
         => Ok(await queries.Update(id, request, ct));
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await queries.Delete(id, ct);
@@ -41,6 +53,8 @@ public class SavedQueriesController(ISavedQueryService queries) : ControllerBase
     }
 
     [HttpPost("{id:guid}/run")]
+    [ProducesResponseType<SearchResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SearchResponse>> Run(Guid id, CancellationToken ct)
         => Ok(await queries.Run(id, ct));
 }

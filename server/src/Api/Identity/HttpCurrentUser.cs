@@ -34,7 +34,7 @@ public sealed class HttpCurrentUser(IHttpContextAccessor accessor, SupportPlatfo
                    ?? db.Users.AsNoTracking().FirstOrDefault(u => u.Username == DefaultUsername);
 
         _resolved = user is null
-            ? (DefaultUsername, "culture-sport-admin", "analyst")
+            ? (DefaultUsername, "culture-sport-admin", Roles.Analyst)
             : (user.Username, user.TenantId, user.Role);
         return _resolved.Value;
     }

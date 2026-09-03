@@ -42,13 +42,18 @@ public class MetadataEndpointTests(TestApiFactory factory) : IClassFixture<TestA
     }
 
     [Fact]
-    public async Task Missing_tenantId_is_a_400()
+    public async Task Missing_tenantId_is_a_400_problem_details()
     {
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/api/metadata");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(doc.RootElement.TryGetProperty("errors", out var errors));
+        Assert.True(errors.TryGetProperty("tenantId", out _));
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+import { labelForCode, labelForField } from '../../lib/labels';
 import type { MetadataResponse } from '../../models/metadata';
 import type { FilterValue, QueryDefinition } from '../../models/queryDefinition';
 
@@ -32,8 +33,8 @@ export function describeDefinition(
   }
 
   if (definition.segmentation.length > 0) {
-    const labels = definition.segmentation.map(
-      (id) => metadata.filterFieldRegistry.find((e) => e.id === id)?.label ?? id,
+    const labels = definition.segmentation.map((id) =>
+      labelForField(metadata.filterFieldRegistry, id),
     );
     fields.push({ label: SEGMENTATION_LABEL, value: labels.join(', ') });
   }
@@ -43,7 +44,7 @@ export function describeDefinition(
 
 function valueText(value: FilterValue, options: { code: string; label: string }[]): string {
   if (Array.isArray(value)) {
-    return value.map((code) => options.find((o) => o.code === code)?.label ?? code).join(' או ');
+    return value.map((code) => labelForCode(options, code)).join(' או ');
   }
   return value.type === 'range' ? `${value.from}–${value.to}` : String(value.value);
 }

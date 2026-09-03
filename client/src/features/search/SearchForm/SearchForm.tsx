@@ -23,7 +23,7 @@ export function SearchForm({
   const segmentable = registry.filter((e) => e.segmentable);
 
   return (
-    <Card size="small" title="חיפוש" style={{ marginBottom: 16 }}>
+    <Card size="small" title="סינון" style={{ marginBottom: 16 }}>
       <Form layout="vertical">
         {registry.map((entry) =>
           entry.kind === 'codeList' ? (

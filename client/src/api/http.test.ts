@@ -57,4 +57,17 @@ describe('http', () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(500);
   });
+
+  it('skips the notification when notify is false but still throws', async () => {
+    mockFetch(400, {
+      type: 'https://supportplatform.local/errors/validation',
+      title: 'One or more validation errors occurred.',
+      status: 400,
+    });
+
+    const err = (await http.post('/api/search', {}, { notify: false }).catch((e) => e)) as ApiError;
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(400);
+    expect(notifyError).not.toHaveBeenCalled();
+  });
 });

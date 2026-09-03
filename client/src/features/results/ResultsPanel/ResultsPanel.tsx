@@ -1,5 +1,5 @@
 import { Alert } from 'antd';
-import { ApiError } from '../../../models/problemDetails';
+import { ApiError, formatProblemDetail } from '../../../models/problemDetails';
 import type { FilterFieldRegistryEntry, References } from '../../../models/metadata';
 import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
 import type { SearchResponse } from '../../../models/search';
@@ -13,8 +13,9 @@ interface Props {
   registry: FilterFieldRegistryEntry[];
   references: References;
   definition: QueryDefinition;
-  onPageChange: (pageNumber: number, pageSize: number) => void;
-  onSortChange: (sort: SortSpec[]) => void;
+  /** Omit both to render a read-only table (no pager, non-sortable headers) — e.g. the saved-query re-run. */
+  onPageChange?: (pageNumber: number, pageSize: number) => void;
+  onSortChange?: (sort: SortSpec[]) => void;
 }
 
 /** Owns the results-area states: error banner, otherwise the chart (when segmented) + the table. */
@@ -35,9 +36,7 @@ export function ResultsPanel({
         type="error"
         showIcon
         message={problem?.title ?? 'החיפוש נכשל'}
-        description={[problem?.detail, problem?.traceId && `traceId: ${problem.traceId}`]
-          .filter(Boolean)
-          .join(' · ')}
+        description={problem ? formatProblemDetail(problem) : undefined}
       />
     );
   }

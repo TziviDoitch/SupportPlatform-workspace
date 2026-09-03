@@ -1,5 +1,6 @@
-import { Alert, Spin } from 'antd';
+import { Alert, Card, Typography } from 'antd';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
+import { PageLoader } from '../../../components/PageLoader';
 import type { MetadataResponse } from '../../../models/metadata';
 import { SaveQueryButton } from '../../saved-queries/SaveQueryButton';
 import { QuestionPanel } from '../../results/QuestionPanel';
@@ -7,7 +8,7 @@ import { ResultsPanel } from '../../results/ResultsPanel';
 import { useSearch } from '../../results/hooks/useSearch';
 import { SearchForm } from '../SearchForm';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { useMetadata } from '../hooks/useMetadata';
+import { useMetadata } from '../../../hooks/useMetadata';
 import { useSearchForm } from '../hooks/useSearchForm';
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -16,11 +17,20 @@ const SEARCH_DEBOUNCE_MS = 400;
 export function SearchPage() {
   const { data: metadata, isLoading, error } = useMetadata(DEFAULT_TENANT_ID);
 
-  if (isLoading) return <Spin />;
-  if (error || !metadata) {
-    return <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />;
-  }
-  return <SearchView metadata={metadata} />;
+  return (
+    <Card size="small">
+      <Typography.Title level={4} style={{ marginTop: 0 }}>
+        חיפוש
+      </Typography.Title>
+      {isLoading ? (
+        <PageLoader />
+      ) : error || !metadata ? (
+        <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />
+      ) : (
+        <SearchView metadata={metadata} />
+      )}
+    </Card>
+  );
 }
 
 function SearchView({ metadata }: { metadata: MetadataResponse }) {

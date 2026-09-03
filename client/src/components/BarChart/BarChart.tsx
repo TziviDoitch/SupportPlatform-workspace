@@ -6,6 +6,7 @@ import {
   Tooltip,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { theme } from 'antd';
 
 // Register only the pieces a categorical bar chart needs — keeps the bundle lean and is required
 // once per app for the tree-shaken `chart.js` build.
@@ -21,6 +22,7 @@ interface Props {
 
 /** Generic single-series bar chart over `react-chartjs-2`. No domain knowledge. */
 export function BarChart({ labels, values, seriesLabel, height = 260 }: Props) {
+  const { token } = theme.useToken();
   return (
     <div style={{ height }}>
       <Bar
@@ -30,7 +32,7 @@ export function BarChart({ labels, values, seriesLabel, height = 260 }: Props) {
             {
               label: seriesLabel,
               data: values,
-              backgroundColor: 'rgba(22, 119, 255, 0.75)', // antd v6 primary
+              backgroundColor: token.colorPrimary,
               borderRadius: 4,
             },
           ],

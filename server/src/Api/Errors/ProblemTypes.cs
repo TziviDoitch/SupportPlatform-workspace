@@ -10,6 +10,8 @@ public static class ProblemTypes
     public static (string Type, string Title) ForStatus(int status) => status switch
     {
         400 => (Base + "validation", "One or more validation errors occurred."),
+        // 401 has no live source in the PoC (no auth middleware — X-User falls back to a seed user).
+        // Kept for the documented production contract (docs/contracts/error-model.md, ARCHITECTURE.md §8.1).
         401 => (Base + "unauthorized", "Authentication required."),
         403 => (Base + "forbidden", "Access denied."),
         404 => (Base + "not-found", "Resource not found."),

@@ -69,6 +69,16 @@ describe('ResultsTable', () => {
     expect(onSortChange).toHaveBeenCalledWith([{ field: 'count', direction: 'asc' }]);
   });
 
+  it('renders read-only (no pager, non-sortable headers) when no handlers are passed', () => {
+    renderTable(<ResultsTable response={response} registry={registry} definition={definition} />);
+
+    // header is plain text, not a sort button
+    expect(screen.queryByRole('button', { name: /כמות/ })).toBeNull();
+    expect(screen.getByText('כמות')).toBeTruthy();
+    // no pagination navigation
+    expect(screen.queryByRole('listitem', { name: /1/ })).toBeNull();
+  });
+
   it('shows an empty state when there are no rows', () => {
     renderTable(
       <ResultsTable

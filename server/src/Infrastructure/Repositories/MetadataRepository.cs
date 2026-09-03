@@ -4,7 +4,7 @@ using SupportPlatform.Infrastructure.Persistence;
 
 namespace SupportPlatform.Infrastructure.Repositories;
 
-public class MetadataRepository(SupportPlatformDbContext db) : IMetadataRepository
+public sealed class MetadataRepository(SupportPlatformDbContext db) : IMetadataRepository
 {
     public async Task<MetadataSnapshot> GetSnapshot(CancellationToken ct = default) =>
         new(
