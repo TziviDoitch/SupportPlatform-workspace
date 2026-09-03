@@ -1,4 +1,6 @@
 using FluentValidation;
+using SupportPlatform.Application.Common;
+using SupportPlatform.Application.Identity;
 using SupportPlatform.Application.NlQuery;
 using SupportPlatform.Application.NlQuery.Interfaces;
 using SupportPlatform.Application.NlQuery.RuleBased;
@@ -21,7 +23,7 @@ public class NlQueryServiceTests
         TestMetadata.Provider,
         new QueryDefinitionValidator(TestMetadata.Provider),
         new QuestionTextRenderer(),
-        new FakeCurrentUser(),
+        new TenantAccessGuard(new FakeCurrentUser()),
         _audit);
 
     [Fact]
@@ -41,6 +43,13 @@ public class NlQueryServiceTests
         var response = await Service().Parse(new NlParseRequest("בקשות בתרבות", null));
 
         Assert.Equal("culture-sport-admin", response.Definition.TenantId);
+    }
+
+    [Fact]
+    public async Task A_tenant_that_is_not_the_callers_is_forbidden()
+    {
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => Service().Parse(new NlParseRequest("בקשות בתרבות", "welfare-admin")));
     }
 
     [Fact]

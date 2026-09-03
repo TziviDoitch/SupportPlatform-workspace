@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
+using SupportPlatform.Application.Common;
+using SupportPlatform.Application.Identity;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Application.Search.Interfaces;
 using SupportPlatform.Application.Search.Validation;
@@ -22,6 +24,7 @@ public class SearchServiceTests
             new QuestionTextRenderer(),
             new MemoryCache(new MemoryCacheOptions()),
             new SearchCacheOptions(),
+            new TenantAccessGuard(new FakeCurrentUser()),
             _audit);
     }
 
@@ -35,9 +38,19 @@ public class SearchServiceTests
     [Fact]
     public async Task Invalid_definition_throws_and_never_touches_the_executor()
     {
-        var def = Valid() with { TenantId = "nope" };
+        // Tenant is now authoritative from identity (guarded before validation), so the invalid
+        // thing here is an unknown metric — still a ValidationException, executor untouched.
+        var def = Valid() with { Metrics = ["bogus"] };
 
         await Assert.ThrowsAsync<ValidationException>(() => _service.Search(def));
+
+        Assert.False(_executor.WasCalled);
+    }
+
+    [Fact]
+    public async Task A_tenant_that_is_not_the_callers_is_forbidden()
+    {
+        await Assert.ThrowsAsync<ForbiddenException>(() => _service.Search(Valid() with { TenantId = "welfare-admin" }));
 
         Assert.False(_executor.WasCalled);
     }

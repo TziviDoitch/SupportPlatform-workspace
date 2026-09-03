@@ -64,10 +64,12 @@ public class NlQueriesEndpointTests(TestApiFactory factory) : IClassFixture<Test
     }
 
     [Fact]
-    public async Task An_unknown_tenant_is_rejected_by_the_same_whitelist_search_uses()
+    public async Task A_tenant_that_is_not_the_callers_is_a_403()
     {
-        var root = await Parse("""{ "text": "בקשות בתרבות", "tenantId": "nope" }""", HttpStatusCode.BadRequest);
+        // S8: the caller's tenant is authoritative; naming another in the body is forbidden.
+        var root = await Parse(
+            """{ "text": "בקשות בתרבות", "tenantId": "welfare-admin" }""", HttpStatusCode.Forbidden);
 
-        Assert.True(root.GetProperty("errors").TryGetProperty("tenantId", out _));
+        Assert.EndsWith("/forbidden", root.GetProperty("type").GetString());
     }
 }

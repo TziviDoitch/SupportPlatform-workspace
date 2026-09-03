@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Domain.Entities;
 using SupportPlatform.Infrastructure.Persistence;
+using SupportPlatform.Infrastructure.Repositories;
 using SupportPlatform.Infrastructure.Search;
 using SupportPlatform.Infrastructure.Search.Filters;
 using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
@@ -18,7 +19,7 @@ public class SearchQueryExecutorTests
 
         var resolver = new FilterHandlerResolver(FilterHandlers.Default);
         var executor = new SearchQueryExecutor(
-            db.Context, db.Tenant, new DynamicQueryBuilder(resolver), resolver);
+            new SupportRequestRepository(db.Context), db.Tenant, new DynamicQueryBuilder(resolver), resolver);
         return (db, executor);
     }
 

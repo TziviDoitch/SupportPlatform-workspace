@@ -55,10 +55,16 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 - רשומות הייחוס גלובליות ל-PoC; אם משרד חדש מביא סט ערכים משלו, הן יקבלו גם הן
   `TenantId` (שינוי מודל קטן).
 
+**מומש (S8):** ה-`TenantId` שממנו נגזר ה-scope כבר סמכותי מזהות הקורא, לא מהקלט.
+`TenantAccessGuard.EnsureTenant` (`Application/Identity`) נקרא ב-`SearchService`,
+`MetadataService`, `NlQueryService`: `tenantId` בגוף/query שאינו של הקורא → **403**
+(`error-model.md`), חסר → מושלם מהזהות. `?tenantId=` נשאר בחוזה אך מאומת ולא נאמן.
+ה-Global Query Filter נשאר שכבת ההגנה השנייה.
+
 **הצעד הבא:** תהליך onboarding — שורת `tenants`, קונפיגורציית ברירת מחדל per-tenant
 (רשימות ייחוס, registry, branding), משתמשי-על ראשוניים, ואפשרות schema/DB נפרד
-ללקוח שדורש בידוד פיזי. ה-`TenantId` שממנו נגזר ה-scope יעבור ב-S8 מ-`?tenantId=`
-ל-claim ב-JWT (`ARCHITECTURE.md` §8.1).
+ללקוח שדורש בידוד פיזי. מקור הזהות עצמו יעבור מ-`X-User` ל-claim ב-JWT
+(`ARCHITECTURE.md` §8.1) — שינוי מקור, לא שינוי אכיפה.
 
 ---
 
@@ -67,7 +73,7 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 **הגישה:** שתי שכבות — RBAC (מה מותר לתפקיד) + data-scoping (על אילו שורות).
 העיקרון: least-privilege, נאכף בשרת בלבד, לעולם לא בסמכות הלקוח.
 
-**מומש (S1–S5):**
+**מומש (S1–S8):**
 
 - data-scoping ברמת ה-tenant — ה-Global Query Filter (שאלה 2). זו כבר הפרדת גופים
   אכיפה: משתמש של `welfare-admin` לא יכול לראות שורות של `culture-sport-admin`
@@ -75,21 +81,28 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 - **ownership scoping (S5):** שאילתה שמורה שייכת ל-`OwnerUsername` + `TenantId`;
   `SavedQueryRepository` מסנן תמיד לפי שניהם, ופעולה על רשומה מחוץ ל-scope מחזירה
   **404** (לא 403 — לא מדליף קיום, `api-contract.md` §5).
-- **seam זהות (S5):** `ICurrentUser` נגזר מכותרת `X-User` (`ARCHITECTURE.md` §5.2).
-- ל-`User` יש שדה `Role` במודל, עדיין בלי לוגיקה שנשענת עליו.
+- **זהות סמכותית (S8):** `ICurrentUser` נגזר מכותרת `X-User` (auth stub, בלי JWT).
+  ה-`TenantId` וה-`Role` שלו הם מקור הסמכות — `TenantAccessGuard` דוחה `tenantId`
+  זר ב-403 (שאלה 2), וה-`?tenantId=` שוב לא נאמן.
+- **כלל RBAC אחד קונקרטי (S8):** מחיקת שאילתה שמורה דורשת role `admin`
+  (`SavedQueryService.Delete`). הבדיקה רצה **אחרי** ה-scope: רשומה מחוץ ל-scope
+  נשארת 404, `analyst` על רשומה בתוך ה-scope מקבל 403. `dan` (admin) מוחק,
+  `sarah`/`michal` (analyst) לא — מדגים RBAC מעל data-scoping. מכוסה ב-
+  `SavedQueriesEndpointTests` + `SavedQueryServiceTests`.
 
-**הצעד הבא (S8):**
+**הצעד הבא:**
 
-- אימות → זהות → תפקיד: `login` → אימות מול `User.PasswordHash` → JWT עם
-  `tenantId` + `role` → אכיפה ב-`ICurrentUser` + policy/authorization ב-controller
-  (`ARCHITECTURE.md` §8.1). ה-`X-User` של S5 הופך למקור לא-מהימן.
+- מקור הזהות עובר מ-`X-User` ל-JWT: `POST /api/auth/login` → אימות מול
+  `User.PasswordHash` → token עם `tenantId` + `role` claims → Bearer auth
+  (`ARCHITECTURE.md` §8.1, §10 החלטה 13). האכיפה עצמה (`TenantAccessGuard`, כלל
+  ה-role) לא משתנה — רק המקור שממנו `ICurrentUser` קורא.
+- RBAC רחב יותר: policy/`[Authorize]` per endpoint במקום כלל בודד ב-service.
 - scoping דק יותר מ-tenant: אופציונלית לפי `supportDomain` (למשל רפרנט תרבות לא
   רואה ספורט).
-- בדיקת role אחת קונקרטית שתדגים הפרדה (§6 S8 "רזה: `X-User` header").
 
-**איפה זה נאכף:** תמיד ב-Application/Infrastructure — הבנאי הדינמי מקבל את ה-tenant
-מ-`QueryDefinition.TenantId` שכבר עבר ולידציה, וה-`?tenantId=` בגוף הבקשה לא
-מהימן לצורך הרשאה (§10 החלטה 6).
+**איפה זה נאכף:** תמיד ב-Application — `TenantAccessGuard` ב-services, כלל ה-role
+ב-`SavedQueryService`, וה-בנאי הדינמי מקבל את ה-tenant מ-`QueryDefinition.TenantId`
+שכבר עבר ולידציה (§10 החלטות 6, 13).
 
 ---
 
@@ -232,7 +245,7 @@ console; שאילתות/דוחות מעל ה-`audit_log`.
 | error model אחיד (RFC 7807) | **מומש (S2)** | `IExceptionHandler` + `ProblemTypes` |
 | dedup / cache | **מומש (S5)** | `DefinitionHasher` → `IMemoryCache` — שאלה 5 |
 | שכבת AI מופשטת | **מומש (S6)** | `INlQueryProvider` נבחר לפי `NlQuery:Provider` (keyed DI); המימוש: `RuleBasedNlQueryProvider` — מנתח דטרמיניסטי, בלי LLM חיצוני — שאלה 6 |
-| auth מרכזי | חלקי (S5 seam; S8 מלא) | `ICurrentUser` מ-`X-User` + scoping owner/tenant; JWT + role — S8, שאלות 2–3 |
+| auth מרכזי | **מומש (S8 — auth stub)** | `ICurrentUser` מ-`X-User` (בלי JWT) + `TenantAccessGuard` (tenant זר → 403) + כלל role אחד (מחיקת שאילתה שמורה = `admin`) — שאלות 2–3. יעד production: `login` + JWT (§8.1, החלטה 13) |
 | Audit | **מומש (S5)** | `IAuditService.Record(...)`, קריאות מפורשות ב-services (לא interceptor) |
 | config management + Secrets | חלקי | `appsettings*.json` + `.env.example` + env ב-Compose; יעד: config service + secret store (Key Vault / Secrets Manager) |
 | CI/CD + IaC | יעד (S10) | `.github/workflows/ci.yml` (build+test); IaC לא בהיקף |

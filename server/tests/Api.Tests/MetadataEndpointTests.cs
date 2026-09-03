@@ -50,4 +50,30 @@ public class MetadataEndpointTests(TestApiFactory factory) : IClassFixture<TestA
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Another_tenants_metadata_is_a_403()
+    {
+        // 'michal' is seeded in welfare-admin; the caller's tenant is authoritative (S8).
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-User", "michal");
+
+        var response = await client.GetAsync("/api/metadata?tenantId=culture-sport-admin");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task A_caller_gets_their_own_tenants_metadata()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-User", "michal");
+
+        var response = await client.GetAsync("/api/metadata?tenantId=welfare-admin");
+
+        response.EnsureSuccessStatusCode();
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("welfare-admin", doc.RootElement.GetProperty("tenantId").GetString());
+    }
 }

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
 using SupportPlatform.Application.Auditing;
+using SupportPlatform.Application.Identity;
 using SupportPlatform.Application.Search.Interfaces;
 
 namespace SupportPlatform.Application.Search;
@@ -22,10 +23,14 @@ public sealed class SearchService(
     QuestionTextRenderer questionText,
     IMemoryCache cache,
     SearchCacheOptions cacheOptions,
+    TenantAccessGuard tenantAccess,
     IAuditService audit) : ISearchService
 {
     public async Task<SearchResponse> Search(QueryDefinition definition, CancellationToken ct = default)
     {
+        // Identity is authoritative for the tenant (S8): fill it in when omitted, 403 on a mismatch.
+        definition = definition with { TenantId = tenantAccess.EnsureTenant(definition.TenantId) };
+
         var result = await validator.ValidateAsync(definition, ct);
         if (!result.IsValid)
             throw new ValidationException(result.Errors);

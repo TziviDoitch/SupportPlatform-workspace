@@ -48,20 +48,44 @@ dotnet test SupportPlatform.sln
 curl http://localhost:5080/health          # -> 200 Healthy
 ```
 
-Endpoints so far: `GET /api/metadata?tenantId=` (S1) · `POST /api/search` (S2 — body is a
-`QueryDefinition`, response has `questionText` / `rows` / `aggregations` / `page` / `executionMeta`)
+Endpoints so far: `GET /api/metadata?tenantId=` (S1; S8 ⇒ 403 if `tenantId` ≠ caller's) ·
+`POST /api/search` (S2 — body is a `QueryDefinition`, response has `questionText` / `rows` /
+`aggregations` / `page` / `executionMeta`; S8 ⇒ 403 on `tenantId` mismatch)
 · `GET/POST/PUT/DELETE /api/saved-queries[/{id}]` + `POST /api/saved-queries/{id}/run` (S5 —
-CRUD + re-run, scoped to owner + tenant; out-of-scope ⇒ 404).
+CRUD + re-run, scoped to owner + tenant; out-of-scope ⇒ 404; S8 — DELETE requires role `admin` ⇒ 403).
 · `POST /api/nl-queries/parse` (S6 — free text ⇒ `{ definition, interpretationText, confidence,
-unresolved }`).
+unresolved }`; S8 ⇒ 403 on `tenantId` mismatch).
 Every request echoes an `X-Correlation-Id` header; errors are `application/problem+json`.
 `src/Api/SupportPlatform.Api.http` has a ready request per endpoint (S7); Swagger UI at `/swagger`
 in Development lists them all.
 
-Caller identity (S5, PoC seam): `ICurrentUser` (`Application/Identity`) — `Username` / `TenantId`
-/ `Role` / `CorrelationId`. Impl `HttpCurrentUser` (`Api/Identity`) reads the `X-User` header and
-resolves the seeded `users` row; a missing/unknown header falls back to `sarah`. No JWT, no role
-enforcement — that is S8. Send `X-User: <username>` from tests/clients to act as someone else.
+Caller identity (S5 seam, S8 authoritative): `ICurrentUser` (`Application/Identity`) — `Username` /
+`TenantId` / `Role` / `CorrelationId`. Impl `HttpCurrentUser` (`Api/Identity`) reads the `X-User`
+header and resolves the seeded `users` row; a missing/unknown header falls back to `sarah`. Send
+`X-User: <username>` from tests/clients to act as someone else. **No JWT / `/api/auth/login`** —
+that stays the production target (`docs/ARCHITECTURE.md` §8.1, decision 13).
+
+Authorization (S8):
+- **Tenant is authoritative from identity.** `TenantAccessGuard.EnsureTenant(requestedTenantId)`
+  (`Application/Identity`) — null/blank ⇒ the caller's tenant; a different tenant ⇒
+  `ForbiddenException` (403 `forbidden`). Called by `SearchService`, `MetadataService`,
+  `NlQueryService`. `?tenantId=` / `definition.tenantId` / `NlParseRequest.tenantId` are validated,
+  not trusted. The tenant global query filter is the second line of defence.
+- **One role rule:** deleting a saved query requires role `Roles.Admin` (`Application/Identity/Roles`),
+  checked in `SavedQueryService.Delete` **after** the owner/tenant scope check — an out-of-scope id
+  stays 404, an in-scope analyst gets 403.
+- Throw `ForbiddenException` (`Application/Common`) for any "authenticated but not allowed"; the
+  global handler maps it to 403. Saved-query out-of-scope access stays `NotFoundException` ⇒ 404.
+
+Data access is through repositories (`Infrastructure/Repositories/`), not direct `DbContext`:
+- `IRepository<T>` (`Application/Common/Interfaces`) — read-only (`ListAllAsync`) for a small set
+  loaded whole; `TenantRepository` implements it. **No generic write abstraction, no `EfRepository<T>`
+  base** (decision 14).
+- `ISupportRequestRepository.Query()` returns the no-tracking `IQueryable<SupportRequest>` the
+  search engine composes filters onto (replaces the S2 `DbContext` injection in `SearchQueryExecutor`).
+- `MetadataRepository` / `SavedQueryRepository` (S1/S5) keep their own purpose-built interfaces.
+- Add a specific repository only when a service needs data access the existing ones don't cover;
+  don't widen `IRepository<T>`.
 
 Search dedup (S5): `SearchService` keys an `IMemoryCache` by the canonical `DefinitionHasher.Hash`;
 a hit returns the stored `SearchResponse` with `executionMeta.cacheHit = true`. TTL from

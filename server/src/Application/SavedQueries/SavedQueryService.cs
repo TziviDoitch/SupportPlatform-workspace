@@ -70,7 +70,12 @@ public sealed class SavedQueryService(
 
     public async Task Delete(Guid id, CancellationToken ct = default)
     {
+        // Scope first (a record outside the caller's scope stays a 404, no existence leak), then the
+        // one role rule the PoC demonstrates: deleting requires 'admin' (DESIGN_QA §3).
         var entity = await Require(id, ct);
+        if (!string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
+            throw new ForbiddenException("Deleting a saved query requires the 'admin' role.");
+
         await repo.Remove(entity, ct);
         await repo.Save(ct);
         await audit.Record("delete", "SavedQuery", id.ToString(), null, ct);

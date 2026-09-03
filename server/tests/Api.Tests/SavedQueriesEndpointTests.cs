@@ -62,9 +62,10 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     }
 
     [Fact]
-    public async Task Delete_removes_the_record()
+    public async Task Delete_by_an_admin_removes_the_record()
     {
-        var client = Client();
+        // 'dan' is the seeded admin in culture-sport-admin; deleting a saved query requires 'admin' (S8).
+        var client = Client("dan");
         var id = (await Create(client, "to delete")).GetProperty("id").GetString();
 
         var deleted = await client.DeleteAsync($"/api/saved-queries/{id}");
@@ -72,6 +73,22 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
 
         var get = await client.GetAsync($"/api/saved-queries/{id}");
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_by_an_analyst_is_a_problem_details_403_and_keeps_the_record()
+    {
+        var client = Client("sarah"); // seeded role 'analyst'
+        var id = (await Create(client, "analyst cannot delete")).GetProperty("id").GetString();
+
+        var response = await client.DeleteAsync($"/api/saved-queries/{id}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var root = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.EndsWith("/forbidden", root.GetProperty("type").GetString());
+
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/saved-queries/{id}")).StatusCode);
     }
 
     [Fact]

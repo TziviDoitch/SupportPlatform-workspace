@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Application.Search.Interfaces;
 using SupportPlatform.Domain.Entities;
-using SupportPlatform.Infrastructure.Persistence;
 using SupportPlatform.Infrastructure.Persistence.Interfaces;
+using SupportPlatform.Infrastructure.Repositories.Interfaces;
 using SupportPlatform.Infrastructure.Search.Filters;
 using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
 
@@ -22,7 +22,7 @@ namespace SupportPlatform.Infrastructure.Search;
 /// </list>
 /// </summary>
 public sealed class SearchQueryExecutor(
-    SupportPlatformDbContext db,
+    ISupportRequestRepository requests,
     ITenantContext tenant,
     DynamicQueryBuilder builder,
     IFilterHandlerResolver handlers) : ISearchQueryExecutor
@@ -37,7 +37,7 @@ public sealed class SearchQueryExecutor(
         // The service has already validated that this tenant exists; apply the scope.
         tenant.SetTenant(definition.TenantId);
 
-        var filtered = builder.Apply(db.SupportRequests.AsNoTracking(), definition, registry);
+        var filtered = builder.Apply(requests.Query(), definition, registry);
 
         return definition.Segmentation.Count switch
         {

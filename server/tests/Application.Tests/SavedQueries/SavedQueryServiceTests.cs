@@ -90,12 +90,24 @@ public class SavedQueryServiceTests
     [Fact]
     public async Task Delete_removes_the_record_and_audits()
     {
+        _user = new FakeCurrentUser("dan", "culture-sport-admin", "admin");
         var created = await Service().Create(Request());
 
         await Service().Delete(created.Id);
 
         Assert.Empty(_repo.Items);
         Assert.Contains(_audit.Records, r => r.Action == "delete");
+    }
+
+    [Fact]
+    public async Task Delete_by_a_non_admin_is_forbidden_and_keeps_the_record()
+    {
+        var created = await Service().Create(Request()); // default user: sarah, role 'analyst'
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => Service().Delete(created.Id));
+
+        Assert.Single(_repo.Items);
+        Assert.DoesNotContain(_audit.Records, r => r.Action == "delete");
     }
 
     private sealed class StubSearch : ISearchService
