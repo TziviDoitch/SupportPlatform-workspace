@@ -128,8 +128,38 @@ provider-agnostic (EF Core, מעבר = החלפת provider + connection string) 
 
 ## 6. Client
 
-_מבנה `src/` (api / shared / features / state) · טופס דינמי מ-metadata · TanStack
-Query · RTL עם Ant Design._
+React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"` +
+`he_IL`), TanStack Query. מבנה `src/`: `api/` · `components/` (גנרי) · `models/` ·
+`features/<feature>/` (כל feature: קומפוננטות + `hooks/`) · `state/` (רק ה-`queryClient`
+המשותף).
+
+### 6.1 ה-Vertical slice (מומש ב-S3)
+
+`metadata → טופס דינמי → QueryDefinition → POST /api/search → משפט שאלה + טבלה`, הכל
+במסך אחד (`features/search/SearchPage`). התוצאות מוצגות **inline** מתחת לטופס; אין מסך
+`/results` נפרד (יוחזר ב-S7 אם צריך).
+
+- **`api/` — ה-seam היחיד ל-HTTP.** `http.ts` עוטף `fetch`: על תשובה לא-2xx הוא מנתח
+  `application/problem+json` ([`error-model.md`](contracts/error-model.md)), מרים
+  `notification.error` (ה-"interceptor" של §4 בתוכנית) וזורק `ApiError`. שירותים
+  (`metadataApi`, `searchApi`) מחזירים טיפוסים מ-`models/`; קומפוננטות לא קוראות `fetch`.
+- **טופס דינמי מ-`filterFieldRegistry`.** `SearchForm` מרנדר פקד אחד לכל רשומת registry
+  לפי סדר המערך — `codeList` → multi-select מ-`references[referenceList]`, `yearRange` →
+  זוג from/to. פקד הפילוח מציע רק רשומות `segmentable`. שום שדה לא מקודד קשיח; שורת
+  registry חדשה = פקד חדש בטעינה הבאה (§8 Q1, צד הלקוח).
+- **`QueryDefinition` נבנה בלקוח.** `buildQueryDefinition` (פונקציה טהורה) ממפה את מצב
+  הטופס לאובייקט הקנוני: פקדים ריקים מושמטים, שנה עם שני קצוות → `range` ועם קצה אחד →
+  `single`, `metrics` תמיד `["count"]` ב-S3. ולידציה חוצת-שדות (טווח הפוך, id לא מוכר)
+  נשארת בשרת.
+- **שאלה קריאה "חיה".** שינויי טופס עוברים debounce (~400ms, `useDebouncedValue`) ואז
+  `POST /api/search`; הפאנל מציג את `questionText` **מהשרת** (`QuestionTextRenderer`,
+  §4.5) — אין renderer שני בלקוח.
+- **עימוד ומיון בצד השרת.** `ResultsTable` בונה עמודות דינמית מ-`segmentation` +
+  `metrics`, וממפה את `onChange` של `antd` Table ל-`paging` / `sort` ב-`QueryDefinition`;
+  `page.totalRows` מזין את סה"כ העמודים. מצבי loading / empty / error מטופלים
+  (`ResultsPanel` — באנר שגיאה עם `traceId`; ריק / טעינה — ברירת המחדל של הטבלה).
+- **Tenant.** `DEFAULT_TENANT_ID` קבוע זמני (`api/config.ts`) — אין `login` עדיין; S8
+  יחליף אותו בזהות המאומתת.
 
 ## 7. הרחבה עתידית
 
