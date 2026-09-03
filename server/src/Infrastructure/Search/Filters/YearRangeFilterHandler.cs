@@ -19,6 +19,9 @@ public sealed class YearRangeFilterHandler(
 
     public override LambdaExpression GroupKeySelector => Column;
 
+    public override Task<IReadOnlyList<GroupAggregate>> AggregateGroups(
+        IQueryable<SupportRequest> source, CancellationToken ct) => AggregateBy(source, Column, ct);
+
     protected override void Guard(FilterValue value)
     {
         switch (value)

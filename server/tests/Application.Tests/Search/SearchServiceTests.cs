@@ -40,11 +40,11 @@ public class SearchServiceTests
     [Fact]
     public async Task Maps_buckets_paging_and_execution_meta()
     {
-        _executor.Result = new QueryExecutionResult(
+        _executor.Result =
         [
             new AggregateBucket(new Dictionary<string, object> { ["supportYear"] = 2023 }, 12, 1000m),
             new AggregateBucket(new Dictionary<string, object> { ["supportYear"] = 2024 }, 8, 500m)
-        ], TotalBuckets: 2);
+        ];
 
         var response = await _service.Search(Valid());
 
@@ -60,8 +60,7 @@ public class SearchServiceTests
     [Fact]
     public async Task Aggregations_carry_only_the_requested_metrics()
     {
-        _executor.Result = new QueryExecutionResult(
-            [new AggregateBucket(new Dictionary<string, object>(), 12, 1000m)], TotalBuckets: 1);
+        _executor.Result = [new AggregateBucket(new Dictionary<string, object>(), 12, 1000m)];
 
         var countOnly = await _service.Search(Valid() with { Segmentation = [], Metrics = [] });
         Assert.Equal(new[] { "count" }, countOnly.Aggregations[0].Metrics.Keys);
@@ -75,10 +74,10 @@ public class SearchServiceTests
     {
         public bool WasCalled { get; private set; }
 
-        public QueryExecutionResult Result { get; set; } =
-            new([new AggregateBucket(new Dictionary<string, object>(), 0, 0m)], 1);
+        public IReadOnlyList<AggregateBucket> Result { get; set; } =
+            [new AggregateBucket(new Dictionary<string, object>(), 0, 0m)];
 
-        public Task<QueryExecutionResult> Execute(
+        public Task<IReadOnlyList<AggregateBucket>> Execute(
             QueryDefinition definition, IReadOnlyList<FilterFieldRegistryEntry> registry, CancellationToken ct = default)
         {
             WasCalled = true;

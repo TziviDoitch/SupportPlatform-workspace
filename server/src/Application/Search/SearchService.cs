@@ -24,7 +24,8 @@ public sealed class SearchService(
         var meta = await metadata.Get(ct);
 
         var watch = Stopwatch.StartNew();
-        var execution = await executor.Execute(definition, meta.Registry, ct);
+        var buckets = await executor.Execute(definition, meta.Registry, ct);
+        var execution = BucketPaging.Apply(buckets, definition);
         watch.Stop();
 
         var metrics = definition.EffectiveMetrics;

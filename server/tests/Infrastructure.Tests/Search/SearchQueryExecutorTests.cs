@@ -4,6 +4,7 @@ using SupportPlatform.Domain.Entities;
 using SupportPlatform.Infrastructure.Persistence;
 using SupportPlatform.Infrastructure.Search;
 using SupportPlatform.Infrastructure.Search.Filters;
+using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Tests.Search;
 
@@ -28,20 +29,21 @@ public class SearchQueryExecutorTests
         Segmentation = segmentation
     };
 
+    private static IReadOnlyList<FilterFieldRegistryEntry> Registry(TestDb db) =>
+        db.Context.FilterFieldRegistry.AsNoTracking().ToList();
+
     [Fact]
     public async Task No_segmentation_returns_one_bucket_with_the_tenant_totals()
     {
         var (db, executor) = Arrange();
         using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
 
-        var result = await executor.Execute(Def("culture-sport-admin", []), registry);
+        var buckets = await executor.Execute(Def("culture-sport-admin", []), Registry(db));
 
-        var bucket = Assert.Single(result.Buckets);
+        var bucket = Assert.Single(buckets);
         Assert.Empty(bucket.Key);
         Assert.Equal(320, bucket.Count);
         Assert.True(bucket.SumAmountApproved > 0);
-        Assert.Equal(1, result.TotalBuckets);
     }
 
     [Fact]
@@ -49,19 +51,13 @@ public class SearchQueryExecutorTests
     {
         var (db, executor) = Arrange();
         using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
 
         var def = Def("culture-sport-admin", []) with
         {
-            Filters = new Dictionary<string, FilterValue>
-            {
-                ["supportYear"] = new FilterValue.YearSingle(1990)
-            }
+            Filters = new Dictionary<string, FilterValue> { ["supportYear"] = new FilterValue.YearSingle(1990) }
         };
 
-        var result = await executor.Execute(def, registry);
-
-        var bucket = Assert.Single(result.Buckets);
+        var bucket = Assert.Single(await executor.Execute(def, Registry(db)));
         Assert.Equal(0, bucket.Count);
         Assert.Equal(0m, bucket.SumAmountApproved);
     }
@@ -71,25 +67,25 @@ public class SearchQueryExecutorTests
     {
         var (db, executor) = Arrange();
         using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
 
-        var result = await executor.Execute(Def("welfare-admin", []), registry);
+        var buckets = await executor.Execute(Def("welfare-admin", []), Registry(db));
 
-        Assert.Equal(180, Assert.Single(result.Buckets).Count);
+        Assert.Equal(180, Assert.Single(buckets).Count);
     }
 
     [Fact]
-    public async Task One_segmentation_field_groups_in_the_database()
+    public async Task One_segmentation_field_groups_by_that_column_in_the_database()
     {
         var (db, executor) = Arrange();
         using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
 
-        var result = await executor.Execute(Def("culture-sport-admin", ["supportYear"]), registry);
+        var buckets = await executor.Execute(Def("culture-sport-admin", ["supportYear"]), Registry(db));
 
-        Assert.Equal(3, result.Buckets.Count);
-        Assert.Equal(new object[] { 2023, 2024, 2025 }, result.Buckets.Select(b => b.Key["supportYear"]));
-        Assert.Equal(320, result.Buckets.Sum(b => b.Count));
+        Assert.Equal(3, buckets.Count);
+        Assert.Equal(
+            new object[] { 2023, 2024, 2025 },
+            buckets.Select(b => b.Key["supportYear"]).OrderBy(y => y));
+        Assert.Equal(320, buckets.Sum(b => b.Count));
     }
 
     [Fact]
@@ -97,43 +93,15 @@ public class SearchQueryExecutorTests
     {
         var (db, executor) = Arrange();
         using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
 
-        var result = await executor.Execute(Def("culture-sport-admin", ["supportYear", "district"]), registry);
+        var buckets = await executor.Execute(
+            Def("culture-sport-admin", ["supportYear", "district"]), Registry(db));
 
-        Assert.Equal(320, result.Buckets.Sum(b => b.Count));
-        Assert.All(result.Buckets, b =>
+        Assert.Equal(320, buckets.Sum(b => b.Count));
+        Assert.All(buckets, b =>
         {
             Assert.Contains("supportYear", b.Key.Keys);
             Assert.Contains("district", b.Key.Keys);
         });
-        Assert.Equal(result.Buckets.Count, result.TotalBuckets);
-    }
-
-    [Fact]
-    public async Task Paging_limits_the_returned_buckets_but_reports_the_full_total()
-    {
-        var (db, executor) = Arrange();
-        using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
-
-        var def = Def("culture-sport-admin", ["supportYear"]) with { Paging = new Paging(2, 1) };
-        var result = await executor.Execute(def, registry);
-
-        Assert.Equal(2, result.Buckets.Count);
-        Assert.Equal(3, result.TotalBuckets);
-    }
-
-    [Fact]
-    public async Task Sort_descending_reverses_the_default_key_order()
-    {
-        var (db, executor) = Arrange();
-        using var _ = db;
-        var registry = db.Context.FilterFieldRegistry.AsNoTracking().ToList();
-
-        var def = Def("culture-sport-admin", ["supportYear"]) with { Sort = [new SortSpec("supportYear", "desc")] };
-        var result = await executor.Execute(def, registry);
-
-        Assert.Equal(new object[] { 2025, 2024, 2023 }, result.Buckets.Select(b => b.Key["supportYear"]));
     }
 }

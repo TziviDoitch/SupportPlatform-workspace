@@ -16,6 +16,9 @@ public sealed class CodeListFilterHandler(
 
     public override LambdaExpression GroupKeySelector => Column;
 
+    public override Task<IReadOnlyList<GroupAggregate>> AggregateGroups(
+        IQueryable<SupportRequest> source, CancellationToken ct) => AggregateBy(source, Column, ct);
+
     protected override void Guard(FilterValue value)
     {
         if (value is not FilterValue.Codes { Values.Count: > 0 } codes || codes.Values.Any(string.IsNullOrWhiteSpace))

@@ -14,9 +14,9 @@ SupportPlatform.sln
 Directory.Build.props        net8.0 · nullable · TreatWarningsAsErrors — inherited by every project
 src/
   Api             controllers, Swagger, Errors/ (IExceptionHandler + ProblemTypes), Middleware/ (correlation id)
-  Application     use-case services, DTOs, validators; Search/ = QueryDefinition + FilterValue + validator + renderer
+  Application     use-case services, DTOs, validators; Search/ = QueryDefinition + FilterValue + validator + renderer + BucketPaging (sort/page result shaping)
   Domain          entities, value objects, FilterFieldRegistry — no framework refs
-  Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = DynamicQueryBuilder + Filters/ handlers + executor
+  Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = DynamicQueryBuilder + Filters/ handlers + executor (data access only — no sort/page)
 tests/
   Api.Tests             xUnit — endpoint tests via TestApiFactory (WebApplicationFactory<Program> + SQLite)
   Application.Tests      xUnit

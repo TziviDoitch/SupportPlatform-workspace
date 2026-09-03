@@ -54,22 +54,27 @@ _Metadata · Search · SavedQueries · NlQuery · Audit · Identity (stub) — �
   (IN מעל עמודת code), `YearRangeFilterHandler` (טווח / שנה בודדת — pattern
   match סגור על צורת הערך). ה-guard בבסיס בודק את צורת הערך מול ה-`kind`.
 - **instance אחד לכל שדה**, נושא את ה-selector החזק שלו
-  (`Expression<Func<SupportRequest,string|int>>`) — הוא גם מפתח ה-filter וגם
-  מפתח ה-segmentation (`GroupKeySelector`). הרישום ב-`FilterHandlers.Default`.
+  (`Expression<Func<SupportRequest,string|int>>`). אותו instance מסנן (`Apply`),
+  מקבץ ב-DB לפי אותה עמודה (`AggregateGroups`), ומספק את מפתח הפילוח בזיכרון
+  (`GroupKeySelector` / `GroupKey`). הרישום ב-`FilterHandlers.Default`.
 - `FilterHandlerResolver` ממפה `fieldId → handler` (מתוך `IEnumerable<FilterHandler>`
-  ב-DI). שדה סינון חדש = שורת רישום אחת; `kind` חדש = תת-מחלקה אחת. ה-resolver
-  וה-builder לא משתנים.
+  ב-DI). שדה סינון חדש = שורת רישום אחת; `kind` חדש = תת-מחלקה אחת. ה-resolver,
+  ה-builder וה-executor לא משתנים — אין `switch` לפי טיפוס handler קונקרטי.
 
-### 4.4 Aggregation + `SearchQueryExecutor`
+### 4.4 Aggregation + `SearchQueryExecutor` + `BucketPaging`
 
-`SearchQueryExecutor` (Infrastructure) מחיל את ה-tenant scope (מ-`QueryDefinition.TenantId`
-שכבר עבר ולידציה), מריץ את ה-builder, ואז מפלח (count + sumAmountApproved תמיד
-מחושבים; ה-service מקרין רק את ה-metrics שהתבקשו):
+`SearchQueryExecutor` (Infrastructure) עושה רק גישת-נתונים: מחיל את ה-tenant scope
+(מ-`QueryDefinition.TenantId` שכבר עבר ולידציה), מריץ את ה-builder, ומחזיר את **כל**
+קבוצות ה-aggregation (count + sumAmountApproved תמיד מחושבים):
 
 - **0 שדות פילוח** → aggregate בודד ב-DB.
-- **שדה פילוח אחד** → `GroupBy` ב-DB.
+- **שדה פילוח אחד** → `handler.AggregateGroups` — `GroupBy` ב-DB לפי עמודת ה-handler.
 - **2+ שדות** → materialization מינימלי + GroupBy בזיכרון (פשטת PoC; שאילתות
   כבדות = `DESIGN_QA` §4).
+
+מיון (לפי `Sort`, אחרת לפי שדות ה-`segmentation` בסדר עולה) וחיתוך העמוד נעשים
+אחרי כן ב-`BucketPaging` (Application) — עיצוב תוצאה טהור בזיכרון, מחוץ ל-executor
+של ה-EF. ה-service מקרין רק את ה-metrics שהתבקשו.
 
 הסכומים נלקחים מעל `double` כדי שה-provider של SQLite בטסטים יתרגם את ה-aggregate;
 SQL Server היה שומר `decimal` נייטיב (הסכומים קטנים דיים כדי שזה יהיה מדויק לאגורה).
