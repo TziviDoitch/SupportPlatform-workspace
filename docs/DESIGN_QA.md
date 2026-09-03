@@ -144,28 +144,37 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 
 ## 6. ריבוי ספקי AI (תרגום שפה טבעית → `QueryDefinition`)
 
-**הגישה:** Strategy + Factory מאחורי חוזה יחיד. שכבת ה-AI היא seam שאפשר להחליף
-בלי לגעת בשאר המערכת.
+**הגישה:** ממשק אחד, מימוש מוחלף. שכבת ה-AI היא seam שאפשר להחליף בלי לגעת בשאר
+המערכת — וזה מה שנמדד, לא חוכמת המתרגם.
 
-**מומש:** טרם — זה S6. אבל התשתית שמאפשרת אותו כבר קיימת: `QueryDefinition` הוא
-אובייקט קנוני שה-NL parser יפיק בדיוק כמו שהטופס בונה (§10 החלטה 3), כך שהתרגום
-מזין את אותו נתיב ולידציה + מנוע SQL בלי קוד חדש בצד הצרכן.
+### מומש עכשיו (S6)
 
-**היעד (S6):**
+- **`INlQueryProvider`** — חוזה יחיד: `text + tenantId + SearchMetadata → NlParseResult`
+  (`definition`, `confidence`, `unresolved[]`). ספק **לא** ניגש למסד, לא מריץ חיפוש
+  ולא מוודא; ה-metadata נמסר לו כקלט (`ARCHITECTURE.md` §4.7).
+- **`RuleBasedNlQueryProvider`** — המימוש היחיד ב-PoC: מנתח **דטרמיניסטי** שאוצר
+  המילים שלו הוא ה-metadata. שלושה כללים — `CodeListFilterRule` (כל שדה `codeList`
+  ב-registry), `YearRule`, `SegmentationRule`. מה שלא זוהה חוזר ב-`unresolved`;
+  **אף ערך לא מומצא**, וגם מילה דו-משמעית לא נפתרת בניחוש.
+- **`NlQueryService`** מריץ על התוצר את אותו `IValidator<QueryDefinition>` ואת אותו
+  `QuestionTextRenderer` ש-`/api/search` משתמש בהם — ספק אינו מקור אמון. הפרסור לא
+  מריץ שאילתה: המשתמש רואה את הפרשנות ולוחץ "הרץ" (`api-contract.md` §4).
+- **החלפת ספק = שורת DI אחת** ב-`Application/DependencyInjection.cs`. `SearchService`,
+  `QueryDefinition`, ה-validator, ה-executor, המסד וחוזה `/api/search` לא משתנים.
+  טסט ב-`DependencyInjectionTests` מקבע גם את הרישום וגם שה-use-case לא תלוי
+  ב-`ISearchService`.
 
-- `INlQueryTranslator` — חוזה אחד: טקסט + tenant → `{ definition, interpretationText,
-  confidence, unresolved[] }` (`api-contract.md` §4).
-- `NlQueryTranslatorFactory` בוחר מימוש לפי `configuration` (מפתח config, לא
-  קומפילציה).
-- מימושים: `MockNlQueryTranslator` (דוגמאות המטלה → `QueryDefinition` ידוע,
-  תמיד עובד) ו-`RuleBasedNlQueryTranslator` (מילון סטטוס/סוג-גוף/תחום/שנה/מחוז +
-  `unresolved[]` למה שלא זוהה). LLM אמיתי = מימוש נוסף של אותו ממשק — seam בלבד
-  ב-PoC.
-- `fallback chain` — אם ספק ראשי נכשל/לא בטוח (confidence נמוך), נופלים למימוש
-  הבא (Mock) במקום להחזיר שגיאה.
+### אופציה עתידית — לא נדרשת ל-PoC
 
-**הצעד הבא מעבר ל-PoC:** ספק LLM מנוהל עם timeout, מכסות, ו-redaction של מידע
-רגיש לפני שליחה החוצה; caching של פרשנויות.
+- **ספק LLM** (Gemini / OpenAI / מודל מקומי) = מימוש נוסף של אותו ממשק. **ה-PoC לא
+  מדבר עם אף שירות AI חיצוני**: אין מפתח API, אין תלות רשת, והרצה מ-clone נקי לא
+  דורשת הרשמה לשירות — ראה `ARCHITECTURE.md` §10 החלטה 11 לנימוק ולחלופה שנדחתה.
+- **Factory לפי `configuration`** — כשיהיה יותר ממימוש אחד, בחירה לפי מפתח config
+  במקום רישום קבוע.
+- **`fallback chain`** — ספק ראשי נכשל או מחזיר `confidence` נמוך → נפילה למנתח
+  הכללים במקום שגיאה. `confidence` כבר מוחזר בחוזה בדיוק בשביל החלטה כזו.
+- **הקשחת ספק מנוהל** — timeout, מכסות, redaction של מידע רגיש לפני שליחה החוצה,
+  caching של פרשנויות.
 
 ---
 
@@ -217,7 +226,7 @@ console; שאילתות/דוחות מעל ה-`audit_log`.
 | logging + correlation id | **מומש (S2)** | Serilog + `CorrelationIdMiddleware` — שאלה 7 |
 | error model אחיד (RFC 7807) | **מומש (S2)** | `IExceptionHandler` + `ProblemTypes` |
 | dedup / cache | **מומש (S5)** | `DefinitionHasher` → `IMemoryCache` — שאלה 5 |
-| שכבת AI מופשטת | seam (S6) | `INlQueryTranslator` + Factory — שאלה 6 |
+| שכבת AI מופשטת | **מומש (S6)** | `INlQueryProvider` + `RuleBasedNlQueryProvider` (מנתח דטרמיניסטי, בלי LLM חיצוני) — שאלה 6 |
 | auth מרכזי | חלקי (S5 seam; S8 מלא) | `ICurrentUser` מ-`X-User` + scoping owner/tenant; JWT + role — S8, שאלות 2–3 |
 | Audit | **מומש (S5)** | `IAuditService.Record(...)`, קריאות מפורשות ב-services (לא interceptor) |
 | config management + Secrets | חלקי | `appsettings*.json` + `.env.example` + env ב-Compose; יעד: config service + secret store (Key Vault / Secrets Manager) |

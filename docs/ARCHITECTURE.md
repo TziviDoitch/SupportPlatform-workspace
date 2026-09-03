@@ -81,7 +81,7 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 ## 3. מודולים אנכיים
 
 כל מודול חוצה את השכבות (endpoint ב-Api → service ב-Application → נתונים ב-Infrastructure).
-שישה מודולים; שלושה מומשו, שלושה עם seams בלבד:
+שישה מודולים; חמישה מומשו, Identity seam בלבד:
 
 | מודול | סטטוס | מכסה | היכן |
 |---|---|---|---|
@@ -90,7 +90,7 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 | **Identity** | חלקי (S5 seam; JWT ב-S8) | login → JWT/`X-User` → זיהוי משתמש → פתירת `TenantId` → הרשאה | `ICurrentUser` (Application) + `HttpCurrentUser` (Api, קורא `X-User`, ברירת מחדל seed user). אין `AuthController`/token/role check עד S8 (§8.1) |
 | **Search** (dedup) | מומש (S5) | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
 | **SavedQueries** | מומש (S5) | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
-| **NlQuery** | יעד (S6) | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryTranslator` + Factory | חוזה ב-`api-contract.md` §4; טרם מומש |
+| **NlQuery** | מומש (S6) | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryProvider`; מנתח דטרמיניסטי, בלי LLM חיצוני | `NlQueriesController` · `NlQueryService` · `RuleBasedNlQueryProvider` + `RuleBased/Rules/` (§4.7, §6.3) |
 | **Audit** | מומש (S5) | `IAuditService.Record(...)` — קריאות מפורשות ב-services (לא interceptor) על mutations + search | `AuditService` (Infrastructure) → `audit_log` (§5.2) |
 
 חתכים רוחביים (Correlation Id, Serilog, ProblemDetails, Validation) משותפים לכל
@@ -165,6 +165,33 @@ SQL Server היה שומר `decimal` נייטיב (הסכומים קטנים ד�
 Controller (`SearchController`) = HTTP בלבד: bind → `ISearchService` → תוצאה.
 כל החלטה עסקית (ולידציה, בחירת metrics, הרכבת התשובה, hashing, תזמון) ב-`SearchService`.
 Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת ה-tenant scope).
+### 4.7 שכבת ה-NL (מומש ב-S6)
+
+`INlQueryProvider` הוא הגבול היחיד של ה-AI: `text + tenantId + SearchMetadata → NlParseResult`.
+ספק **לא** ניגש למסד, לא מריץ חיפוש ולא מוודא — ה-metadata נמסר לו כקלט, ו-`NlQueryService`
+מריץ את אותו `IValidator<QueryDefinition>` ואת אותו `QuestionTextRenderer` ש-`/api/search`
+משתמש בהם, ורושם audit (`nl-parse`). פרסור לא מריץ שאילתה.
+
+`RuleBasedNlQueryProvider` דק: בונה `NlText`, מפעיל שלושה כללים ב-`RuleBased/Rules/`, ומרכיב
+`QueryDefinition`:
+
+| כלל | מה מזהה | מקור אוצר המילים |
+|---|---|---|
+| `CodeListFilterRule` | ערכי ייחוס לכל שדה `codeList` ב-registry; כמה ערכים לשדה → IN | תוויות/קודים מה-metadata |
+| `YearRule` | שנה בודדת, או הטווח שבין השנים שנמצאו | שדה ה-`yearRange` היחיד ב-registry |
+| `SegmentationRule` | סעיף קיבוץ אחרי "לפי" / "פילוח" | תוויות השדות ה-`segmentable` |
+
+כלל **אחד** לכל השדות מסוג `codeList` — לא כלל לכל שדה עסקי — כך שתחום/סטטוס/מחוז חדש
+ב-seed מזוהה בלי שינוי קוד (§7.1). `HebrewText` מבצע נרמול מורפולוגי גס (תחיליות ב/ה/ו/ל/מ/כ/ש,
+ריבוי, סיומות חלשות); שני הצדדים עוברים את אותה פונקציה, ולכן די שהגזעים יהיו **עקביים**.
+
+מה שאף כלל לא תבע חוזר ב-`unresolved`, ו-`confidence` הוא היחס שנתבע — אינדיקציה בלבד.
+שם שדה נחשב "מובן" רק אם השדה באמת שימש: "לפי סטטוס" (סטטוס אינו `segmentable`) חוזר
+ב-`unresolved`, ולא כפרשנות בביטחון מלא שהתעלמה מהבקשה. מספר בן 4 ספרות מחוץ לטווח
+לוח שנה סביר אינו שנה — הוא נשאר לא-תבוע במקום להפוך לפילטר.
+מילה דו-משמעית לא נפתרת בניחוש: "תמיכה" שייכת גם ל"תחום תמיכה" וגם ל"שנת תמיכה", ולכן
+אינה מזהה אף אחד מהם. **אין ערך מומצא**, בשום מסלול.
+
 
 ## 5. מסד נתונים
 
@@ -281,6 +308,17 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 מספר הרשומות (סכום ה-`count` מעל הקבוצות) ומספר הקבוצות. מנוע החיפוש הוא מנוע אגרגציה —
 שאילתה בלי `segmentation` מחזירה קבוצה אחת (הסך הכולל); לכן `lastRunRowCount` הוא מספר
 **קבוצות**, לא רשומות. הטבלה המלאה של התוצאה במסך זה — S7 (§7 בתוכנית).
+
+### 6.3 מסך השאלה החופשית (מומש ב-S6)
+
+`features/nl-query/`: `useNlParse` (mutation — המשתמש שואל מפורשות, שאלה אחת בכל פעם),
+`InterpretationPanel` (משפט הפרשנות מהשרת + פירוט שדה-שדה + מה שלא זוהה + כפתור "הרץ"),
+`NlQueryPage` שמחבר ביניהם. הפרשנות **לא מריצה כלום**: `useSearch` מקבל `undefined` עד
+שהמשתמש לוחץ "הרץ", ורק אז `POST /api/search` יוצא — אותו נתיב הרצה של מסך החיפוש,
+כולל `ResultsPanel`, עימוד ומיון. אין ממשק צ'אט ואין מנוע חיפוש שני.
+`describeDefinition` (טהור) מתרגם `QueryDefinition` לרשימת תווית/ערך לפי אותן תוויות
+registry ורשימות ייחוס שמזינות את הטופס — קריאה של הגדרה, לא ניסוח עברית: המשפט תמיד
+מגיע מהשרת (§10 החלטה 9).
 
 ## 7. הרחבה עתידית
 
@@ -476,7 +514,8 @@ flowchart TD
 ```
 
 יעד (לא ב-Compose הנוכחי): API gateway / reverse proxy, מסד logs מרוכז, ספק AI
-חיצוני מאחורי `INlQueryTranslator` (§10 החלטה 8, DESIGN_QA §8).
+חיצוני מאחורי `INlQueryProvider` (§10 החלטה 11, DESIGN_QA §8) — ה-PoC עצמו לא מדבר עם
+אף שירות AI חיצוני: אין מפתח API, אין תלות רשת, ו-`docker compose up` מ-clone נקי עובד.
 
 ## 10. Decision Log
 
@@ -552,3 +591,15 @@ Correlation Id + Serilog + ProblemDetails (RFC 7807) נכנסו כשהיה endpo
 המפורשת נראית בקוד ה-use-case, נושאת payload סמנטי, ולא מפעילה audit על כתיבות פנימיות.
 **חלופה שנדחתה:** interceptor גלובלי — "קסום", קשה לצרף לו action/payload נכונים, וכותב
 גם על שמירת שורת ה-audit עצמה.
+
+### 11. מנתח דטרמיניסטי כספק ה-AI ל-PoC (S6)
+
+מאחורי `INlQueryProvider` יושב `RuleBasedNlQueryProvider` — parser שקוף שאוצר המילים
+שלו הוא ה-metadata, ולא ספק LLM חיצוני. הנימוקים: (א) המטלה מבקשת ש**החלפת ספק AI**
+תהיה זולה, לא ש-PoC ידבר עם מודל; מה שנמדד הוא הגבול, והוא נבדק ב-DI ובטסטים;
+(ב) ספק חיצוני מחייב מפתח API — סוד ב-repo, תלות רשת, ותשובה לא דטרמיניסטית בטסטים;
+(ג) `docker compose up` מ-clone נקי חייב לעבוד אצל הבודק בלי הרשמה לשירות.
+המימוש **לעולם לא ממציא ערך**: מה שלא זוהה חוזר ב-`unresolved` והמשתמש רואה אותו לפני
+ההרצה. **חלופה שנדחתה:** אינטגרציית Gemini/OpenAI ב-S6 — מוסיפה תשתית (מפתחות, מכסות,
+retries, timeouts) שאינה נמדדת, ומחלישה את הרפרודוקטיביות. ספק LLM נכנס כמימוש נוסף
+של אותו ממשק — שורת DI אחת (DESIGN_QA §6).

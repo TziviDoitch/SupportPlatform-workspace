@@ -2,6 +2,9 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SupportPlatform.Application.Metadata;
 using SupportPlatform.Application.Metadata.Interfaces;
+using SupportPlatform.Application.NlQuery;
+using SupportPlatform.Application.NlQuery.Interfaces;
+using SupportPlatform.Application.NlQuery.RuleBased;
 using SupportPlatform.Application.SavedQueries;
 using SupportPlatform.Application.SavedQueries.Interfaces;
 using SupportPlatform.Application.Search;
@@ -22,6 +25,10 @@ public static class DependencyInjection
         services.AddSingleton<QuestionTextRenderer>();
 
         services.AddScoped<ISavedQueryService, SavedQueryService>();
+
+        // The AI seam (DESIGN_QA Q6): swapping the provider is this one line.
+        services.AddScoped<INlQueryService, NlQueryService>();
+        services.AddScoped<INlQueryProvider, RuleBasedNlQueryProvider>();
 
         return services;
     }

@@ -96,3 +96,18 @@ npm run lint         # oxlint
   aggregates: no `segmentation` ⇒ one group ⇒ `lastRunRowCount` is a group count, not a record
   count.
 - Scope errors are 404s surfaced by `http.ts` like any other `ApiError` — no special handling.
+
+## The NL slice (S6)
+
+- `features/nl-query/`: `useNlParse` (a **mutation** — the user asks explicitly, one question at
+  a time), `InterpretationPanel` (the server's read-back sentence + the filters field by field +
+  what could not be mapped + the Run button), `NlQueryPage` wiring them together.
+- **Parsing never runs a search.** `useSearch` now takes `QueryDefinition | undefined` and uses
+  TanStack `skipToken` — the NL screen holds it `undefined` until the user clicks Run, then the
+  normal `POST /api/search` path takes over (same `ResultsPanel`, paging and sorting). No second
+  search implementation, no chat UI.
+- `describeDefinition` (pure, unit-tested) maps a `QueryDefinition` to label/value rows using the
+  same registry + reference labels the form is built from. It **reads** a definition; it does not
+  compose Hebrew prose — the sentence is always `interpretationText` from the server.
+- `nlQueryApi` is the only HTTP caller. Parse failures surface through `http.ts` like any other
+  `ApiError`.

@@ -51,16 +51,6 @@ public sealed class QuestionTextRenderer
             _ => string.Empty
         };
 
-    private static string Label(string code, FilterFieldRegistryEntry entry, MetadataSnapshot meta)
-    {
-        var list = entry.ReferenceList switch
-        {
-            "domains" => (IEnumerable<ReferenceItem>)meta.Domains,
-            "bodyTypes" => meta.BodyTypes,
-            "statuses" => meta.Statuses,
-            "districts" => meta.Districts,
-            _ => []
-        };
-        return list.FirstOrDefault(i => i.Code == code)?.Label ?? code;
-    }
+    private static string Label(string code, FilterFieldRegistryEntry entry, MetadataSnapshot meta) =>
+        meta.ReferenceList(entry.ReferenceList).FirstOrDefault(i => i.Code == code)?.Label ?? code;
 }
