@@ -49,8 +49,24 @@ curl http://localhost:5080/health          # -> 200 Healthy
 ```
 
 Endpoints so far: `GET /api/metadata?tenantId=` (S1) · `POST /api/search` (S2 — body is a
-`QueryDefinition`, response has `questionText` / `rows` / `aggregations` / `page` / `executionMeta`).
+`QueryDefinition`, response has `questionText` / `rows` / `aggregations` / `page` / `executionMeta`)
+· `GET/POST/PUT/DELETE /api/saved-queries[/{id}]` + `POST /api/saved-queries/{id}/run` (S5 —
+CRUD + re-run, scoped to owner + tenant; out-of-scope ⇒ 404).
 Every request echoes an `X-Correlation-Id` header; errors are `application/problem+json`.
+
+Caller identity (S5, PoC seam): `ICurrentUser` (`Application/Identity`) — `Username` / `TenantId`
+/ `Role` / `CorrelationId`. Impl `HttpCurrentUser` (`Api/Identity`) reads the `X-User` header and
+resolves the seeded `users` row; a missing/unknown header falls back to `sarah`. No JWT, no role
+enforcement — that is S8. Send `X-User: <username>` from tests/clients to act as someone else.
+
+Search dedup (S5): `SearchService` keys an `IMemoryCache` by the canonical `DefinitionHasher.Hash`;
+a hit returns the stored `SearchResponse` with `executionMeta.cacheHit = true`. TTL from
+`Search:CacheTtlSeconds` (default 60; `0` disables dedup — `TestApiFactory` sets `0` so repeated
+identical posts stay deterministic).
+
+Audit (S5): call `IAuditService.Record(action, entityType, entityId, payload)` **explicitly** from
+the use-case service — never an EF interceptor. Wired on `search` and every saved-query mutation +
+run. Rows carry `User` + `CorrelationId` from `ICurrentUser`; `payload` is stored as JSON.
 
 ### EF Core migrations
 
@@ -67,6 +83,9 @@ dotnet dotnet-ef database update       --project src/Infrastructure --startup-pr
 On `dotnet run` in **Development** only, `Program.cs` runs `Migrate()` then `DbSeeder.Seed()`
 (needs SQL Server up — `cd ../infra && docker compose up db`). `DbSeeder` is deterministic and
 idempotent; it no-ops if `support_requests` already has rows.
+
+Migrations to date: `InitialCreate` · `TenantAndReferenceFkDeleteBehavior` · `SavedQueriesAndAudit`
+(S5 — additive only: creates `saved_queries` + `audit_log`, touches no existing table).
 
 Docker: `server/Dockerfile` publishes `src/Api` on the aspnet:8.0 runtime (listens on `8080`).
 Full stack (db + api + client): `cd ../infra && docker compose up --build`.

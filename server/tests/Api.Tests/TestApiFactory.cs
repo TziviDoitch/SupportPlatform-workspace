@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using SupportPlatform.Application.Search;
 using SupportPlatform.Infrastructure.Persistence;
 
 namespace SupportPlatform.Api.Tests;
@@ -27,6 +28,11 @@ public class TestApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<SupportPlatformDbContext>>();
             services.RemoveAll<SupportPlatformDbContext>();
             services.AddDbContext<SupportPlatformDbContext>(o => o.UseSqlite(_connection));
+
+            // Deterministic endpoint tests: dedup off so repeated identical posts always re-run.
+            // The cache itself is covered by SearchServiceTests.
+            services.RemoveAll<SearchCacheOptions>();
+            services.AddSingleton(new SearchCacheOptions { TtlSeconds = 0 });
         });
     }
 

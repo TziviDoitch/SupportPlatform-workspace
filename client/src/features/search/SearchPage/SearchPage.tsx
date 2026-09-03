@@ -1,6 +1,7 @@
 import { Alert, Spin } from 'antd';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import type { MetadataResponse } from '../../../models/metadata';
+import { SaveQueryButton } from '../../saved-queries/SaveQueryButton';
 import { QuestionPanel } from '../../results/QuestionPanel';
 import { ResultsPanel } from '../../results/ResultsPanel';
 import { useSearch } from '../../results/hooks/useSearch';
@@ -36,6 +37,9 @@ function SearchView({ metadata }: { metadata: MetadataResponse }) {
         onFieldChange={form.setFieldValue}
         onSegmentationChange={form.setSegmentation}
       />
+      <div style={{ marginBottom: 16 }}>
+        <SaveQueryButton definition={form.definition} />
+      </div>
       <QuestionPanel text={data?.questionText} isFetching={isFetching} />
       <ResultsPanel
         response={data}

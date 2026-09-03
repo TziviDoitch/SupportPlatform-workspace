@@ -12,12 +12,18 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
 {
     public const string HeaderName = "X-Correlation-Id";
 
+    /// <summary>Bounds a client-supplied id so it fits every downstream store (e.g. <c>audit_log</c>).</summary>
+    public const int MaxLength = 64;
+
     public async Task Invoke(HttpContext context)
     {
         var id = context.Request.Headers.TryGetValue(HeaderName, out var supplied)
                  && !string.IsNullOrWhiteSpace(supplied)
             ? supplied.ToString()
             : Guid.NewGuid().ToString("n");
+
+        if (id.Length > MaxLength)
+            id = id[..MaxLength];
 
         context.TraceIdentifier = id;
         context.Response.Headers[HeaderName] = id;

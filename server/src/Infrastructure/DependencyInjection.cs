@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SupportPlatform.Application.Auditing;
 using SupportPlatform.Application.Metadata.Interfaces;
+using SupportPlatform.Application.SavedQueries.Interfaces;
 using SupportPlatform.Application.Search.Interfaces;
+using SupportPlatform.Infrastructure.Auditing;
 using SupportPlatform.Infrastructure.Persistence;
 using SupportPlatform.Infrastructure.Persistence.Interfaces;
 using SupportPlatform.Infrastructure.Repositories;
@@ -22,6 +25,8 @@ public static class DependencyInjection
 
         services.AddScoped<ITenantContext, TenantContext>();
         services.AddScoped<IMetadataRepository, MetadataRepository>();
+        services.AddScoped<ISavedQueryRepository, SavedQueryRepository>();
+        services.AddScoped<IAuditService, AuditService>();
 
         services.AddScoped<ISearchMetadataProvider, SearchMetadataProvider>();
         services.AddScoped<ISearchQueryExecutor, SearchQueryExecutor>();

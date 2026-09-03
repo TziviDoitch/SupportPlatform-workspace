@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using SupportPlatform.Application.Common;
 using SupportPlatform.Application.Search;
 
 namespace SupportPlatform.Api.Errors;
@@ -52,6 +53,8 @@ public sealed class ExceptionToProblemDetailsHandler(ILogger<ExceptionToProblemD
             400,
             "The query definition failed validation.",
             new Dictionary<string, string[]> { [q.Field] = [q.Message] }),
+
+        NotFoundException n => (404, n.Message, null),
 
         _ => (500, "The request could not be completed. Reference traceId when reporting.", null)
     };

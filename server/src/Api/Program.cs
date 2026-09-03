@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
 using SupportPlatform.Api.Errors;
+using SupportPlatform.Api.Identity;
 using SupportPlatform.Api.Middleware;
 using SupportPlatform.Application;
+using SupportPlatform.Application.Identity;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Infrastructure;
 using SupportPlatform.Infrastructure.Persistence;
@@ -34,6 +37,14 @@ builder.Services.AddExceptionHandler<ExceptionToProblemDetailsHandler>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache(o => o.SizeLimit = 1000); // bound the search dedup cache (§ DESIGN_QA 5)
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddSingleton(new SearchCacheOptions
+{
+    TtlSeconds = builder.Configuration.GetValue("Search:CacheTtlSeconds", 60)
+});
 
 var app = builder.Build();
 
