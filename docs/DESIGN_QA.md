@@ -7,6 +7,12 @@
 
 _metadata-driven · `FilterFieldRegistry` · JSON config · הדגמה דרך seed._
 
+מומש עד כה (S1–S3): צד השרת — `filter_field_registry` + טבלאות הייחוס מזינות את
+`GET /api/metadata`, וה-`DynamicQueryBuilder` בונה שאילתה רק משדות שב-registry
+(§3.4). צד הלקוח (S3) — `SearchForm` מרנדר את הפקדים מ-`filterFieldRegistry`
+בזמן ריצה, בלי שום שדה מקודד קשיח. שורת registry + שורות ייחוס חדשות (שינוי
+נתונים/seed) מוסיפות פקד ושדה סינון מקצה לקצה בלי שינוי קוד.
+
 ## 2. הוספת משרד ממשלתי נוסף
 
 _multi-tenant: `TenantId` + Global Query Filter · config per tenant · תהליך
