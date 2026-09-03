@@ -6,7 +6,7 @@ Component patterns + worked table example: the
 
 ## Stack
 
-React 19 + TypeScript + Vite 8 · Ant Design v6 (`ConfigProvider direction="rtl"`) ·
+React 19 + TypeScript + Vite 8 · Ant Design v6 + `@ant-design/icons` (`ConfigProvider direction="rtl"` + theme tokens) ·
 react-router-dom v7 · TanStack Query v5 · Chart.js (`react-chartjs-2`, added in S7) ·
 Vitest + `@testing-library/react` + jsdom · lint via **oxlint** (not ESLint).
 
@@ -32,7 +32,8 @@ test/setup.ts  Vitest setup — RTL cleanup + ResizeObserver/matchMedia stubs fo
 ```
 
 Search results are shown **inline on `SearchPage`** — there is no `/results` route (removed in S3;
-S7 kept it inline and added the chart to `ResultsPanel` instead). `features/results/` holds the
+S7 kept it inline and added the chart to `ResultsPanel` instead). The app theme (antd tokens) lives
+in `src/theme.ts` and is applied once via `ConfigProvider` in `main.tsx`. `features/results/` holds the
 results components (`ResultsTable`, `ResultsPanel`, `ResultsChart`, `QuestionPanel`), `useSearch`,
 and the pure `buildChartData`.
 
@@ -96,15 +97,19 @@ npm run lint         # oxlint
   array order. Never hard-code a filter field, label, or option list in a component.
 - `buildQueryDefinition` (pure) is the single place the form → `QueryDefinition` mapping lives; unit
   test it there.
-- Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into
-  `QueryDefinition.paging` / `.sort` and refetches; `SearchResponse.page.totalRows` drives the pager.
+- The search runs on an explicit **"חיפוש"** click, not on every keystroke. `SearchPage` keeps the
+  last-run definition in `submitted` state; `SearchForm`'s "ניקוי מאפייני חיפוש" clears the form
+  (`useSearchForm.reset`). The filter panel is collapsible (local state in `SearchForm`).
+- Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into a
+  `withPaging` / `withSort` patch on `submitted`; `SearchResponse.page.totalRows` drives the pager.
 - `questionText` always comes from the server (`POST /api/search`) — no client-side Hebrew renderer.
-- `ResultsPanel` renders `ResultsChart` above the table. The chart shows **only** when the query has
-  exactly one segmentation field; `buildChartData` (pure, in `features/results/`) is the single
-  aggregations → `{labels, values}` mapping — unit-test chart logic there, not in the component.
-  `components/BarChart` is a generic `react-chartjs-2` wrapper (registers `chart.js` modules once).
-- `YearRangeField` emits bounded integers (`min`/`max` 2000–2100, `precision=0`) — no free-form
-  number inputs. The server still validates the range.
+- `ResultsPanel` lays the table and the chart **side by side** (antd `Row`/`Col`, stacked on
+  narrow). It calls `buildChartData` (pure, in `features/results/`) — the single aggregations →
+  `{labels, values}` mapping — to decide whether a chart applies (exactly one segmentation field)
+  and passes the result to `ResultsChart`. Unit-test chart logic in `buildChartData`, not the
+  component. `components/BarChart` is a generic `react-chartjs-2` wrapper (registers `chart.js` once).
+- `YearRangeField` is two year `Select`s (2000 – next year), "to" hiding years before "from" — no
+  free-form number inputs. The server still validates the range.
 
 ## The saved-queries slice (S5)
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { FilterFieldRegistryEntry } from '../../../models/metadata';
 import { YearRangeField } from './YearRangeField';
@@ -11,26 +11,48 @@ const entry: FilterFieldRegistryEntry = {
   segmentable: true,
 };
 
-describe('YearRangeField', () => {
-  it('bounds both inputs to a plausible calendar-year range', () => {
-    render(<YearRangeField entry={entry} value={{}} onChange={vi.fn()} />);
-    for (const input of screen.getAllByRole('spinbutton')) {
-      expect(input.getAttribute('aria-valuemin')).toBe('2000');
-      expect(input.getAttribute('aria-valuemax')).toBe('2100');
+const thisYear = new Date().getFullYear();
+
+/** Open an antd Select and wait for its option list (rendered in a body portal). */
+async function open(combobox: HTMLElement): Promise<HTMLElement> {
+  fireEvent.mouseDown(combobox);
+  return waitFor(() => {
+    const dropdown = document.querySelector(
+      '.ant-select-dropdown:not(.ant-select-dropdown-hidden)',
+    ) as HTMLElement | null;
+    if (!dropdown || !dropdown.querySelector('.ant-select-item-option')) {
+      throw new Error('dropdown not open yet');
     }
+    return dropdown;
+  });
+}
+
+describe('YearRangeField', () => {
+  it('offers two year dropdowns and no free-form number input', () => {
+    render(<YearRangeField entry={entry} value={{}} onChange={vi.fn()} />);
+    expect(screen.getAllByRole('combobox')).toHaveLength(2);
+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
   });
 
-  it('emits the "from" year as it is typed', () => {
+  it('emits the picked "from" year', async () => {
     const onChange = vi.fn();
     render(<YearRangeField entry={entry} value={{}} onChange={onChange} />);
-    fireEvent.change(screen.getAllByRole('spinbutton')[0], { target: { value: '2023' } });
-    expect(onChange).toHaveBeenLastCalledWith({ from: 2023 });
+    const dropdown = await open(screen.getByRole('combobox', { name: 'שנת תמיכה — משנה' }));
+    fireEvent.click(dropdown.querySelector(`.ant-select-item-option[title="${thisYear}"]`)!);
+    expect(onChange).toHaveBeenLastCalledWith({ from: thisYear });
   });
 
-  it('clears the filter when the only set end is emptied', () => {
-    const onChange = vi.fn();
-    render(<YearRangeField entry={entry} value={{ from: 2023 }} onChange={onChange} />);
-    fireEvent.change(screen.getAllByRole('spinbutton')[0], { target: { value: '' } });
-    expect(onChange).toHaveBeenLastCalledWith(undefined);
+  it('reflects both ends of a controlled range', () => {
+    render(<YearRangeField entry={entry} value={{ from: 2018, to: 2022 }} onChange={vi.fn()} />);
+    const [from, to] = screen.getAllByRole('combobox');
+    expect(within(from.closest('.ant-select')!).getByText('2018')).toBeTruthy();
+    expect(within(to.closest('.ant-select')!).getByText('2022')).toBeTruthy();
+  });
+
+  it('hides "to" years before the chosen "from"', async () => {
+    render(<YearRangeField entry={entry} value={{ from: thisYear }} onChange={vi.fn()} />);
+    const dropdown = await open(screen.getByRole('combobox', { name: 'שנת תמיכה — עד שנה' }));
+    expect(dropdown.querySelector(`.ant-select-item-option[title="${thisYear}"]`)).toBeTruthy();
+    expect(dropdown.querySelector(`.ant-select-item-option[title="${thisYear - 1}"]`)).toBeNull();
   });
 });

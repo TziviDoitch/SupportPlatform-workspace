@@ -1,4 +1,5 @@
-import { Card, Skeleton, Tag, Typography } from 'antd';
+import { Card, Skeleton, Space, Tag, Typography } from 'antd';
+import { MessageOutlined } from '@ant-design/icons';
 
 interface Props {
   /** The server's Hebrew read-back of the current query (`SearchResponse.questionText`). */
@@ -11,9 +12,13 @@ export function QuestionPanel({ text, isFetching }: Props) {
   return (
     <Card
       size="small"
-      title="השאלה"
+      title={
+        <Space size={8}>
+          <MessageOutlined aria-hidden />
+          השאלה
+        </Space>
+      }
       extra={isFetching ? <Tag color="processing">מעדכן…</Tag> : null}
-      style={{ marginBottom: 16 }}
     >
       {text ? (
         <Typography.Text>{text}</Typography.Text>

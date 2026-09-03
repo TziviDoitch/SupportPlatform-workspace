@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Card, Typography } from 'antd';
+import { Alert, Card, Space, Typography } from 'antd';
+import { StarOutlined } from '@ant-design/icons';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import { PageLoader } from '../../../components/PageLoader';
 import type { MetadataResponse } from '../../../models/metadata';
@@ -23,9 +24,12 @@ export function SavedQueriesPage() {
   const ranQuery = rows.find((q) => q.id === run.variables);
 
   return (
-    <Card size="small">
-      <Typography.Title level={4} style={{ marginTop: 0 }}>
-        שאילתות שמורות
+    <Space direction="vertical" size={20} style={{ display: 'flex' }}>
+      <Typography.Title level={3} style={{ margin: 0 }}>
+        <Space size={10}>
+          <StarOutlined aria-hidden />
+          שאילתות שמורות
+        </Space>
       </Typography.Title>
 
       {run.data && (
@@ -33,19 +37,23 @@ export function SavedQueriesPage() {
       )}
 
       {list.isLoading ? (
-        <PageLoader />
+        <Card>
+          <PageLoader />
+        </Card>
       ) : list.error ? (
         <Alert type="error" showIcon message="טעינת השאילתות השמורות נכשלה" />
       ) : rows.length === 0 ? (
         <Alert type="info" showIcon message="עדיין אין שאילתות שמורות. שמור אחת ממסך החיפוש." />
       ) : (
-        <SavedQueriesTable
-          rows={rows}
-          runningId={run.isPending ? (run.variables ?? null) : null}
-          onRun={(id) => run.mutate(id)}
-          onRename={setRenaming}
-          onDelete={(id) => remove.mutate(id)}
-        />
+        <Card styles={{ body: { padding: 0 } }}>
+          <SavedQueriesTable
+            rows={rows}
+            runningId={run.isPending ? (run.variables ?? null) : null}
+            onRun={(id) => run.mutate(id)}
+            onRename={setRenaming}
+            onDelete={(id) => remove.mutate(id)}
+          />
+        </Card>
       )}
 
       <RenameQueryModal
@@ -61,7 +69,7 @@ export function SavedQueriesPage() {
           );
         }}
       />
-    </Card>
+    </Space>
   );
 }
 

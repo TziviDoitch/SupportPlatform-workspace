@@ -1,8 +1,9 @@
-import { Alert } from 'antd';
+import { Alert, Col, Row } from 'antd';
 import { ApiError, formatProblemDetail } from '../../../models/problemDetails';
 import type { FilterFieldRegistryEntry, References } from '../../../models/metadata';
 import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
 import type { SearchResponse } from '../../../models/search';
+import { buildChartData } from '../buildChartData';
 import { ResultsChart } from '../ResultsChart';
 import { ResultsTable } from '../ResultsTable';
 
@@ -18,7 +19,7 @@ interface Props {
   onSortChange?: (sort: SortSpec[]) => void;
 }
 
-/** Owns the results-area states: error banner, otherwise the chart (when segmented) + the table. */
+/** Owns the results-area states: error banner, otherwise the table with the chart beside it (when segmented). */
 export function ResultsPanel({
   response,
   error,
@@ -41,22 +42,27 @@ export function ResultsPanel({
     );
   }
 
+  const chart = response
+    ? buildChartData(response.aggregations, definition.segmentation, registry, references)
+    : null;
+
   return (
-    <>
-      <ResultsChart
-        response={response}
-        segmentation={definition.segmentation}
-        registry={registry}
-        references={references}
-      />
-      <ResultsTable
-        response={response}
-        registry={registry}
-        definition={definition}
-        loading={isFetching}
-        onPageChange={onPageChange}
-        onSortChange={onSortChange}
-      />
-    </>
+    <Row gutter={[16, 16]} align="stretch">
+      <Col xs={24} xl={chart ? 15 : 24}>
+        <ResultsTable
+          response={response}
+          registry={registry}
+          definition={definition}
+          loading={isFetching}
+          onPageChange={onPageChange}
+          onSortChange={onSortChange}
+        />
+      </Col>
+      {chart && (
+        <Col xs={24} xl={9}>
+          <ResultsChart data={chart} />
+        </Col>
+      )}
+    </Row>
   );
 }

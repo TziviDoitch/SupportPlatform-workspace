@@ -1,42 +1,61 @@
-import { Alert, Card, Typography } from 'antd';
+import { useState } from 'react';
+import { Alert, Card, Space, Typography } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import { PageLoader } from '../../../components/PageLoader';
 import type { MetadataResponse } from '../../../models/metadata';
+import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
+import { withPaging, withSort } from '../../../lib/queryDefinition';
 import { SaveQueryButton } from '../../saved-queries/SaveQueryButton';
 import { QuestionPanel } from '../../results/QuestionPanel';
 import { ResultsPanel } from '../../results/ResultsPanel';
 import { useSearch } from '../../results/hooks/useSearch';
 import { SearchForm } from '../SearchForm';
-import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useMetadata } from '../../../hooks/useMetadata';
 import { useSearchForm } from '../hooks/useSearchForm';
-
-const SEARCH_DEBOUNCE_MS = 400;
 
 /** The S3 vertical slice: metadata → dynamic form → QueryDefinition → /api/search → question + table. */
 export function SearchPage() {
   const { data: metadata, isLoading, error } = useMetadata(DEFAULT_TENANT_ID);
 
   return (
-    <Card size="small">
-      <Typography.Title level={4} style={{ marginTop: 0 }}>
-        חיפוש
+    <Space direction="vertical" size={20} style={{ display: 'flex' }}>
+      <Typography.Title level={3} style={{ margin: 0 }}>
+        <Space size={10}>
+          <SearchOutlined aria-hidden />
+          חיפוש בקשות תמיכה
+        </Space>
       </Typography.Title>
+
       {isLoading ? (
-        <PageLoader />
+        <Card>
+          <PageLoader />
+        </Card>
       ) : error || !metadata ? (
         <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />
       ) : (
         <SearchView metadata={metadata} />
       )}
-    </Card>
+    </Space>
   );
 }
 
 function SearchView({ metadata }: { metadata: MetadataResponse }) {
   const form = useSearchForm(metadata.filterFieldRegistry, DEFAULT_TENANT_ID);
-  const definition = useDebouncedValue(form.definition, SEARCH_DEBOUNCE_MS);
-  const { data, error, isFetching } = useSearch(definition);
+
+  // The query only runs on an explicit "search" — `submitted` is the last definition the user ran.
+  // Paging and sorting patch that snapshot directly (the form above stays free to be re-edited).
+  const [submitted, setSubmitted] = useState<QueryDefinition>();
+  const { data, error, isFetching } = useSearch(submitted);
+
+  const runSearch = () => setSubmitted(form.definition);
+  const clear = () => {
+    form.reset();
+    setSubmitted(undefined);
+  };
+  const setPage = (pageNumber: number, pageSize: number) =>
+    setSubmitted((d) => d && withPaging(d, pageNumber, pageSize));
+  const setSort = (sort: SortSpec[]) => setSubmitted((d) => d && withSort(d, sort));
 
   return (
     <>
@@ -44,23 +63,29 @@ function SearchView({ metadata }: { metadata: MetadataResponse }) {
         registry={metadata.filterFieldRegistry}
         references={metadata.references}
         state={form.state}
+        isSearching={isFetching}
         onFieldChange={form.setFieldValue}
         onSegmentationChange={form.setSegmentation}
+        onSearch={runSearch}
+        onClear={clear}
       />
-      <div style={{ marginBottom: 16 }}>
-        <SaveQueryButton definition={form.definition} />
-      </div>
-      <QuestionPanel text={data?.questionText} isFetching={isFetching} />
-      <ResultsPanel
-        response={data}
-        error={error}
-        isFetching={isFetching}
-        registry={metadata.filterFieldRegistry}
-        references={metadata.references}
-        definition={definition}
-        onPageChange={form.setPage}
-        onSortChange={form.setSort}
-      />
+
+      {submitted && (
+        <Space direction="vertical" size={16} style={{ display: 'flex' }}>
+          <QuestionPanel text={data?.questionText} isFetching={isFetching} />
+          <ResultsPanel
+            response={data}
+            error={error}
+            isFetching={isFetching}
+            registry={metadata.filterFieldRegistry}
+            references={metadata.references}
+            definition={submitted}
+            onPageChange={setPage}
+            onSortChange={setSort}
+          />
+          <SaveQueryButton definition={submitted} />
+        </Space>
+      )}
     </>
   );
 }
