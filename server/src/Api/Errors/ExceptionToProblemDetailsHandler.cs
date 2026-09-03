@@ -10,7 +10,8 @@ namespace SupportPlatform.Api.Errors;
 /// <summary>
 /// Turns an unhandled exception into an RFC 7807 response (<c>docs/contracts/error-model.md</c>).
 /// FluentValidation failures and the Application <see cref="InvalidQueryException"/> become 400
-/// <c>validation</c>; anything else is a logged 500 <c>unexpected</c>.
+/// <c>validation</c>; <see cref="ForbiddenException"/> is 403, <see cref="NotFoundException"/> is
+/// 404; anything else is a logged 500 <c>unexpected</c>.
 /// </summary>
 public sealed class ExceptionToProblemDetailsHandler(ILogger<ExceptionToProblemDetailsHandler> logger)
     : IExceptionHandler
@@ -53,6 +54,8 @@ public sealed class ExceptionToProblemDetailsHandler(ILogger<ExceptionToProblemD
             400,
             "The query definition failed validation.",
             new Dictionary<string, string[]> { [q.Field] = [q.Message] }),
+
+        ForbiddenException f => (403, f.Message, null),
 
         NotFoundException n => (404, n.Message, null),
 

@@ -22,7 +22,7 @@ public sealed class NlQueryService(
     ISearchMetadataProvider metadata,
     IValidator<QueryDefinition> validator,
     QuestionTextRenderer questionText,
-    ICurrentUser user,
+    TenantAccessGuard tenantAccess,
     IAuditService audit) : INlQueryService
 {
     public async Task<NlParseResponse> Parse(NlParseRequest request, CancellationToken ct = default)
@@ -31,7 +31,8 @@ public sealed class NlQueryService(
         if (text.Length == 0)
             throw new ValidationException([new ValidationFailure("text", "text is required.")]);
 
-        var tenantId = string.IsNullOrWhiteSpace(request.TenantId) ? user.TenantId : request.TenantId;
+        // Identity is authoritative for the tenant (S8): use the caller's when omitted, 403 on a mismatch.
+        var tenantId = tenantAccess.EnsureTenant(request.TenantId);
 
         var meta = await metadata.Get(ct);
         var result = await provider.Translate(text, tenantId, meta, ct);

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using SupportPlatform.Application.Identity;
 using SupportPlatform.Application.Metadata;
 using SupportPlatform.Application.Metadata.Interfaces;
 using SupportPlatform.Application.NlQuery;
@@ -28,6 +29,8 @@ public static class DependencyInjection
 
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddScoped<TenantAccessGuard>();
+
         services.AddScoped<IMetadataService, MetadataService>();
 
         services.AddScoped<ISearchService, SearchService>();

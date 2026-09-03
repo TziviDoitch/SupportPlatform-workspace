@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
+using SupportPlatform.Application.Common.Interfaces;
 using SupportPlatform.Application.Metadata.Interfaces;
 using SupportPlatform.Application.Search;
 using SupportPlatform.Application.Search.Interfaces;
-using SupportPlatform.Infrastructure.Persistence;
+using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Search;
 
@@ -10,7 +10,7 @@ namespace SupportPlatform.Infrastructure.Search;
 /// Loads the reference/registry snapshot and the known tenant ids once per request (the type is
 /// scoped, so the memoized value is per request).
 /// </summary>
-public sealed class SearchMetadataProvider(IMetadataRepository metadata, SupportPlatformDbContext db)
+public sealed class SearchMetadataProvider(IMetadataRepository metadata, IRepository<Tenant> tenants)
     : ISearchMetadataProvider
 {
     private SearchMetadata? _cached;
@@ -21,8 +21,8 @@ public sealed class SearchMetadataProvider(IMetadataRepository metadata, Support
             return _cached;
 
         var snapshot = await metadata.GetSnapshot(ct);
-        var tenants = await db.Tenants.AsNoTracking().Select(t => t.Id).ToListAsync(ct);
+        var tenantIds = (await tenants.ListAllAsync(ct)).Select(t => t.Id).ToHashSet();
 
-        return _cached = new SearchMetadata(snapshot, tenants.ToHashSet());
+        return _cached = new SearchMetadata(snapshot, tenantIds);
     }
 }

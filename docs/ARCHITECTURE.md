@@ -73,7 +73,9 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 
 `SupportPlatform.Infrastructure` — גישת נתונים ומימושי הממשקים של Application.
 `SupportPlatformDbContext` + `IEntityTypeConfiguration` לכל ישות + מיגרציות + `DbSeeder`
-(`Persistence/`); `MetadataRepository` (`Repositories/`); ומנוע ה-SQL (`Search/`):
+(`Persistence/`); ה-repositories (`Repositories/`) — `MetadataRepository`,
+`SavedQueryRepository`, ומ-S8 גם `SupportRequestRepository` (`IQueryable` למנוע החיפוש)
+ו-`TenantRepository` (`IRepository<Tenant>`); ומנוע ה-SQL (`Search/`):
 `DynamicQueryBuilder`, היררכיית ה-`FilterHandler` (`Filters/`), `SearchQueryExecutor`,
 `SearchMetadataProvider`. גם ה-Global Query Filter של ה-tenant יושב כאן דרך
 `ITenantContext`. אין כאן החלטות עסקיות — רק תרגום ל-EF וחזרה.
@@ -81,17 +83,22 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 ## 3. מודולים אנכיים
 
 כל מודול חוצה את השכבות (endpoint ב-Api → service ב-Application → נתונים ב-Infrastructure).
-שישה מודולים; חמישה מומשו, Identity seam בלבד:
+שישה מודולים, כולם מומשו (Identity — auth stub מבוסס `X-User`, בלי JWT — §8.1):
 
 | מודול | סטטוס | מכסה | היכן |
 |---|---|---|---|
 | **Metadata** | מומש (S1) | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
 | **Search** | מומש (S2–S3) | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
-| **Identity** | חלקי (S5 seam; JWT ב-S8) | login → JWT/`X-User` → זיהוי משתמש → פתירת `TenantId` → הרשאה | `ICurrentUser` (Application) + `HttpCurrentUser` (Api, קורא `X-User`, ברירת מחדל seed user). אין `AuthController`/token/role check עד S8 (§8.1) |
+| **Identity** | מומש (S8 — auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + כלל role אחד (מחיקת שאילתה שמורה דורשת `admin`) | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
 | **Search** (dedup) | מומש (S5) | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
 | **SavedQueries** | מומש (S5) | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
 | **NlQuery** | מומש (S6) | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryProvider`; מנתח דטרמיניסטי, בלי LLM חיצוני | `NlQueriesController` · `NlQueryService` · `RuleBasedNlQueryProvider` + `RuleBased/Rules/` (§4.7, §6.3) |
 | **Audit** | מומש (S5) | `IAuditService.Record(...)` — קריאות מפורשות ב-services (לא interceptor) על mutations + search | `AuditService` (Infrastructure) → `audit_log` (§5.2) |
+
+גישת הנתונים עברה ל-repositories ב-S8: `IRepository<T>` (קריאה בלבד, `Application/Common`)
++ `ISupportRequestRepository` / `TenantRepository` (`Infrastructure/Repositories`) מחליפים את
+הזרקות ה-`DbContext` הישירות שמנוע ה-S2 נשא. `MetadataRepository` / `SavedQueryRepository`
+(S1/S5) נשארים כפי שהם. אין הפשטת כתיבה גנרית.
 
 חתכים רוחביים (Correlation Id, Serilog, ProblemDetails, Validation) משותפים לכל
 המודולים ומפורטים ב-§8.
@@ -429,18 +436,27 @@ reference_domains: { code: "education", label: "חינוך" }
 
 נוספו ב-S5: **Audit Log** (`IAuditService.Record`, קריאות מפורשות — §5.2) · **caching/dedup**
 (`definitionHash` → `IMemoryCache` — §5.2) · **seam זהות** (`ICurrentUser` מ-`X-User`).
-עדיין לפי הבנייה: Auth מלא (JWT + הנפקת token + role check) — S8.
+ב-S8 הזהות הפכה סמכותית (§8.1). נשאר כיעד production: JWT + `POST /api/auth/login` + הנפקת token.
 
-### 8.1 גבול האימות (יעד S8; ב-S1 רק הנתונים)
+### 8.1 גבול האימות — auth stub מבוסס `X-User` (מומש ב-S8)
 
-זרימת היעד: `login → אימות credentials מול User.PasswordHash → הנפקת JWT → Bearer
-authentication → זיהוי User → פתירת TenantId מה-User → הרשאה + בידוד tenant`.
+זרימת היעד המלאה: `login → אימות credentials מול User.PasswordHash → הנפקת JWT → Bearer
+authentication → זיהוי User → פתירת TenantId + Role מה-User → הרשאה + בידוד tenant`.
+ה-PoC מממש את הזרימה **מנקודת "זיהוי User" ואילך**; שני השלבים הראשונים (`login`, JWT) הם
+Fallback §7.6 המוצהר ונשארים יעד production.
 
-- ב-S1 קיימת רק ישות `User` (עם hash דטרמיניסטי) — אין `AuthController`, אין הנפקת token,
-  אין middleware. אין JWT מזויף/stub.
-- `GET /api/metadata?tenantId=` הוא **חוזה פיתוח זמני ל-S1**. משהאימות ינחת ב-S8, ה-tenant של
-  המשתמש המאומת הוא מקור הסמכות; **ה-API לא יבטח `tenantId` מהלקוח לצורך הרשאה** — הוא ישמש
-  לכל היותר לבדיקת התאמה מול ה-token (אחרת 403, ראה `error-model.md`).
+- **מקור הזהות:** כותרת `X-User` מול ה-seed users (`HttpCurrentUser`), ברירת מחדל `sarah`.
+  אין `AuthController`, אין token, אין middleware — ובכוונה: הבודק מריץ `docker compose up`
+  ושולח `X-User: <username>` בלי שלב הרשמה.
+- **`TenantId` סמכותי:** `TenantAccessGuard.EnsureTenant` (Application) נקרא ב-`SearchService`,
+  `MetadataService`, `NlQueryService`. `tenantId` בגוף/query שאינו של הקורא → **403 `forbidden`**
+  (`error-model.md`); חסר → מושלם מזהות הקורא. `?tenantId=` נשאר בחוזה (`api-contract.md` §2)
+  אך כבר **לא נאמן** — הוא מאומת, לא סומך. ה-Global Query Filter (§5.1) הוא שכבת ההגנה השנייה.
+- **כלל role אחד** שמדגים הפרדת גופים מעל data-scoping: מחיקת שאילתה שמורה דורשת role `admin`
+  (`SavedQueryService.Delete` — אחרי בדיקת ה-scope, כדי לא להדליף קיום; analyst → 403). שאר
+  ה-endpoints לא נבדקים ל-role ב-PoC (`DESIGN_QA.md` §3).
+- **`SavedQuery`:** ה-scoping (owner + tenant) כבר נאכף ב-S5 ב-`SavedQueryRepository`; on save
+  ה-`TenantId` של ה-definition נכפה לזה של הקורא. גישה חוצת-scope נשארת 404 (לא 403).
 
 ## 9. דיאגרמות
 
@@ -671,3 +687,28 @@ keyed DI כבר עושה את זה, ומחלקה נוספת היא ceremony בל
 הנרמול חי כולו תחת `RuleBased/`, כך שספק LLM (§4.7) הופך אותו ללא רלוונטי בלי לגעת בשום
 דבר אחר. **חלופה שנדחתה:** עמודת `aliases` בשורות הייחוס — תואמת את פילוסופיית ה-metadata,
 אבל דורשת שינוי חוזה מוקפא + migration, ועדיין לא פותרת תחיליות ("בתחום").
+
+### 13. Auth stub מבוסס `X-User`, ולא JWT, ב-S8
+
+תוכנית §6 S8 מגדירה "רזה: `X-User` header במקום JWT", ו-§7.6 הוא המנוף המוצהר. כל השלבים
+S5–S7 כבר נבנו סביב `ICurrentUser` מ-`X-User`. לכן S8 מממש את **ההרשאה** (tenant סמכותי +
+כלל role) על גבי אותו seam, ולא מוסיף `login`/JWT/scheme. הבודק שולח `X-User: <username>`;
+`docker compose up` עובד בלי שירות זהות. **חלופה שנדחתה:** JWT + `POST /api/auth/login` ב-S8 —
+מוסיף הנפקת token, חתימה, וניהול secret שאינם נמדדים, ומחליף seam שכבר עובד. נשאר יעד
+production מתועד (§8.1, `DESIGN_QA.md` §2–3).
+
+**`TenantAccessGuard` ולא בדיקה מפוזרת:** שלושת ה-services שמקבלים `tenantId` מהקלט
+(`Search`/`Metadata`/`NlQuery`) קוראים ל-`EnsureTenant` אחד — מקום יחיד, נבדק ב-
+`TenantAccessGuardTests`. `SavedQuery` לא עובר דרכו: ה-scoping שלו (owner + tenant) הוא 404,
+לא 403, וכבר נאכף ב-S5.
+
+### 14. `IRepository<T>` מינימלי לקריאה בלבד, בלי הפשטת כתיבה (S8)
+
+תוכנית §6 S8: "`IRepository<T>` + 2–3 ספציפיים (ניקוי הזרקות זמניות מ-S2)". מנוע ה-S2
+(`SearchQueryExecutor`, `SearchMetadataProvider`) הזריק `SupportPlatformDbContext` ישירות.
+S8 מכניס: `IRepository<T>` — ממשק קריאה יחיד (`ListAllAsync`) ב-`Application/Common` —
+ו-`TenantRepository` שמממש אותו; `ISupportRequestRepository` (Infrastructure) שחושף
+`IQueryable<SupportRequest>` ל-`DynamicQueryBuilder`. `MetadataRepository`/`SavedQueryRepository`
+לא נגעו. **אין `IRepository<T>` לכתיבה** ואין `EfRepository<T>` בסיס גנרי — `DbSet<T>` כבר
+Repository, וב-PoC הפשטה מעליו היא anti-pattern. **חלופה שנדחתה:** repository גנרי מלא
+(CRUD + `IUnitOfWork`) — ceremony בלי דרישה; רק שני seams נדרשים בפועל ל-S8.
