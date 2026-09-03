@@ -26,9 +26,68 @@ _Metadata · Search · SavedQueries · NlQuery · Audit · Identity (stub) — �
 
 ## 4. מנוע השאילתות
 
-_`QueryDefinition` כאובייקט קנוני יחיד · `DynamicQueryBuilder` שבונה `IQueryable`
-דרך whitelist מ-`FilterFieldRegistry` (§3.4 קו אדום) · Aggregation לפי
-`segmentation` · `QuestionTextRenderer`. חוזה: [`contracts/query-definition.md`](contracts/query-definition.md)._
+חוזה: [`contracts/query-definition.md`](contracts/query-definition.md) ·
+[`contracts/api-contract.md`](contracts/api-contract.md) §3. מומש ב-S2.
+
+### 4.1 `QueryDefinition` — האובייקט הקנוני
+
+רשומה ב-`Application/Search/QueryDefinition.cs`: `TenantId` · `Filters`
+(מילון `fieldId → FilterValue`) · `Segmentation` · `Metrics` · `Paging` · `Sort`.
+`FilterValue` הוא היררכיה סגורה (`Codes` · `YearRange` · `YearSingle`) עם
+`FilterValueJsonConverter` שקורא מערך JSON כרשימת codes ואובייקט `{type}` כפילטר שנה.
+
+### 4.2 ולידציה מול ה-Registry
+
+`QueryDefinitionValidator` (FluentValidation) נטען דרך `ISearchMetadataProvider`
+(reference lists + registry + רשימת ה-tenants). נדחים ב-400 (`error-model.md`):
+`filters` key / `segmentation` / `sort.field` שאינו ב-registry, ערך שצורתו לא
+תואמת ל-`kind`, שדה לא-`segmentable` בפילוח, טווח שנים הפוך, metric/direction לא
+מוכר, `pageSize` מחוץ ל-1–200, tenant לא קיים.
+
+### 4.3 `DynamicQueryBuilder` + היררכיית ה-handlers (§3.4 קו אדום)
+
+`DynamicQueryBuilder` (Infrastructure) הוא מתזמן דק: קודם **דוחה כל `fieldId`
+שאינו ב-registry — לפני שרץ handler כלשהו** — ואז מקפל את ה-handlers שנפתרו.
+אין `switch` לפי `fieldId`, אין reflection, אין expression-from-string.
+
+- `FilterHandler` (abstract) — תת-מחלקה אחת לכל `kind`: `CodeListFilterHandler`
+  (IN מעל עמודת code), `YearRangeFilterHandler` (טווח / שנה בודדת — pattern
+  match סגור על צורת הערך). ה-guard בבסיס בודק את צורת הערך מול ה-`kind`.
+- **instance אחד לכל שדה**, נושא את ה-selector החזק שלו
+  (`Expression<Func<SupportRequest,string|int>>`) — הוא גם מפתח ה-filter וגם
+  מפתח ה-segmentation (`GroupKeySelector`). הרישום ב-`FilterHandlers.Default`.
+- `FilterHandlerResolver` ממפה `fieldId → handler` (מתוך `IEnumerable<FilterHandler>`
+  ב-DI). שדה סינון חדש = שורת רישום אחת; `kind` חדש = תת-מחלקה אחת. ה-resolver
+  וה-builder לא משתנים.
+
+### 4.4 Aggregation + `SearchQueryExecutor`
+
+`SearchQueryExecutor` (Infrastructure) מחיל את ה-tenant scope (מ-`QueryDefinition.TenantId`
+שכבר עבר ולידציה), מריץ את ה-builder, ואז מפלח (count + sumAmountApproved תמיד
+מחושבים; ה-service מקרין רק את ה-metrics שהתבקשו):
+
+- **0 שדות פילוח** → aggregate בודד ב-DB.
+- **שדה פילוח אחד** → `GroupBy` ב-DB.
+- **2+ שדות** → materialization מינימלי + GroupBy בזיכרון (פשטת PoC; שאילתות
+  כבדות = `DESIGN_QA` §4).
+
+הסכומים נלקחים מעל `double` כדי שה-provider של SQLite בטסטים יתרגם את ה-aggregate;
+SQL Server היה שומר `decimal` נייטיב (הסכומים קטנים דיים כדי שזה יהיה מדויק לאגורה).
+מיון וניפוי עמודים על ה-buckets; `page.totalRows` = מספר הקבוצות לפני עימוד.
+
+### 4.5 `QuestionTextRenderer`
+
+בונה את משפט העברית מהניסוח שהחוזה מגדיר בפועל
+([`query-definition.md`](contracts/query-definition.md) "Reads as" +
+`api-contract.md` §3): הפתיח "כמה בקשות תמיכה", תוויות ה-registry, תוויות ערכי
+הייחוס, וסעיף "בפילוח לפי". אין ניסוח מומצא מעבר לכך; ל-metric הסכום אין ניסוח
+בחוזה ולכן הוא לא מתואר במשפט.
+
+### 4.6 גבולות אחריות
+
+Controller (`SearchController`) = HTTP בלבד: bind → `ISearchService` → תוצאה.
+כל החלטה עסקית (ולידציה, בחירת metrics, הרכבת התשובה, hashing, תזמון) ב-`SearchService`.
+Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת ה-tenant scope).
 
 ## 5. מסד נתונים
 
@@ -74,10 +133,20 @@ _הוספת תחום תמיכה / סוג גוף / שדה סינון שלם = ש�
 
 ## 8. חתכים רוחביים
 
-_Serilog + Correlation Id · ProblemDetails (RFC 7807,
-[`contracts/error-model.md`](contracts/error-model.md)) · Validation
-(FluentValidation) · Auth (JWT מינימלי / `X-User` + tenant filter + role check) ·
-Audit Log · caching/dedup (`definitionHash`)._
+מומשו ב-S2 (יחד עם `POST /api/search`):
+
+- **Correlation Id** — `CorrelationIdMiddleware` לוקח `X-Correlation-Id` מה-request
+  או מייצר; מחזיר אותו ב-response, דוחף ל-Serilog `LogContext`, וקובע אותו כ-
+  `HttpContext.TraceIdentifier` כך שהוא צף כ-`traceId` ב-ProblemDetails.
+- **Serilog** — Console sink, `ILogger<T>` בהזרקה, בלי multi-sink config.
+- **ProblemDetails (RFC 7807, [`contracts/error-model.md`](contracts/error-model.md))** —
+  `AddProblemDetails` + `IExceptionHandler` (`Api/Errors`): `ValidationException`
+  ו-`InvalidQueryException` → 400 `validation` עם `errors{}`; כל השאר → 500 `unexpected`
+  מתועד. ה-`type`/`title` מ-`ProblemTypes`.
+- **Validation** — FluentValidation על `QueryDefinition`, נבדק ב-service לפני שימוש.
+
+עדיין לפי הבנייה: Auth (JWT / `X-User` + role check) — S8 · Audit Log · caching/dedup
+(`definitionHash` כבר מחושב ב-`executionMeta`, ה-cache עצמו — S5).
 
 ### 8.1 גבול האימות (יעד S8; ב-S1 רק הנתונים)
 
