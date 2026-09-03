@@ -1,4 +1,6 @@
 import { Alert, Button, Card, Descriptions, Space, Typography } from 'antd';
+import { ProfileOutlined } from '@ant-design/icons';
+import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { NlParseResponse } from '../../../models/nlQuery';
 import { describeDefinition } from '../describeDefinition';
@@ -19,7 +21,7 @@ export function InterpretationPanel({ parsed, metadata, onRun, isRunning }: Prop
   const fields = describeDefinition(parsed.definition, metadata);
 
   return (
-    <Card size="small" title="פירשתי את הבקשה כך" style={{ marginBottom: 16 }}>
+    <Card size="small" title={<SectionTitle icon={<ProfileOutlined />}>פירשתי את הבקשה כך</SectionTitle>}>
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Typography.Text>{parsed.interpretationText}</Typography.Text>
 

@@ -9,13 +9,21 @@ import type { SearchResponse } from '../../../models/search';
 import { ResultsPanel } from './ResultsPanel';
 
 vi.mock('../../../components/BarChart', () => ({
-  BarChart: ({ labels }: { labels: string[] }) => <div data-testid="bar-chart">{labels.join(',')}</div>,
+  BarChart: ({ seriesLabel }: { seriesLabel: string }) => (
+    <div data-testid="bar-chart">{seriesLabel}</div>
+  ),
 }));
 
 const registry: FilterFieldRegistryEntry[] = [
   { id: 'district', label: 'מחוז', kind: 'codeList', referenceList: 'districts', operators: ['in'], segmentable: true },
+  { id: 'bodyType', label: 'סוג גוף', kind: 'codeList', referenceList: 'bodyTypes', operators: ['in'], segmentable: true },
 ];
-const references: References = { domains: [], bodyTypes: [], statuses: [], districts: [{ code: 'north', label: 'צפון' }] };
+const references: References = {
+  domains: [],
+  bodyTypes: [{ code: 'association', label: 'עמותה' }],
+  statuses: [],
+  districts: [{ code: 'north', label: 'צפון' }],
+};
 
 const base: SearchResponse = {
   questionText: 'q',
@@ -37,7 +45,7 @@ const def = (segmentation: string[]): QueryDefinition => ({
 const wrap = (ui: ReactElement) => render(<ConfigProvider locale={heIL}>{ui}</ConfigProvider>);
 
 describe('ResultsPanel', () => {
-  it('shows the chart beside the table when segmented by one field', () => {
+  it('shows one chart beside the table for one graph field', () => {
     wrap(
       <ResultsPanel
         response={base}
@@ -48,14 +56,34 @@ describe('ResultsPanel', () => {
         definition={def(['district'])}
       />,
     );
-    expect(screen.getByTestId('bar-chart')).toBeTruthy();
+    expect(screen.getAllByTestId('bar-chart')).toHaveLength(1);
     expect(screen.getByText('תוצאות')).toBeTruthy();
   });
 
-  it('shows only the table when the query is not segmented', () => {
+  it('shows one chart per field, beside the table, for two graph fields', () => {
     wrap(
       <ResultsPanel
-        response={{ ...base, segmentation: undefined } as SearchResponse}
+        response={{
+          ...base,
+          aggregations: [
+            { key: { district: 'north', bodyType: 'association' }, metrics: { count: 13 } },
+          ],
+        }}
+        error={undefined}
+        isFetching={false}
+        registry={registry}
+        references={references}
+        definition={def(['district', 'bodyType'])}
+      />,
+    );
+    expect(screen.getAllByTestId('bar-chart')).toHaveLength(2);
+    expect(screen.getByText('תוצאות')).toBeTruthy();
+  });
+
+  it('shows only the table when there is no graph field', () => {
+    wrap(
+      <ResultsPanel
+        response={base}
         error={undefined}
         isFetching={false}
         registry={registry}

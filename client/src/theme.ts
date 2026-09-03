@@ -1,5 +1,8 @@
 import type { ThemeConfig } from 'antd';
 
+/** Dark-purple accent for section / card-title / nav icons — the one place this colour is defined. */
+export const SECTION_ICON_COLOR = '#5b21b6';
+
 /**
  * The one place the app's look is decided. A calm indigo-on-slate palette, roomy radii and a
  * single quiet elevation — tuned for dense Hebrew data screens. Components read these tokens, so
@@ -19,6 +22,8 @@ export const theme: ThemeConfig = {
     controlHeight: 38,
     boxShadow: '0 1px 2px rgba(20, 27, 45, 0.04), 0 6px 20px rgba(20, 27, 45, 0.06)',
     boxShadowSecondary: '0 6px 24px rgba(20, 27, 45, 0.10)',
+    // Borderless cards paint this — a faint dark-purple lift around every card frame.
+    boxShadowTertiary: '0 2px 8px rgba(76, 29, 149, 0.06), 0 12px 32px rgba(76, 29, 149, 0.09)',
   },
   components: {
     Layout: { headerBg: '#ffffff', headerHeight: 60, bodyBg: '#f3f5fb' },

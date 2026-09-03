@@ -7,7 +7,7 @@ export interface InterpretedField {
   value: string;
 }
 
-const SEGMENTATION_LABEL = 'קיבוץ לפי';
+const SEGMENTATION_LABEL = 'גרף לפי';
 
 /**
  * The definition as a label/value list, for the review panel — the same registry and reference

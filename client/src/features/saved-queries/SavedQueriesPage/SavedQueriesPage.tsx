@@ -3,16 +3,15 @@ import { Alert, Card, Space, Typography } from 'antd';
 import { StarOutlined } from '@ant-design/icons';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
 import { PageLoader } from '../../../components/PageLoader';
+import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { QueryDefinition } from '../../../models/queryDefinition';
 import type { SavedQuery } from '../../../models/savedQuery';
 import type { SearchResponse } from '../../../models/search';
-import { formatCurrencyIls, formatIntHe } from '../../../lib/format';
-import { ResultsPanel } from '../../results/ResultsPanel';
+import { ResultsSection } from '../../results/ResultsSection';
 import { useMetadata } from '../../../hooks/useMetadata';
 import { RenameQueryModal } from '../RenameQueryModal';
 import { SavedQueriesTable } from '../SavedQueriesTable';
-import { summarizeRun } from '../runSummary';
 import { useSavedQueries } from '../hooks/useSavedQueries';
 
 /** S5 screen: list saved queries, re-run / rename / delete them. Saving happens on the search screen. */
@@ -26,10 +25,7 @@ export function SavedQueriesPage() {
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        <Space size={10}>
-          <StarOutlined aria-hidden />
-          שאילתות שמורות
-        </Space>
+        <SectionTitle icon={<StarOutlined />}>שאילתות שמורות</SectionTitle>
       </Typography.Title>
 
       {run.data && (
@@ -45,7 +41,7 @@ export function SavedQueriesPage() {
       ) : rows.length === 0 ? (
         <Alert type="info" showIcon message="עדיין אין שאילתות שמורות. שמור אחת ממסך החיפוש." />
       ) : (
-        <Card styles={{ body: { padding: 0 } }}>
+        <Card title={<SectionTitle icon={<StarOutlined />}>השאילתות שלי</SectionTitle>} styles={{ body: { padding: 0 } }}>
           <SavedQueriesTable
             rows={rows}
             runningId={run.isPending ? (run.variables ?? null) : null}
@@ -74,10 +70,9 @@ export function SavedQueriesPage() {
 }
 
 /**
- * A re-run's result: the server's readable question + record/approved/group headline, then the full
- * results (chart + table) once metadata is available. Paging and sorting aren't offered here — the
- * run endpoint takes no definition override (`api-contract.md` §5); the search screen is where a
- * query is adjusted.
+ * A re-run's result — the same question + chart(s) + table the search screen shows. Paging and
+ * sorting aren't offered here: the run endpoint takes no definition override (`api-contract.md` §5);
+ * the search screen is where a query is adjusted.
  */
 function RunResult({
   response,
@@ -88,32 +83,16 @@ function RunResult({
   definition: QueryDefinition | undefined;
   metadata: MetadataResponse | undefined;
 }) {
-  const { records, approved, groups } = summarizeRun(response);
-  const parts = [
-    `${formatIntHe(records)} רשומות`,
-    `סכום מאושר ${formatCurrencyIls(approved)}`,
-    ...(groups > 1 ? [`${groups} קבוצות`] : []),
-  ];
+  if (!definition || !metadata) return null;
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Alert
-        style={{ marginBottom: 16 }}
-        type="success"
-        showIcon
-        message={response.questionText}
-        description={parts.join(' · ')}
-      />
-      {definition && metadata && (
-        <ResultsPanel
-          response={response}
-          error={undefined}
-          isFetching={false}
-          registry={metadata.filterFieldRegistry}
-          references={metadata.references}
-          definition={definition}
-        />
-      )}
-    </div>
+    <ResultsSection
+      response={response}
+      error={undefined}
+      isFetching={false}
+      registry={metadata.filterFieldRegistry}
+      references={metadata.references}
+      definition={definition}
+    />
   );
 }

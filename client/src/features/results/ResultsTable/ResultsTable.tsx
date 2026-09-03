@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { Card, Space, Typography, type TableProps } from 'antd';
+import { Card, Typography, type TableProps } from 'antd';
 import { TableOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../components/DataTable';
-import { formatIntHe } from '../../../lib/format';
+import { SectionTitle } from '../../../components/SectionTitle';
+import { formatCurrencyIls, formatIntHe } from '../../../lib/format';
 import type { FilterFieldRegistryEntry } from '../../../models/metadata';
 import { DEFAULT_PAGE_SIZE, type QueryDefinition, type SortSpec } from '../../../models/queryDefinition';
 import type { ResultRow, SearchResponse } from '../../../models/search';
@@ -59,19 +60,19 @@ export function ResultsTable({
   };
 
   const totalRows = response?.page.totalRows ?? 0;
+  const approved =
+    response && definition.metrics.includes('sumAmountApproved')
+      ? response.aggregations.reduce((sum, agg) => sum + (agg.metrics.sumAmountApproved ?? 0), 0)
+      : undefined;
 
   return (
     <Card
-      title={
-        <Space size={8}>
-          <TableOutlined aria-hidden />
-          תוצאות
-        </Space>
-      }
+      title={<SectionTitle icon={<TableOutlined />}>תוצאות</SectionTitle>}
       extra={
         response ? (
           <Typography.Text type="secondary">
             סה״כ {formatIntHe(totalRows)} רשומות
+            {approved !== undefined && ` · סכום מאושר ${formatCurrencyIls(approved)}`}
           </Typography.Text>
         ) : null
       }

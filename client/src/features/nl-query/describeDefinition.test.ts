@@ -56,7 +56,7 @@ describe('describeDefinition', () => {
   it('adds the grouping fields last', () => {
     const fields = describeDefinition({ ...base, segmentation: ['district'] }, metadata);
 
-    expect(fields).toEqual([{ label: 'קיבוץ לפי', value: 'מחוז' }]);
+    expect(fields).toEqual([{ label: 'גרף לפי', value: 'מחוז' }]);
   });
 
   it('describes an empty definition as no fields at all', () => {

@@ -7,6 +7,7 @@ import {
   SearchOutlined,
   UpOutlined,
 } from '@ant-design/icons';
+import { SectionTitle } from '../../../components/SectionTitle';
 import type { FilterFieldRegistryEntry, References } from '../../../models/metadata';
 import type { FieldValue, SearchFormState, YearInput } from '../buildQueryDefinition';
 import { CodeListField } from './CodeListField';
@@ -45,12 +46,7 @@ export function SearchForm({
 
   return (
     <Card
-      title={
-        <Space size={8}>
-          <FilterOutlined aria-hidden />
-          מאפייני חיפוש
-        </Space>
-      }
+      title={<SectionTitle icon={<FilterOutlined />}>מאפייני חיפוש</SectionTitle>}
       extra={
         <Button type="text" onClick={() => setOpen((v) => !v)}>
           {open ? 'הסתרת מאפייני חיפוש' : 'הצגת מאפייני חיפוש'}
@@ -82,11 +78,11 @@ export function SearchForm({
           ))}
 
           <Col {...colSpan('codeList')}>
-            <Form.Item label="פילוח">
+            <Form.Item label="הוספת גרף לפי">
               <Select
                 mode="multiple"
                 allowClear
-                placeholder="ללא פילוח"
+                placeholder="בחרו שדה (למשל: מחוז)"
                 value={state.segmentation}
                 onChange={onSegmentationChange}
                 options={segmentable.map((e) => ({ value: e.id, label: e.label }))}

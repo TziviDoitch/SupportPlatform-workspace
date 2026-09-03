@@ -1,5 +1,6 @@
-import { Card, Skeleton, Space, Tag, Typography } from 'antd';
+import { Card, Skeleton, Tag, Typography } from 'antd';
 import { MessageOutlined } from '@ant-design/icons';
+import { SectionTitle } from '../../../components/SectionTitle';
 
 interface Props {
   /** The server's Hebrew read-back of the current query (`SearchResponse.questionText`). */
@@ -12,12 +13,7 @@ export function QuestionPanel({ text, isFetching }: Props) {
   return (
     <Card
       size="small"
-      title={
-        <Space size={8}>
-          <MessageOutlined aria-hidden />
-          השאלה
-        </Space>
-      }
+      title={<SectionTitle icon={<MessageOutlined />}>השאלה</SectionTitle>}
       extra={isFetching ? <Tag color="processing">מעדכן…</Tag> : null}
     >
       {text ? (

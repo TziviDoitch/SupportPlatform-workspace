@@ -77,7 +77,7 @@ describe('NlQueryPage', () => {
 
     expect(await screen.findByText(parsed.interpretationText)).toBeTruthy();
     expect(screen.getByText('תרבות')).toBeTruthy();
-    expect(screen.getByText('קיבוץ לפי')).toBeTruthy();
+    expect(screen.getByText('גרף לפי')).toBeTruthy();
     expect(runSearch).not.toHaveBeenCalled();
   });
 

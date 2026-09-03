@@ -11,7 +11,7 @@ import { App } from './App';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider direction="rtl" locale={heIL} theme={theme}>
+      <ConfigProvider direction="rtl" locale={heIL} theme={theme} card={{ variant: 'borderless' }}>
         <AntdApp>
           <BrowserRouter>
             <App />
