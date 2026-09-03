@@ -19,9 +19,7 @@ export function QuestionPanel({ text, isFetching }: Props) {
         <Typography.Text>{text}</Typography.Text>
       ) : isFetching ? (
         <Skeleton active paragraph={false} />
-      ) : (
-        <Typography.Text type="secondary">בחר/י פילטרים כדי לראות את השאלה.</Typography.Text>
-      )}
+      ) : null}
     </Card>
   );
 }

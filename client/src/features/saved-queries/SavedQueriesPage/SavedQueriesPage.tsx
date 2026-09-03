@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import { Alert, Card, Spin, Typography } from 'antd';
+import { Alert, Card, Typography } from 'antd';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
+import { PageLoader } from '../../../components/PageLoader';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { QueryDefinition } from '../../../models/queryDefinition';
 import type { SavedQuery } from '../../../models/savedQuery';
 import type { SearchResponse } from '../../../models/search';
+import { formatCurrencyIls, formatIntHe } from '../../../lib/format';
 import { ResultsPanel } from '../../results/ResultsPanel';
-import { useMetadata } from '../../search/hooks/useMetadata';
+import { useMetadata } from '../../../hooks/useMetadata';
 import { RenameQueryModal } from '../RenameQueryModal';
 import { SavedQueriesTable } from '../SavedQueriesTable';
 import { summarizeRun } from '../runSummary';
 import { useSavedQueries } from '../hooks/useSavedQueries';
-
-const noop = () => {};
 
 /** S5 screen: list saved queries, re-run / rename / delete them. Saving happens on the search screen. */
 export function SavedQueriesPage() {
@@ -33,7 +33,7 @@ export function SavedQueriesPage() {
       )}
 
       {list.isLoading ? (
-        <Spin />
+        <PageLoader />
       ) : list.error ? (
         <Alert type="error" showIcon message="טעינת השאילתות השמורות נכשלה" />
       ) : rows.length === 0 ? (
@@ -65,12 +65,6 @@ export function SavedQueriesPage() {
   );
 }
 
-const shekels = new Intl.NumberFormat('he-IL', {
-  style: 'currency',
-  currency: 'ILS',
-  maximumFractionDigits: 0,
-});
-
 /**
  * A re-run's result: the server's readable question + record/approved/group headline, then the full
  * results (chart + table) once metadata is available. Paging and sorting aren't offered here — the
@@ -88,8 +82,8 @@ function RunResult({
 }) {
   const { records, approved, groups } = summarizeRun(response);
   const parts = [
-    `${records.toLocaleString('he-IL')} רשומות`,
-    `סכום מאושר ${shekels.format(approved)}`,
+    `${formatIntHe(records)} רשומות`,
+    `סכום מאושר ${formatCurrencyIls(approved)}`,
     ...(groups > 1 ? [`${groups} קבוצות`] : []),
   ];
 
@@ -110,8 +104,6 @@ function RunResult({
           registry={metadata.filterFieldRegistry}
           references={metadata.references}
           definition={definition}
-          onPageChange={noop}
-          onSortChange={noop}
         />
       )}
     </div>

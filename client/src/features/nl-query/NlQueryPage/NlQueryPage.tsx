@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Input, Space, Spin, Typography } from 'antd';
+import { Alert, Button, Card, Input, Space, Typography } from 'antd';
 import { DEFAULT_TENANT_ID } from '../../../api/config';
+import { PageLoader } from '../../../components/PageLoader';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { QueryDefinition, SortSpec } from '../../../models/queryDefinition';
+import { withPaging, withSort } from '../../../lib/queryDefinition';
 import { ResultsPanel } from '../../results/ResultsPanel';
 import { useSearch } from '../../results/hooks/useSearch';
-import { useMetadata } from '../../search/hooks/useMetadata';
+import { useMetadata } from '../../../hooks/useMetadata';
 import { InterpretationPanel } from '../InterpretationPanel';
 import { useNlParse } from '../hooks/useNlParse';
 
@@ -22,7 +24,7 @@ export function NlQueryPage() {
       </Typography.Title>
 
       {isLoading ? (
-        <Spin />
+        <PageLoader />
       ) : error || !metadata ? (
         <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />
       ) : (
@@ -49,10 +51,9 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
   };
 
   const setPage = (pageNumber: number, pageSize: number) =>
-    setDefinition((d) => d && { ...d, paging: { pageNumber, pageSize } });
+    setDefinition((d) => d && withPaging(d, pageNumber, pageSize));
 
-  const setSort = (sort: SortSpec[]) =>
-    setDefinition((d) => d && { ...d, sort, paging: { ...d.paging, pageNumber: 1 } });
+  const setSort = (sort: SortSpec[]) => setDefinition((d) => d && withSort(d, sort));
 
   return (
     <>

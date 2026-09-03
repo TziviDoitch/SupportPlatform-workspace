@@ -1,3 +1,4 @@
+import { labelForCode } from '../../lib/labels';
 import type { FilterFieldRegistryEntry, References } from '../../models/metadata';
 import type { AggregationRow } from '../../models/search';
 
@@ -30,13 +31,11 @@ export function buildChartData(
   if (!entry) return null;
 
   const refList = entry.referenceList ? references[entry.referenceList] : undefined;
-  const labelFor = (code: string | number): string =>
-    refList?.find((r) => r.code === String(code))?.label ?? String(code);
 
   const labels: string[] = [];
   const values: number[] = [];
   for (const agg of aggregations) {
-    labels.push(labelFor(agg.key[fieldId]));
+    labels.push(labelForCode(refList, agg.key[fieldId]));
     values.push(Number(agg.metrics[CHART_METRIC] ?? 0));
   }
 

@@ -1,3 +1,5 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc;
 using SupportPlatform.Application.Metadata;
 using SupportPlatform.Application.Metadata.Interfaces;
@@ -6,6 +8,7 @@ namespace SupportPlatform.Api.Controllers;
 
 [ApiController]
 [Route("api/metadata")]
+[ProducesErrorResponseType(typeof(ProblemDetails))]
 public class MetadataController(IMetadataService metadata) : ControllerBase
 {
     /// <summary>
@@ -17,10 +20,15 @@ public class MetadataController(IMetadataService metadata) : ControllerBase
     /// <c>tenantId</c> is not trusted for authorization.
     /// </remarks>
     [HttpGet]
+    [ProducesResponseType<MetadataResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<MetadataResponse>> Get([FromQuery] string? tenantId, CancellationToken ct)
     {
+        // Emit the same RFC 7807 shape as every other error path (docs/contracts/error-model.md);
+        // never a hand-built string body.
         if (string.IsNullOrWhiteSpace(tenantId))
-            return BadRequest("tenantId is required.");
+            throw new ValidationException([new ValidationFailure("tenantId", "'tenantId' is required.")]);
 
         return await metadata.Get(tenantId, ct);
     }

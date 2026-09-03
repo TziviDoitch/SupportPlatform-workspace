@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Input, Modal, notification } from 'antd';
+import { Button, Input, Modal } from 'antd';
+import { notifySuccess } from '../../../api/notificationHost';
 import type { QueryDefinition } from '../../../models/queryDefinition';
 import { useCreateSavedQuery } from '../hooks/useSavedQueries';
 
@@ -20,7 +21,7 @@ export function SaveQueryButton({ definition }: Props) {
       { name: trimmed, definition },
       {
         onSuccess: () => {
-          notification.success({ message: 'השאילתה נשמרה', description: trimmed });
+          notifySuccess({ message: 'השאילתה נשמרה', description: trimmed });
           setOpen(false);
           setName('');
         },

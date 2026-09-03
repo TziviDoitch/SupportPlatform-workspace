@@ -12,6 +12,8 @@ public sealed class YearRangeFilterHandler(
     string fieldId,
     Expression<Func<SupportRequest, int>> column) : FilterHandler(fieldId)
 {
+    private const string ShapeMessage = "Expected a year range or a single year.";
+
     /// <summary>The year column, e.g. <c>r =&gt; r.SupportYear</c>. Also the group key.</summary>
     public Expression<Func<SupportRequest, int>> Column { get; } = column;
 
@@ -31,7 +33,7 @@ public sealed class YearRangeFilterHandler(
             case FilterValue.YearRange or FilterValue.YearSingle:
                 return;
             default:
-                throw Invalid("Expected a year range or a single year.");
+                throw Invalid(ShapeMessage);
         }
     }
 
@@ -39,6 +41,7 @@ public sealed class YearRangeFilterHandler(
     {
         FilterValue.YearRange r => FilterPredicates.YearBetween(Column, r.From, r.To),
         FilterValue.YearSingle s => FilterPredicates.YearEquals(Column, s.Value),
-        _ => throw Invalid("Expected a year range or a single year.")
+        // Unreachable: Guard() has already validated the shape before BuildPredicate runs.
+        _ => throw new InvalidOperationException(ShapeMessage)
     };
 }

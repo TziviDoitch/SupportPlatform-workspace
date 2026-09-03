@@ -44,7 +44,7 @@ vi.mock('../hooks/useSavedQueries', () => ({
   }),
 }));
 
-vi.mock('../../search/hooks/useMetadata', () => ({
+vi.mock('../../../hooks/useMetadata', () => ({
   useMetadata: () => ({
     data: {
       tenantId: 'culture-sport-admin',

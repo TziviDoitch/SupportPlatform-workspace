@@ -18,9 +18,11 @@ antd v6 is CSS-in-JS — no stylesheet import. RTL comes from `<html dir="rtl">`
 ```
 src/
   main.tsx     entry — providers: QueryClientProvider > ConfigProvider(rtl, he_IL) > BrowserRouter > App
-  App/         app shell — Layout + Menu nav + <Routes>; routes.tsx is the route list (data)
+  App/         app shell — Layout + Menu nav + ErrorBoundary + <Routes>; routes.tsx is the route list (data)
   api/         http.ts (fetch wrapper + ProblemDetails→notification interceptor), config.ts, typed services
-  components/  generic reusable components (PagePlaceholder, DataTable, ...)
+  components/  generic reusable components (DataTable, BarChart, PageLoader, ...)
+  hooks/       cross-feature hooks (useMetadata) — a hook used by one feature lives under that feature
+  lib/         pure, framework-free helpers: format.ts (he-IL currency/date), labels.ts (code/field → label), queryDefinition.ts (withPaging/withSort)
   features/
     search/  results/  saved-queries/  nl-query/
       each: components in <Component>/ folders, hooks in hooks/, feature-local helpers alongside
@@ -59,24 +61,34 @@ npm run lint         # oxlint
 - Data access in `src/api/` services returning typed results — components never call `fetch`.
 - Types in `src/models/` (or co-located `*.types.ts`) — not inline.
 - Generic components in `src/components/`; feature-only components under their feature folder.
-- No `any`. Derive state, don't duplicate it.
-- Every data view handles loading / empty / error.
+- No `any` — `tsconfig` has `strict: true`, so this is compiler-enforced.
+- Derive state, don't duplicate it.
+- Every data view handles loading / empty / error; `App/ErrorBoundary` is the last-resort catch for
+  a thrown render. Page-level loading uses `components/PageLoader` (centered), not a bare `<Spin/>`.
 
 ## API seam (`src/api/`)
 
 - `http.get` / `http.post` / `http.put` / `http.del` are the only callers of `fetch`. On a non-2xx
-  response `http.ts` parses RFC 7807 ProblemDetails, raises one error toast (title + detail +
-  `traceId`), and throws `ApiError` — hooks/components surface it from that, they don't re-notify.
-- The toast goes through `api/notificationHost` (`notifyError`), not a direct `notification.error`.
-  `App/NotificationBridge` (rendered inside antd `<App>` in `main.tsx`) registers the context-aware
-  `notification` instance so toasts inherit theme + RTL; `notificationHost` falls back to antd's
-  static API when nothing is registered (unit tests). Don't `import { notification }` in `src/api`.
+  response `http.ts` parses RFC 7807 ProblemDetails, raises one error toast (title + `detail` +
+  `traceId`, formatted by `formatProblemDetail` in `models/problemDetails`), and throws `ApiError` —
+  hooks/components surface it from that, they don't re-notify.
+- **One surface per failure.** A call whose screen shows the error inline passes `{ notify: false }`
+  as the last arg so the toast is suppressed (`searchApi.run` does this — `ResultsPanel` renders the
+  banner). Mutations and parse keep the toast (they have no inline surface).
+- Toasts go through `api/notificationHost` (`notifyError` / `notifySuccess`), never a direct
+  `notification.*` call. `App/NotificationBridge` (rendered inside antd `<App>` in `main.tsx`)
+  registers the context-aware `notification` instance so toasts inherit theme + RTL; `notificationHost`
+  falls back to antd's static API when nothing is registered (unit tests). Don't `import { notification }`
+  anywhere outside `notificationHost`.
+- `queryClient` retries only network/parse failures once; a real HTTP answer (`ApiError`) is surfaced
+  immediately, not retried.
 - Every request carries an `X-User` header (`DEFAULT_USER`, `api/config.ts`) — the PoC identity seam
-  until S8. `http.post` body is optional (for `POST .../run`).
-- One service per resource (`metadataApi`, `searchApi`, `savedQueriesApi`), each returning a
-  `models/` type.
-- `DEFAULT_TENANT_ID` / `DEFAULT_USER` (`api/config.ts`) are temporary stand-ins until auth lands in
-  S8 — do not scatter tenant/user literals elsewhere.
+  (the server derives tenant + role from it and 403s on a body `tenantId` mismatch). `http.post` body
+  is optional (for `POST .../run`).
+- One service per resource (`metadataApi`, `searchApi`, `savedQueriesApi`, `nlQueryApi`), each
+  returning a `models/` type.
+- `DEFAULT_TENANT_ID` / `DEFAULT_USER` (`api/config.ts`) are fixed stand-ins until a real login flow
+  lands — do not scatter tenant/user literals elsewhere.
 
 ## The search slice
 

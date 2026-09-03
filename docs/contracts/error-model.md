@@ -40,14 +40,14 @@ Every error response is [RFC 7807](https://www.rfc-editor.org/rfc/rfc7807)
 | Status | `type` slug | When |
 |---|---|---|
 | `400` | `validation` | Body fails schema or FluentValidation: unknown field id, filter value shape ≠ registry `kind`, operator not allowed, reversed year range, bad enum (`metrics`, `sort.direction`), `pageSize` out of 1–200, missing `tenantId` on `/api/metadata`. |
-| `401` | `unauthorized` | No token / `X-User`, or an invalid/expired token. |
+| `401` | `unauthorized` | **Production target — not emitted by the PoC.** No token / `X-User`, or an invalid/expired token. The PoC has no auth middleware; a missing/unknown `X-User` resolves to a seed user (`ARCHITECTURE.md` §8.1), so this status never occurs. |
 | `403` | `forbidden` | Authenticated but out of scope: `tenantId` in the body ≠ the caller's tenant, or a role lacking the required permission. |
 | `404` | `not-found` | Route has no match, or a saved query is not in the caller's owner+tenant scope (existence is not leaked — see `api-contract.md` §5). |
 | `500` | `unexpected` | Unhandled exception. `detail` is generic; the real cause is in the logs under `traceId`. |
 
 ## Examples
 
-**401**
+**401** _(production target — the PoC never emits this)_
 
 ```json
 {

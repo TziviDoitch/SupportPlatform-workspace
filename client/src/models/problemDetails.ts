@@ -9,6 +9,19 @@ export interface ProblemDetails {
   errors?: Record<string, string[]>;
 }
 
+/**
+ * One-line human description of a problem: its `detail`, then the `traceId` for a bug report.
+ * The single place that formatting lives — used by the `http` toast and by inline error banners.
+ */
+export function formatProblemDetail(problem: {
+  detail?: string;
+  traceId?: string;
+}): string {
+  return [problem.detail, problem.traceId && `traceId: ${problem.traceId}`]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 /** Thrown by the `src/api` layer for any non-2xx response. Carries the parsed ProblemDetails. */
 export class ApiError extends Error {
   readonly status: number;

@@ -4,7 +4,12 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.Metadata;
 
-public class MetadataService(IMetadataRepository repository, TenantAccessGuard tenantAccess) : IMetadataService
+/// <summary>
+/// Builds the <see cref="MetadataResponse"/> — reference lists + filter-field registry — for the
+/// caller's tenant. The requested <c>tenantId</c> is validated against identity, not trusted (S8).
+/// </summary>
+public sealed class MetadataService(IMetadataRepository repository, TenantAccessGuard tenantAccess)
+    : IMetadataService
 {
     public async Task<MetadataResponse> Get(string tenantId, CancellationToken ct = default)
     {

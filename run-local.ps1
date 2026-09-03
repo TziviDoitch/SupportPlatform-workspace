@@ -3,8 +3,8 @@
   Run SupportPlatform locally WITHOUT Docker.
 
 .DESCRIPTION
-  Docker Desktop is not installed on this machine, so this script runs the stack
-  directly on the host:
+  Runs the stack directly on the host, without Docker — useful when Docker Desktop
+  isn't available. The intended one-command flow is still `cd infra; docker compose up --build`.
 
     * db     - uses the SQL Server LocalDB instance already installed on Windows
                (MSSQLLocalDB). No container.

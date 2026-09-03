@@ -45,7 +45,7 @@ public sealed class ExceptionToProblemDetailsHandler(ILogger<ExceptionToProblemD
     {
         ValidationException v => (
             400,
-            "The query definition failed validation.",
+            "One or more validation errors occurred.",
             v.Errors
                 .GroupBy(e => e.PropertyName)
                 .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray())),

@@ -11,8 +11,9 @@ interface Props {
   registry: FilterFieldRegistryEntry[];
   definition: QueryDefinition;
   loading?: boolean;
-  onPageChange: (pageNumber: number, pageSize: number) => void;
-  onSortChange: (sort: SortSpec[]) => void;
+  /** Omit both for a read-only table: no pager, non-sortable headers. */
+  onPageChange?: (pageNumber: number, pageSize: number) => void;
+  onSortChange?: (sort: SortSpec[]) => void;
 }
 
 /** Thin wiring: dynamic columns + server-side paging/sort over the generic {@link DataTable}. */
@@ -24,9 +25,14 @@ export function ResultsTable({
   onPageChange,
   onSortChange,
 }: Props) {
+  const interactive = onPageChange !== undefined || onSortChange !== undefined;
+
   const columns = useMemo(
-    () => buildColumns(definition.segmentation, definition.metrics, registry, definition.sort),
-    [definition.segmentation, definition.metrics, definition.sort, registry],
+    () =>
+      buildColumns(definition.segmentation, definition.metrics, registry, definition.sort, {
+        sortable: interactive,
+      }),
+    [definition.segmentation, definition.metrics, definition.sort, registry, interactive],
   );
 
   // Result rows have no id — key them by their segmentation values (unique per bucket on a page);
@@ -44,9 +50,9 @@ export function ResultsTable({
         : [];
 
     if (JSON.stringify(nextSort) !== JSON.stringify(definition.sort)) {
-      onSortChange(nextSort);
+      onSortChange?.(nextSort);
     } else {
-      onPageChange(pagination.current ?? 1, pagination.pageSize ?? DEFAULT_PAGE_SIZE);
+      onPageChange?.(pagination.current ?? 1, pagination.pageSize ?? DEFAULT_PAGE_SIZE);
     }
   };
 
@@ -56,13 +62,17 @@ export function ResultsTable({
       rows={response?.rows ?? []}
       rowKey={rowKey}
       loading={loading}
-      onChange={handleChange}
-      pagination={{
-        current: response?.page.pageNumber ?? 1,
-        pageSize: response?.page.pageSize ?? DEFAULT_PAGE_SIZE,
-        total: response?.page.totalRows ?? 0,
-        showSizeChanger: false,
-      }}
+      onChange={interactive ? handleChange : undefined}
+      pagination={
+        interactive
+          ? {
+              current: response?.page.pageNumber ?? 1,
+              pageSize: response?.page.pageSize ?? DEFAULT_PAGE_SIZE,
+              total: response?.page.totalRows ?? 0,
+              showSizeChanger: false,
+            }
+          : false
+      }
     />
   );
 }

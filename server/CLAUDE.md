@@ -126,7 +126,9 @@ The connection string is read from `ConnectionStrings:SqlServer` (env `Connectio
 - EF Core lives only in `Infrastructure`.
 - Validate input with FluentValidation.
 - Inject dependencies through the constructor; depend on interfaces.
-- Keep controllers thin — they call a service and return.
+- Keep controllers thin — they call a service and return. Annotate actions with
+  `[ProducesResponseType<T>(200)]` + the `ProblemDetails` error codes they can return, and
+  `[ProducesErrorResponseType(typeof(ProblemDetails))]` on the class, so Swagger documents them.
 - Tenant-scoped entities (`SupportRequest`, `SubmittingBody`) carry a **fail-closed** global
   query filter via `ITenantContext`: no tenant set ⇒ zero rows. Reach past it only with an
   explicit `IgnoreQueryFilters()` (tests, admin, seeding's emptiness check).
