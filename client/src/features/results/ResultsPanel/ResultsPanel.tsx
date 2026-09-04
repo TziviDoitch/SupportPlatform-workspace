@@ -14,6 +14,8 @@ interface Props {
   registry: FilterFieldRegistryEntry[];
   references: References;
   definition: QueryDefinition;
+  /** Fields to draw a chart for. Defaults to the definition's segmentation. */
+  graphFields?: string[];
   /** Omit both to render a read-only table (no pager, non-sortable headers) — e.g. the saved-query re-run. */
   onPageChange?: (pageNumber: number, pageSize: number) => void;
   onSortChange?: (sort: SortSpec[]) => void;
@@ -43,6 +45,7 @@ export function ResultsPanel({
   registry,
   references,
   definition,
+  graphFields,
   onPageChange,
   onSortChange,
 }: Props) {
@@ -59,7 +62,7 @@ export function ResultsPanel({
   }
 
   const charts = response
-    ? buildCharts(response.aggregations, definition.segmentation, registry, references)
+    ? buildCharts(response.aggregations, graphFields ?? definition.segmentation, registry, references)
     : [];
   const span = spans(charts.length);
 
@@ -69,6 +72,7 @@ export function ResultsPanel({
         <ResultsTable
           response={response}
           registry={registry}
+          references={references}
           definition={definition}
           loading={isFetching}
           onPageChange={onPageChange}

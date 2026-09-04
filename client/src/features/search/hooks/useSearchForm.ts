@@ -13,7 +13,8 @@ export interface SearchForm {
   /** Live definition rebuilt on every edit. */
   definition: QueryDefinition;
   setFieldValue: (fieldId: string, value: FieldValue | undefined) => void;
-  setSegmentation: (ids: string[]) => void;
+  /** The registry ids the user wants a chart for ("הוספת גרף לפי"). */
+  setGraphFields: (ids: string[]) => void;
   /** Back to the empty form (the "clear filters" action). */
   reset: () => void;
 }
@@ -31,8 +32,8 @@ export function useSearchForm(registry: FilterFieldRegistryEntry[], tenantId: st
     });
   }, []);
 
-  const setSegmentation = useCallback((ids: string[]) => {
-    setState((s) => ({ ...s, segmentation: ids, sort: [], pageNumber: 1 }));
+  const setGraphFields = useCallback((ids: string[]) => {
+    setState((s) => ({ ...s, graphFields: ids, pageNumber: 1 }));
   }, []);
 
   const reset = useCallback(() => setState(emptyFormState), []);
@@ -42,5 +43,5 @@ export function useSearchForm(registry: FilterFieldRegistryEntry[], tenantId: st
     [state, registry, tenantId],
   );
 
-  return { state, definition, setFieldValue, setSegmentation, reset };
+  return { state, definition, setFieldValue, setGraphFields, reset };
 }

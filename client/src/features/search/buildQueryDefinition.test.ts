@@ -4,23 +4,35 @@ import { buildQueryDefinition, emptyFormState, type SearchFormState } from './bu
 
 const registry: FilterFieldRegistryEntry[] = [
   { id: 'bodyType', label: 'סוג גוף', kind: 'codeList', referenceList: 'bodyTypes', operators: ['in'], segmentable: true },
+  { id: 'supportDomain', label: 'תחום תמיכה', kind: 'codeList', referenceList: 'domains', operators: ['in'], segmentable: true },
   { id: 'status', label: 'סטטוס', kind: 'codeList', referenceList: 'statuses', operators: ['in'], segmentable: false },
+  { id: 'district', label: 'מחוז', kind: 'codeList', referenceList: 'districts', operators: ['in'], segmentable: true },
   { id: 'supportYear', label: 'שנת תמיכה', kind: 'yearRange', operators: ['range', 'single'], segmentable: true },
+];
+
+const DEFAULT_SORT = [
+  { field: 'supportYear', direction: 'desc' },
+  { field: 'sumAmountApproved', direction: 'desc' },
 ];
 
 const state = (patch: Partial<SearchFormState>): SearchFormState => ({ ...emptyFormState, ...patch });
 
 describe('buildQueryDefinition', () => {
-  it('omits empty controls and requests both metrics + paging defaults', () => {
+  it('uses the fixed 3-way breakdown, both metrics, paging + default sort', () => {
     const def = buildQueryDefinition(emptyFormState, registry, 'culture-sport-admin');
     expect(def).toEqual({
       tenantId: 'culture-sport-admin',
       filters: {},
-      segmentation: [],
+      segmentation: ['supportDomain', 'district', 'supportYear'],
       metrics: ['count', 'sumAmountApproved'],
       paging: { pageNumber: 1, pageSize: 50 },
-      sort: [],
+      sort: DEFAULT_SORT,
     });
+  });
+
+  it('graph-field picks do not change the table breakdown', () => {
+    const def = buildQueryDefinition(state({ graphFields: ['bodyType'] }), registry, 't');
+    expect(def.segmentation).toEqual(['supportDomain', 'district', 'supportYear']);
   });
 
   it('maps a code-list selection to an IN array', () => {
@@ -45,16 +57,7 @@ describe('buildQueryDefinition', () => {
     ).toEqual({ type: 'single', value: 2024 });
   });
 
-  it('keeps only segmentable ids in segmentation', () => {
-    const def = buildQueryDefinition(
-      state({ segmentation: ['supportYear', 'status', 'unknown'] }),
-      registry,
-      't',
-    );
-    expect(def.segmentation).toEqual(['supportYear']);
-  });
-
-  it('passes page and sort through', () => {
+  it('passes an explicit page and sort through, overriding the default sort', () => {
     const def = buildQueryDefinition(
       state({ pageNumber: 3, pageSize: 25, sort: [{ field: 'count', direction: 'desc' }] }),
       registry,

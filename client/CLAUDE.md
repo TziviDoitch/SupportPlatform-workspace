@@ -108,15 +108,23 @@ npm run lint         # oxlint
 - The search runs on an explicit **"חיפוש"** click, not on every keystroke. `SearchPage` keeps the
   last-run definition in `submitted` state; `SearchForm`'s "ניקוי מאפייני חיפוש" clears the form
   (`useSearchForm.reset`). The filter panel is collapsible (local state in `SearchForm`).
+- **The table is a fixed 3-way breakdown.** `buildQueryDefinition` always sets
+  `segmentation = TABLE_BREAKDOWN` (`supportDomain, district, supportYear`) and, when the user
+  hasn't clicked a column, `sort = [supportYear desc, sumAmountApproved desc]` — so the columns
+  (תחום תמיכה · מחוז · שנת תמיכה · כמות · סכום מאושר) and default order never shift as the user
+  works. `metrics` is fixed the same way. `ResultsTable` renders segmentation-cell values through
+  `labelForCode` (Hebrew reference labels, not raw codes).
 - Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into a
-  `withPaging` / `withSort` patch on `submitted`; `SearchResponse.page.totalRows` drives the pager.
+  `withPaging` / `withSort` patch on `submitted.definition`; `SearchResponse.page.totalRows` drives
+  the pager. `columns.ts` shows the sort arrow only for `sort[0]` (single-key indicator).
 - `questionText` always comes from the server (`POST /api/search`) — no client-side Hebrew renderer.
-- The segmentation control is labelled **"הוספת גרף לפי"**: each field it adds gets a bucket column
-  in the table **and** a bar chart. `ResultsPanel` lays the table first, then one `ResultsChart` per
-  field **beside** it (antd `Row`/`Col`, wraps; stacks on narrow) — it never falls back to a
-  table-only view. `buildCharts` (pure, `buildChartData.ts`) is the single aggregations → per-field
-  `ChartData[]` mapping: for each field it sums `count` per bucket, marginalising over the other
-  fields. Unit-test chart logic there, not in the component. `components/BarChart` is a generic
+- **"הוספת גרף לפי"** picks *graph fields only* (`form.state.graphFields`), snapshotted into
+  `submitted.graphFields` at search time and passed to `ResultsSection` → `ResultsPanel`. It draws
+  one `ResultsChart` per picked field **beside** the table (antd `Row`/`Col`, wraps; stacks on
+  narrow) and never changes the table. `buildCharts` (pure, `buildChartData.ts`) maps the response
+  `aggregations` to a per-field `ChartData[]`, summing `count` per bucket and marginalising over the
+  other breakdown fields; when `graphFields` is omitted (nl-query / saved re-run) it falls back to
+  `definition.segmentation`. Unit-test chart logic there. `components/BarChart` is a generic
   `react-chartjs-2` wrapper (registers `chart.js` once).
 - `YearRangeField` is two year `Select`s (2000 – next year), "to" hiding years before "from" — no
   free-form number inputs. The server still validates the range.

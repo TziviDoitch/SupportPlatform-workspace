@@ -16,7 +16,8 @@ export interface YearInput {
 export interface SearchFormState {
   /** Keyed by registry field id. */
   values: Record<string, FieldValue>;
-  segmentation: string[];
+  /** Registry ids the user picked in "הוספת גרף לפי" — one chart each. Not the table shape. */
+  graphFields: string[];
   pageNumber: number;
   pageSize: number;
   sort: SortSpec[];
@@ -24,11 +25,24 @@ export interface SearchFormState {
 
 export const emptyFormState: SearchFormState = {
   values: {},
-  segmentation: [],
+  graphFields: [],
   pageNumber: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   sort: [],
 };
+
+/**
+ * The results table is always this 3-way breakdown, so its columns never change as the user works.
+ * The "הוספת גרף לפי" picker only chooses which of these fields also gets a chart. These are the
+ * `segmentable` registry ids we break out (body type stays a filter, not a breakdown dimension).
+ */
+export const TABLE_BREAKDOWN = ['supportDomain', 'district', 'supportYear'];
+
+/** Default ordering when the user hasn't clicked a column header: newest year first, then largest sum. */
+const DEFAULT_SORT: SortSpec[] = [
+  { field: 'supportYear', direction: 'desc' },
+  { field: 'sumAmountApproved', direction: 'desc' },
+];
 
 /**
  * Turn the form state into the canonical {@link QueryDefinition}. Empty controls are omitted;
@@ -55,12 +69,13 @@ export function buildQueryDefinition(
   return {
     tenantId,
     filters,
-    segmentation: state.segmentation.filter((id) => segmentableIds.has(id)),
+    // Fixed breakdown → a stable table. Guarded against a registry that drops one of the ids.
+    segmentation: TABLE_BREAKDOWN.filter((id) => segmentableIds.has(id)),
     // Both contract metrics — count answers the question, sumAmountApproved gives the table a
     // second real column. The server always computes both (contract §3).
     metrics: ['count', 'sumAmountApproved'],
     paging: { pageNumber: state.pageNumber, pageSize: state.pageSize },
-    sort: state.sort,
+    sort: state.sort.length > 0 ? state.sort : DEFAULT_SORT,
   };
 }
 
