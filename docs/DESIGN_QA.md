@@ -261,8 +261,8 @@ console; שאילתות/דוחות מעל ה-`audit_log`.
 | שכבת AI מופשטת | **מומש (S6)** | `INlQueryProvider` נבחר לפי `NlQuery:Provider` (keyed DI); המימוש: `RuleBasedNlQueryProvider` — מנתח דטרמיניסטי, בלי LLM חיצוני — שאלה 6 |
 | auth מרכזי | **מומש (S8 — auth stub)** | `ICurrentUser` מ-`X-User` (בלי JWT) + `TenantAccessGuard` (tenant זר → 403) + כלל role אחד (מחיקת שאילתה שמורה = `admin`) — שאלות 2–3. יעד production: `login` + JWT (§8.1, החלטה 13) |
 | Audit | **מומש (S5)** | `IAuditService.Record(...)`, קריאות מפורשות ב-services (לא interceptor) |
-| config management + Secrets | חלקי | `appsettings*.json` + `.env.example` + env ב-Compose; יעד: config service + secret store (Key Vault / Secrets Manager) |
-| CI/CD + IaC | יעד (S10) | `.github/workflows/ci.yml` (build+test); IaC לא בהיקף |
+| config management + Secrets | חלקי | `appsettings*.json` + `.env.example` + env ב-Compose; יעד: config service + secret store (Key Vault / Secrets Manager) — פירוט מלא ב-[`DEVOPS.md`](DEVOPS.md) §3–§4 |
+| CI/CD + IaC | **מתואר (S10)** | [`DEVOPS.md`](DEVOPS.md) §2 — שלבי הפייפליין ו-gates. **לא מומש בפועל**: המטלה קובעת לגבי DevOps "אין צורך לממש בפועל"; אין `.github/workflows/` ואין IaC |
 | API gateway | יעד | reverse proxy לניתוב, rate-limit, TLS termination — `ARCHITECTURE.md` §9.2 |
 
 **עיקרון מנחה (PoC):** בונים תשתית רוחבית **כשיש צרכן ממשי** — החתכים הרוחביים
