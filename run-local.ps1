@@ -50,10 +50,11 @@ Write-Host "-> starting LocalDB (MSSQLLocalDB) via $localDb"
 & $localDb start MSSQLLocalDB | Out-Host
 
 # 2. Client deps ---------------------------------------------------------------
-if (-not (Test-Path (Join-Path $clientDir 'node_modules'))) {
-    Write-Host '-> npm install (first run)'
-    Push-Location $clientDir; npm install; Pop-Location
-}
+# Always run: node_modules can exist but be stale after package.json changes
+# (a missing dep only surfaces later as a Vite "could not be resolved" error).
+# npm install is a fast no-op when everything is already up to date.
+Write-Host '-> npm install'
+Push-Location $clientDir; npm install; Pop-Location
 
 # 3. Build server ---------------------------------------------------------------
 if (-not $SkipBuild) {
