@@ -4,7 +4,7 @@ import { TableOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../components/DataTable';
 import { SectionTitle } from '../../../components/SectionTitle';
 import { formatCurrencyIls, formatIntHe } from '../../../lib/format';
-import type { FilterFieldRegistryEntry } from '../../../models/metadata';
+import type { FilterFieldRegistryEntry, References } from '../../../models/metadata';
 import { DEFAULT_PAGE_SIZE, type QueryDefinition, type SortSpec } from '../../../models/queryDefinition';
 import type { ResultRow, SearchResponse } from '../../../models/search';
 import { buildColumns } from './columns';
@@ -12,6 +12,7 @@ import { buildColumns } from './columns';
 interface Props {
   response: SearchResponse | undefined;
   registry: FilterFieldRegistryEntry[];
+  references: References;
   definition: QueryDefinition;
   loading?: boolean;
   /** Omit both for a read-only table: no pager, non-sortable headers. */
@@ -23,6 +24,7 @@ interface Props {
 export function ResultsTable({
   response,
   registry,
+  references,
   definition,
   loading,
   onPageChange,
@@ -32,10 +34,10 @@ export function ResultsTable({
 
   const columns = useMemo(
     () =>
-      buildColumns(definition.segmentation, definition.metrics, registry, definition.sort, {
+      buildColumns(definition.segmentation, definition.metrics, registry, references, definition.sort, {
         sortable: interactive,
       }),
-    [definition.segmentation, definition.metrics, definition.sort, registry, interactive],
+    [definition.segmentation, definition.metrics, registry, references, definition.sort, interactive],
   );
 
   // Result rows have no id — key them by their segmentation values (unique per bucket on a page);

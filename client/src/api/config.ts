@@ -1,13 +1,26 @@
 /**
- * Tenant the client operates as. Since S8 the server derives the authoritative tenant from
- * identity (the `X-User` header) and returns 403 on a mismatch — this literal just tells the
- * server which tenant we *claim* to be. A real login flow (`/api/auth/login`, JWT) is the
- * documented production target (`docs/ARCHITECTURE.md` §8.1); until then it stays a fixed stand-in.
+ * PoC identity seam. The server has no `/api/auth/login` yet — it derives the authoritative tenant
+ * and role from the `X-User` header (`docs/contracts/api-contract.md` §Auth, `ARCHITECTURE.md`
+ * §8.1). Until a real login lands, the client just picks one of the seeded users to act as; the
+ * header carries the choice and the tenant claim follows from it.
  */
-export const DEFAULT_TENANT_ID = 'culture-sport-admin';
 
-/**
- * User the client acts as, sent as the `X-User` header (`docs/contracts/api-contract.md` §Auth).
- * PoC identity seam for tenant scoping, saved-query ownership and audit until JWT auth lands.
- */
-export const DEFAULT_USER = 'sarah';
+export type UserRole = 'analyst' | 'admin';
+
+export interface SeedUser {
+  username: string;
+  /** The user's tenant — sent as the `tenantId` claim; the server 403s on a mismatch. */
+  tenantId: string;
+  role: UserRole;
+  /** Hebrew label for the header picker. */
+  label: string;
+}
+
+/** The users created by the server `DbSeeder`. Keep in sync with `server/.../DbSeeder.cs`. */
+export const SEED_USERS: SeedUser[] = [
+  { username: 'sarah', tenantId: 'culture-sport-admin', role: 'analyst', label: 'שרה · התרבות והספורט · אנליסטית' },
+  { username: 'dan', tenantId: 'culture-sport-admin', role: 'admin', label: 'דן · התרבות והספורט · מנהל' },
+  { username: 'michal', tenantId: 'welfare-admin', role: 'analyst', label: 'מיכל · הרווחה · אנליסטית' },
+];
+
+export const DEFAULT_USERNAME = 'sarah';

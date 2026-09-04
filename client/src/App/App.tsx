@@ -1,15 +1,19 @@
-import type { ReactNode } from 'react';
-import { Layout, Menu, Typography } from 'antd';
+import { useState, type ReactNode } from 'react';
+import { Layout, Menu, Select, Typography } from 'antd';
 import {
   BulbOutlined,
   DatabaseOutlined,
   SearchOutlined,
   StarOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
 import { NotificationBridge } from './NotificationBridge';
 import { routes } from './routes';
+import { SEED_USERS, type SeedUser } from '../api/config';
+import { getActiveUser, setActiveUser } from '../api/activeUser';
 import { SECTION_ICON_COLOR } from '../theme';
 
 const { Header, Content } = Layout;
@@ -24,6 +28,17 @@ const NAV_ICONS: Record<string, ReactNode> = {
 export function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState<SeedUser>(getActiveUser);
+
+  // Switching identity: swap the `X-User` header source, drop every cached response, and remount
+  // the screens (the `key` below) so no state survives from the previous user.
+  const selectUser = (username: string) => {
+    if (username === user.username) return;
+    const next = setActiveUser(username);
+    queryClient.clear();
+    setUser(next);
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -32,7 +47,7 @@ export function App() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 32,
+          gap: 24,
           paddingInline: 24,
           borderBottom: '1px solid #e7eaf3',
           position: 'sticky',
@@ -72,9 +87,18 @@ export function App() {
             }))}
           />
         </nav>
+        <Select
+          aria-label="משתמש מחובר"
+          value={user.username}
+          onChange={selectUser}
+          variant="filled"
+          prefix={<UserOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />}
+          options={SEED_USERS.map((u) => ({ value: u.username, label: u.label }))}
+          style={{ minWidth: 260 }}
+        />
       </Header>
       <Content style={{ padding: '24px 24px 48px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div key={user.username} style={{ maxWidth: 1280, margin: '0 auto' }}>
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Navigate to={routes[0].path} replace />} />

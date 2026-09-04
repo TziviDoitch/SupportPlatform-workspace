@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { ConfigProvider } from 'antd';
 import heIL from 'antd/locale/he_IL';
 import { describe, expect, it, vi } from 'vitest';
-import type { FilterFieldRegistryEntry } from '../../../models/metadata';
+import type { FilterFieldRegistryEntry, References } from '../../../models/metadata';
 import type { QueryDefinition } from '../../../models/queryDefinition';
 import type { SearchResponse } from '../../../models/search';
 import { ResultsTable } from './ResultsTable';
@@ -11,6 +11,8 @@ import { ResultsTable } from './ResultsTable';
 const registry: FilterFieldRegistryEntry[] = [
   { id: 'supportYear', label: 'שנת תמיכה', kind: 'yearRange', operators: ['range', 'single'], segmentable: true },
 ];
+
+const references: References = { domains: [], bodyTypes: [], statuses: [], districts: [] };
 
 const definition: QueryDefinition = {
   tenantId: 't',
@@ -43,6 +45,7 @@ describe('ResultsTable', () => {
       <ResultsTable
         response={response}
         registry={registry}
+        references={references}
         definition={definition}
         onPageChange={noop}
         onSortChange={noop}
@@ -60,6 +63,7 @@ describe('ResultsTable', () => {
       <ResultsTable
         response={response}
         registry={registry}
+        references={references}
         definition={definition}
         onPageChange={noop}
         onSortChange={onSortChange}
@@ -70,7 +74,7 @@ describe('ResultsTable', () => {
   });
 
   it('renders read-only (no pager, non-sortable headers) when no handlers are passed', () => {
-    renderTable(<ResultsTable response={response} registry={registry} definition={definition} />);
+    renderTable(<ResultsTable response={response} registry={registry} references={references} definition={definition} />);
 
     // header is plain text, not a sort button
     expect(screen.queryByRole('button', { name: /כמות/ })).toBeNull();
@@ -84,6 +88,7 @@ describe('ResultsTable', () => {
       <ResultsTable
         response={{ ...response, rows: [], page: { ...response.page, totalRows: 0 } }}
         registry={registry}
+        references={references}
         definition={definition}
         onPageChange={noop}
         onSortChange={noop}

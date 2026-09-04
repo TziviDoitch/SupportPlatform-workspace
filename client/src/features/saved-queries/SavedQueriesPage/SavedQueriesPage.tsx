@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Card, Space, Typography } from 'antd';
 import { StarOutlined } from '@ant-design/icons';
-import { DEFAULT_TENANT_ID } from '../../../api/config';
+import { getActiveUser } from '../../../api/activeUser';
 import { PageLoader } from '../../../components/PageLoader';
 import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
@@ -17,7 +17,7 @@ import { useSavedQueries } from '../hooks/useSavedQueries';
 /** S5 screen: list saved queries, re-run / rename / delete them. Saving happens on the search screen. */
 export function SavedQueriesPage() {
   const { list, rename, remove, run } = useSavedQueries();
-  const { data: metadata } = useMetadata(DEFAULT_TENANT_ID);
+  const { data: metadata } = useMetadata(getActiveUser().tenantId);
   const [renaming, setRenaming] = useState<SavedQuery | null>(null);
   const rows = list.data ?? [];
   const ranQuery = rows.find((q) => q.id === run.variables);

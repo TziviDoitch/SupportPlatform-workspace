@@ -13,6 +13,8 @@ interface Props {
   registry: FilterFieldRegistryEntry[];
   references: References;
   definition: QueryDefinition;
+  /** Fields to draw a chart for. Defaults to the definition's segmentation (nl-query / re-run). */
+  graphFields?: string[];
   /** Omit both for a read-only render (no pager / sort) — e.g. the saved-query re-run. */
   onPageChange?: (pageNumber: number, pageSize: number) => void;
   onSortChange?: (sort: SortSpec[]) => void;

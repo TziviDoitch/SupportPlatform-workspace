@@ -23,7 +23,7 @@ function renderForm(overrides: Partial<Parameters<typeof SearchForm>[0]> = {}) {
     references,
     state: emptyFormState,
     onFieldChange: vi.fn(),
-    onSegmentationChange: vi.fn(),
+    onGraphFieldsChange: vi.fn(),
     onSearch: vi.fn(),
     onClear: vi.fn(),
     ...overrides,
@@ -33,13 +33,13 @@ function renderForm(overrides: Partial<Parameters<typeof SearchForm>[0]> = {}) {
 }
 
 describe('SearchForm', () => {
-  it('renders one labelled control per registry entry, in order, plus a segmentation picker', () => {
+  it('renders one labelled control per registry entry, in order, plus the graph-fields picker', async () => {
     renderForm();
     for (const label of ['סוג גוף', 'סטטוס', 'שנת תמיכה', 'הוספת גרף לפי']) {
       expect(screen.getByText(label)).toBeTruthy();
     }
-    // two code-list selects + from/to year selects + the segmentation select
-    expect(screen.getAllByRole('combobox')).toHaveLength(5);
+    // two code-list selects + from/to year selects + the graph-fields select
+    expect(await screen.findAllByRole('combobox')).toHaveLength(5);
     // year range is a dropdown now — no free-form number inputs
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
   });
@@ -69,7 +69,7 @@ describe('SearchForm', () => {
         references={references}
         state={emptyFormState}
         onFieldChange={vi.fn()}
-        onSegmentationChange={vi.fn()}
+        onGraphFieldsChange={vi.fn()}
         onSearch={vi.fn()}
         onClear={vi.fn()}
       />,

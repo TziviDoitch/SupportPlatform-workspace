@@ -1,5 +1,5 @@
 import { ApiError, formatProblemDetail, type ProblemDetails } from '../models/problemDetails';
-import { DEFAULT_USER } from './config';
+import { getActiveUser } from './activeUser';
 import { notifyError } from './notificationHost';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -28,7 +28,7 @@ async function request<T>(
   const res = await fetch(url, {
     method,
     headers: {
-      'X-User': DEFAULT_USER,
+      'X-User': getActiveUser().username,
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
     body: body === undefined ? undefined : JSON.stringify(body),

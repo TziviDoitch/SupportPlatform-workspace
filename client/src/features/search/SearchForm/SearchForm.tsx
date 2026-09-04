@@ -19,7 +19,7 @@ interface Props {
   state: SearchFormState;
   isSearching?: boolean;
   onFieldChange: (fieldId: string, value: FieldValue | undefined) => void;
-  onSegmentationChange: (ids: string[]) => void;
+  onGraphFieldsChange: (ids: string[]) => void;
   onSearch: () => void;
   onClear: () => void;
 }
@@ -37,7 +37,7 @@ export function SearchForm({
   state,
   isSearching,
   onFieldChange,
-  onSegmentationChange,
+  onGraphFieldsChange,
   onSearch,
   onClear,
 }: Props) {
@@ -78,13 +78,16 @@ export function SearchForm({
           ))}
 
           <Col {...colSpan('codeList')}>
-            <Form.Item label="הוספת גרף לפי">
+            <Form.Item
+              label="הוספת גרף לפי"
+              tooltip="גרף לכל שדה שנבחר. הטבלה תמיד מציגה תחום תמיכה, מחוז ושנת תמיכה."
+            >
               <Select
                 mode="multiple"
                 allowClear
                 placeholder="בחרו שדה (למשל: מחוז)"
-                value={state.segmentation}
-                onChange={onSegmentationChange}
+                value={state.graphFields}
+                onChange={onGraphFieldsChange}
                 options={segmentable.map((e) => ({ value: e.id, label: e.label }))}
                 style={{ width: '100%' }}
               />
