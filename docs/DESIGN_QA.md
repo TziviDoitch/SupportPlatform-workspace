@@ -148,6 +148,12 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
   הוא per-instance בזיכרון — מכוון ל-PoC (ראה "הצעד הבא").
 - **`saved_queries.last_run_at` / `last_run_row_count` (S5):** מתעדכנים ב-`POST /{id}/run`
   ומוצגים במסך השאילתות השמורות — המשתמש רואה שהשאילתה כבר רצה ומתי.
+- **אחסון ה-`QueryDefinition` השמור (S5):** `saved_queries` מחזיק את ה-`QueryDefinition`
+  כ-JSON קנוני ב-`DefinitionJson`, יחד עם `DefinitionHash`. בכל טעינה של שאילתה שמורה ה-JSON
+  עובר `Deserialize` + ולידציה מחדש דרך אותו `IValidator<QueryDefinition>` של `/api/search`
+  (`SavedQueryService`). שינוי *שובר* עתידי במבנה החוזה המוקפא של `QueryDefinition` (למשל שדה
+  `required` חדש) ידרוש **data migration** חד-פעמית מעל `saved_queries.DefinitionJson`. אין
+  כרגע שדה `version` ב-JSON ואין שינוי DB — מכוון ל-PoC.
 - החיפוש בלקוח מופעל בלחיצה מפורשת על "חיפוש" — אין הרצה אוטומטית בהקלדה (`ARCHITECTURE.md` §6.1).
 
 **הצעד הבא (מעבר ל-PoC):** cache מבוזר (Redis) משותף בין instances במקום ה-per-instance
@@ -223,6 +229,13 @@ JSON. זה עונה על "מי הריץ מה ומתי" וקושר חזרה לל�
   הוא גס — עם הרצה יזומה בלקוח זו שורה לכל לחיצת "חיפוש". ל-PoC זה מקובל ונותן הדגמה
   מלאה של "מי הריץ מה"; בפרודקשן: sampling / תור אסינכרוני, הפרדת audit-קריאה מ-audit-mutation,
   ו-payload רזה (hash בלבד) ל-reads.
+- **ריצת שאילתה שמורה = שתי שורות audit (מכוון).** `POST /api/saved-queries/{id}/run` מייצר
+  שורת `run` (`EntityType=SavedQuery` + מזהה השאילתה השמורה) **וגם** שורת `search`
+  (`EntityType=QueryDefinition` + ה-`QueryDefinition` ב-payload), כי ה-run מריץ דרך
+  `ISearchService`. אלו אינן שורות כפולות בטעות — הן מתעדות שני דברים שונים ("איזו שאילתה
+  שמורה הורצה" מול "חיפוש עם ה-definition הזה בוצע") ומקושרות באותו `CorrelationId`. ניתוח
+  שצריך להפריד חיפושים יזומים מריצות של שאילתות שמורות מצטרף לפי `CorrelationId` / `EntityType`,
+  לא לפי `Action` בלבד.
 - **אטומיות.** `Record(...)` מבצע `SaveChanges` משלו — שורת ה-audit לא נכתבת באותה טרנזקציה
   של הפעולה שהיא מתעדת. ל-PoC בלי טרנזקציות זה בסדר; בפרודקשן: אותה טרנזקציה, או outbox
   pattern, כדי שלא ייווצר audit ל-פעולה שנכשלה (או להפך).
