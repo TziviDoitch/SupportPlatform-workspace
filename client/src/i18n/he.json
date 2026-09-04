@@ -1,0 +1,85 @@
+{
+  "common": {
+    "ok": "שמור",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "run": "הרץ",
+    "save": "שמור",
+    "reload": "רענן דף"
+  },
+  "routes": {
+    "search": "חיפוש",
+    "savedQueries": "שאילתות שמורות",
+    "nlQuery": "שאלה חופשית"
+  },
+  "navigation": {
+    "mainNav": "ניווט ראשי",
+    "activeUser": "משתמש מחובר"
+  },
+  "search": {
+    "title": "חיפוש בקשות תמיכה",
+    "filterError": "טעינת נתוני הסינון נכשלה",
+    "filterTitle": "מאפייני חיפוש",
+    "hideFilters": "הסתרת מאפייני חיפוש",
+    "showFilters": "הצגת מאפייני חיפוש",
+    "graphLabel": "הוספת גרף לפי",
+    "graphTooltip": "גרף לכל שדה שנבחר. הטבלה תמיד מציגה תחום תמיכה, מחוז ושנת תמיכה.",
+    "graphPlaceholder": "בחרו שדה (למשל: מחוז)",
+    "searchButton": "חיפוש",
+    "clearButton": "ניקוי מאפייני חיפוש"
+  },
+  "yearRange": {
+    "fromPlaceholder": "משנה",
+    "toPlaceholder": "עד שנה",
+    "fromLabel": "משנה",
+    "toLabel": "עד שנה"
+  },
+  "savedQueries": {
+    "title": "שאילתות שמורות",
+    "loadError": "טעינת השאילתות השמורות נכשלה",
+    "empty": "עדיין אין שאילתות שמורות. שמור אחת ממסך החיפוש.",
+    "myQueries": "השאילתות שלי",
+    "tableName": "שם",
+    "tableLastRun": "הרצה אחרונה",
+    "tableRowCount": "קבוצות בהרצה האחרונה",
+    "tableActions": "פעולות",
+    "runButton": "הרץ",
+    "renameButton": "שנה שם",
+    "deleteConfirm": "למחוק את השאילתה?",
+    "renameTitle": "שינוי שם שאילתה",
+    "renameLabel": "שם שאילתה",
+    "renamePlaceholder": "שם שאילתה",
+    "saveTitle": "שמירת שאילתה",
+    "saveLabel": "שם שאילתה",
+    "savePlaceholder": "לדוגמה: עמותות תרבות מאושרות",
+    "saveButton": "שמור שאילתה",
+    "saveNotification": "השאילתה נשמרה"
+  },
+  "nlQuery": {
+    "title": "שאלה חופשית",
+    "filterError": "טעינת נתוני הסינון נכשלה",
+    "questionFormTitle": "ניסוח השאלה",
+    "questionPlaceholder": "לדוגמה: כמה עמותות בתחום התרבות אושרו בשנת 2024 לפי מחוז",
+    "questionLabel": "שאלה חופשית",
+    "parseButton": "פרש שאלה"
+  },
+  "interpretation": {
+    "title": "פירשתי את הבקשה כך",
+    "noFilters": "לא זוהו סינונים בשאלה",
+    "noFiltersDescription": "הרצה כזו תחזיר את כל הבקשות. אפשר לנסח מחדש או להשתמש במסך החיפוש.",
+    "unresolvedTitle": "מילים שלא זוהו",
+    "unresolvedDescription": "— לא נוספו לשאילתה."
+  },
+  "results": {
+    "title": "תוצאות",
+    "totalRows": "סה״כ {count} רשומות",
+    "approvedAmount": "סכום מאושר {amount}",
+    "questionTitle": "השאלה",
+    "updating": "מעדכן…",
+    "searchError": "החיפוש נכשל"
+  },
+  "error": {
+    "title": "משהו השתבש",
+    "message": "אירעה שגיאה בלתי צפויה בתצוגה. רענון הדף אמור לפתור זאת."
+  }
+}

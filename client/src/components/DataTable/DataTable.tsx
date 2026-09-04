@@ -9,15 +9,14 @@ interface DataTableProps<T> {
   onChange?: TableProps<T>['onChange'];
 }
 
-/** Generic antd `Table` wrapper — no domain knowledge. Styling and defaults decided once. */
-export function DataTable<T extends object>({
+export const DataTable = <T extends object>({
   columns,
   rows,
   rowKey,
   loading,
   pagination,
   onChange,
-}: DataTableProps<T>) {
+}: DataTableProps<T>) => {
   return (
     <Table<T>
       columns={columns}
@@ -29,4 +28,4 @@ export function DataTable<T extends object>({
       size="middle"
     />
   );
-}
+};

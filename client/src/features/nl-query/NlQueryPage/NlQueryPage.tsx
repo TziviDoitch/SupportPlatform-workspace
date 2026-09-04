@@ -12,17 +12,15 @@ import { useSearch } from '../../results/hooks/useSearch';
 import { useMetadata } from '../../../hooks/useMetadata';
 import { InterpretationPanel } from '../InterpretationPanel';
 import { useNlParse } from '../hooks/useNlParse';
+import { t } from '../../../i18n';
 
-const EXAMPLE = 'לדוגמה: כמה עמותות בתחום התרבות אושרו בשנת 2024 לפי מחוז';
-
-/** The S6 screen: question → interpretation → the user runs it → the existing search slice. */
-export function NlQueryPage() {
+export const NlQueryPage = () => {
   const { data: metadata, isLoading, error } = useMetadata(getActiveUser().tenantId);
 
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        <SectionTitle icon={<BulbOutlined />}>שאלה חופשית</SectionTitle>
+        <SectionTitle icon={<BulbOutlined />}>{t.nlQuery.title}</SectionTitle>
       </Typography.Title>
 
       {isLoading ? (
@@ -30,19 +28,18 @@ export function NlQueryPage() {
           <PageLoader />
         </Card>
       ) : error || !metadata ? (
-        <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />
+        <Alert type="error" showIcon message={t.nlQuery.filterError} />
       ) : (
         <NlQueryView metadata={metadata} />
       )}
     </Space>
   );
-}
+};
 
-function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
+const NlQueryView = ({ metadata }: { metadata: MetadataResponse }) => {
   const [text, setText] = useState('');
   const parse = useNlParse();
 
-  // Set only when the user presses Run, so parsing never executes a search.
   const [definition, setDefinition] = useState<QueryDefinition>();
   const { data, error, isFetching } = useSearch(definition);
 
@@ -50,7 +47,7 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
 
   const submit = () => {
     if (question.length === 0) return;
-    setDefinition(undefined); // a new question invalidates the previous results
+    setDefinition(undefined);
     parse.mutate({ text: question, tenantId: getActiveUser().tenantId });
   };
 
@@ -61,12 +58,12 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
 
   return (
     <Space direction="vertical" size={16} style={{ display: 'flex' }}>
-      <Card title={<SectionTitle icon={<EditOutlined />}>ניסוח השאלה</SectionTitle>}>
+      <Card title={<SectionTitle icon={<EditOutlined />}>{t.nlQuery.questionFormTitle}</SectionTitle>}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Input.TextArea
             rows={2}
-            aria-label="שאלה חופשית"
-            placeholder={EXAMPLE}
+            aria-label={t.nlQuery.questionLabel}
+            placeholder={t.nlQuery.questionPlaceholder}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -77,7 +74,7 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
             loading={parse.isPending}
             disabled={question.length === 0}
           >
-            פרש שאלה
+            {t.nlQuery.parseButton}
           </Button>
         </Space>
       </Card>
@@ -105,4 +102,4 @@ function NlQueryView({ metadata }: { metadata: MetadataResponse }) {
       )}
     </Space>
   );
-}
+};

@@ -3,13 +3,13 @@ import { Button, Input, Modal } from 'antd';
 import { notifySuccess } from '../../../api/notificationHost';
 import type { QueryDefinition } from '../../../models/queryDefinition';
 import { useCreateSavedQuery } from '../hooks/useSavedQueries';
+import { t } from '../../../i18n';
 
 interface Props {
   definition: QueryDefinition;
 }
 
-/** Saves the current search definition as a named saved query. Lives on the search screen. */
-export function SaveQueryButton({ definition }: Props) {
+export const SaveQueryButton = ({ definition }: Props) => {
   const create = useCreateSavedQuery();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -21,7 +21,7 @@ export function SaveQueryButton({ definition }: Props) {
       { name: trimmed, definition },
       {
         onSuccess: () => {
-          notifySuccess({ message: 'השאילתה נשמרה', description: trimmed });
+          notifySuccess({ message: t.savedQueries.saveNotification, description: trimmed });
           setOpen(false);
           setName('');
         },
@@ -31,20 +31,20 @@ export function SaveQueryButton({ definition }: Props) {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>שמור שאילתה</Button>
+      <Button onClick={() => setOpen(true)}>{t.savedQueries.saveButton}</Button>
       <Modal
         open={open}
-        title="שמירת שאילתה"
-        okText="שמור"
-        cancelText="ביטול"
+        title={t.savedQueries.saveTitle}
+        okText={t.common.save}
+        cancelText={t.common.cancel}
         okButtonProps={{ disabled: trimmed.length === 0 }}
         confirmLoading={create.isPending}
         onCancel={() => setOpen(false)}
         onOk={submit}
       >
         <Input
-          aria-label="שם שאילתה"
-          placeholder="לדוגמה: עמותות תרבות מאושרות"
+          aria-label={t.savedQueries.saveLabel}
+          placeholder={t.savedQueries.savePlaceholder}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onPressEnter={submit}
@@ -52,4 +52,4 @@ export function SaveQueryButton({ definition }: Props) {
       </Modal>
     </>
   );
-}
+};

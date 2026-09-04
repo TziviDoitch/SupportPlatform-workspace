@@ -15,6 +15,7 @@ import { routes } from './routes';
 import { SEED_USERS, type SeedUser } from '../api/config';
 import { getActiveUser, setActiveUser } from '../api/activeUser';
 import { SECTION_ICON_COLOR } from '../theme';
+import { t } from '../i18n';
 
 const { Header, Content } = Layout;
 
@@ -25,14 +26,12 @@ const NAV_ICONS: Record<string, ReactNode> = {
   '/nl-query': <BulbOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />,
 };
 
-export function App() {
+export const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<SeedUser>(getActiveUser);
 
-  // Switching identity: swap the `X-User` header source, drop every cached response, and remount
-  // the screens (the `key` below) so no state survives from the previous user.
   const selectUser = (username: string) => {
     if (username === user.username) return;
     const next = setActiveUser(username);
@@ -74,7 +73,7 @@ export function App() {
             SupportPlatform
           </Typography.Text>
         </div>
-        <nav aria-label="ניווט ראשי" style={{ flex: 1, minWidth: 0 }}>
+        <nav aria-label={t.navigation.mainNav} style={{ flex: 1, minWidth: 0 }}>
           <Menu
             mode="horizontal"
             selectedKeys={[location.pathname]}
@@ -88,7 +87,7 @@ export function App() {
           />
         </nav>
         <Select
-          aria-label="משתמש מחובר"
+          aria-label={t.navigation.activeUser}
           value={user.username}
           onChange={selectUser}
           variant="filled"
@@ -112,4 +111,4 @@ export function App() {
       </Content>
     </Layout>
   );
-}
+};

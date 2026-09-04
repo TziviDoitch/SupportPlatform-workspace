@@ -8,6 +8,7 @@ import type { FilterFieldRegistryEntry, References } from '../../../models/metad
 import { DEFAULT_PAGE_SIZE, type QueryDefinition, type SortSpec } from '../../../models/queryDefinition';
 import type { ResultRow, SearchResponse } from '../../../models/search';
 import { buildColumns } from './columns';
+import { t, formatMessage } from '../../../i18n';
 
 interface Props {
   response: SearchResponse | undefined;
@@ -15,13 +16,11 @@ interface Props {
   references: References;
   definition: QueryDefinition;
   loading?: boolean;
-  /** Omit both for a read-only table: no pager, non-sortable headers. */
   onPageChange?: (pageNumber: number, pageSize: number) => void;
   onSortChange?: (sort: SortSpec[]) => void;
 }
 
-/** Thin wiring: dynamic columns + server-side paging/sort over the generic {@link DataTable}. */
-export function ResultsTable({
+export const ResultsTable = ({
   response,
   registry,
   references,
@@ -29,7 +28,7 @@ export function ResultsTable({
   loading,
   onPageChange,
   onSortChange,
-}: Props) {
+}: Props) => {
   const interactive = onPageChange !== undefined || onSortChange !== undefined;
 
   const columns = useMemo(
@@ -40,8 +39,6 @@ export function ResultsTable({
     [definition.segmentation, definition.metrics, registry, references, definition.sort, interactive],
   );
 
-  // Result rows have no id — key them by their segmentation values (unique per bucket on a page);
-  // an unsegmented query has a single total row.
   const rowKey = (row: ResultRow) =>
     definition.segmentation.length > 0
       ? definition.segmentation.map((id) => row[id]).join('|')
@@ -69,12 +66,12 @@ export function ResultsTable({
 
   return (
     <Card
-      title={<SectionTitle icon={<TableOutlined />}>תוצאות</SectionTitle>}
+      title={<SectionTitle icon={<TableOutlined />}>{t.results.title}</SectionTitle>}
       extra={
         response ? (
           <Typography.Text type="secondary">
-            סה״כ {formatIntHe(totalRows)} רשומות
-            {approved !== undefined && ` · סכום מאושר ${formatCurrencyIls(approved)}`}
+            {formatMessage(t.results.totalRows, { count: formatIntHe(totalRows) })}
+            {approved !== undefined && ` · ${formatMessage(t.results.approvedAmount, { amount: formatCurrencyIls(approved) })}`}
           </Typography.Text>
         ) : null
       }
@@ -99,4 +96,4 @@ export function ResultsTable({
       />
     </Card>
   );
-}
+};

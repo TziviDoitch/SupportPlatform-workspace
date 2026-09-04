@@ -6,6 +6,7 @@ import type { SearchResponse } from '../../../models/search';
 import { buildCharts } from '../buildChartData';
 import { ResultsChart } from '../ResultsChart';
 import { ResultsTable } from '../ResultsTable';
+import { t } from '../../../i18n';
 
 interface Props {
   response: SearchResponse | undefined;
@@ -14,15 +15,12 @@ interface Props {
   registry: FilterFieldRegistryEntry[];
   references: References;
   definition: QueryDefinition;
-  /** Fields to draw a chart for. Defaults to the definition's segmentation. */
   graphFields?: string[];
-  /** Omit both to render a read-only table (no pager, non-sortable headers) — e.g. the saved-query re-run. */
   onPageChange?: (pageNumber: number, pageSize: number) => void;
   onSortChange?: (sort: SortSpec[]) => void;
 }
 
-/** xl column spans for the table and each chart, by chart count. 4 charts push to a second row. */
-function spans(chartCount: number): { table: number; chart: number } {
+const spans = (chartCount: number): { table: number; chart: number } => {
   switch (chartCount) {
     case 0:
       return { table: 24, chart: 0 };
@@ -35,10 +33,9 @@ function spans(chartCount: number): { table: number; chart: number } {
     default:
       return { table: 24, chart: 6 };
   }
-}
+};
 
-/** Owns the results-area states: error banner, otherwise the table with a chart per graph field beside it. */
-export function ResultsPanel({
+export const ResultsPanel = ({
   response,
   error,
   isFetching,
@@ -48,14 +45,14 @@ export function ResultsPanel({
   graphFields,
   onPageChange,
   onSortChange,
-}: Props) {
+}: Props) => {
   if (error) {
     const problem = error instanceof ApiError ? error : undefined;
     return (
       <Alert
         type="error"
         showIcon
-        message={problem?.title ?? 'החיפוש נכשל'}
+        message={problem?.title ?? t.results.searchError}
         description={problem ? formatProblemDetail(problem) : undefined}
       />
     );
@@ -86,4 +83,4 @@ export function ResultsPanel({
       ))}
     </Row>
   );
-}
+};

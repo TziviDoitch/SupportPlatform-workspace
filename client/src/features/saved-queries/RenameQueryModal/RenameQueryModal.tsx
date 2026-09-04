@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Input, Modal } from 'antd';
 import type { SavedQuery } from '../../../models/savedQuery';
+import { t } from '../../../i18n';
 
 interface Props {
   query: SavedQuery | null;
@@ -9,31 +10,27 @@ interface Props {
   onSubmit: (name: string) => void;
 }
 
-/**
- * Rename an existing saved query. Open when `query` is set. The parent keys this by query id so
- * each open remounts with the right initial name.
- */
-export function RenameQueryModal({ query, confirmLoading, onCancel, onSubmit }: Props) {
+export const RenameQueryModal = ({ query, confirmLoading, onCancel, onSubmit }: Props) => {
   const [name, setName] = useState(query?.name ?? '');
   const trimmed = name.trim();
 
   return (
     <Modal
       open={query !== null}
-      title="שינוי שם שאילתה"
-      okText="שמור"
-      cancelText="ביטול"
+      title={t.savedQueries.renameTitle}
+      okText={t.common.save}
+      cancelText={t.common.cancel}
       okButtonProps={{ disabled: trimmed.length === 0 }}
       confirmLoading={confirmLoading}
       onCancel={onCancel}
       onOk={() => onSubmit(trimmed)}
     >
       <Input
-        aria-label="שם שאילתה"
+        aria-label={t.savedQueries.renameLabel}
         value={name}
         onChange={(e) => setName(e.target.value)}
         onPressEnter={() => trimmed.length > 0 && onSubmit(trimmed)}
       />
     </Modal>
   );
-}
+};

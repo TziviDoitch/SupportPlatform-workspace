@@ -8,20 +8,16 @@ import {
 import { Bar } from 'react-chartjs-2';
 import { theme } from 'antd';
 
-// Register only the pieces a categorical bar chart needs — keeps the bundle lean and is required
-// once per app for the tree-shaken `chart.js` build.
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
 interface Props {
   labels: string[];
   values: number[];
-  /** Dataset label, shown in the tooltip. */
   seriesLabel: string;
   height?: number;
 }
 
-/** Generic single-series bar chart over `react-chartjs-2`. No domain knowledge. */
-export function BarChart({ labels, values, seriesLabel, height = 260 }: Props) {
+export const BarChart = ({ labels, values, seriesLabel, height = 260 }: Props) => {
   const { token } = theme.useToken();
   return (
     <div style={{ height }}>
@@ -53,4 +49,4 @@ export function BarChart({ labels, values, seriesLabel, height = 260 }: Props) {
       />
     </div>
   );
-}
+};
