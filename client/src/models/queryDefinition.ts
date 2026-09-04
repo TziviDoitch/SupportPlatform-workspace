@@ -13,6 +13,9 @@ export interface Paging {
 
 export type SortDirection = 'asc' | 'desc';
 
+/** Metric names allowed by the contract (`docs/contracts/query-definition.md`). */
+export type MetricName = 'count' | 'sumAmountApproved';
+
 export interface SortSpec {
   field: string;
   direction: SortDirection;
@@ -23,7 +26,7 @@ export interface QueryDefinition {
   /** Keys are registry field ids. May be empty. */
   filters: Record<string, FilterValue>;
   segmentation: string[];
-  metrics: string[];
+  metrics: MetricName[];
   paging: Paging;
   sort: SortSpec[];
 }

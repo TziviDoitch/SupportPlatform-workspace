@@ -65,15 +65,22 @@ app.UseStatusCodePages();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
+// Schema must exist in every real environment. The test host ("Testing") builds its own SQLite
+// schema via EnsureCreated (TestApiFactory) and must not run the SQL Server migrations.
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<SupportPlatformDbContext>();
+    db.Database.Migrate();
+
+    if (app.Environment.IsDevelopment())
+        DbSeeder.Seed(db);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<SupportPlatformDbContext>();
-    db.Database.Migrate();
-    DbSeeder.Seed(db);
 }
 
 app.MapHealthChecks("/health");
