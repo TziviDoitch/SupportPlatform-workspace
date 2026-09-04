@@ -29,7 +29,7 @@ const base: SearchResponse = {
   questionText: 'q',
   rows: [{ district: 'north', count: 13 }],
   aggregations: [{ key: { district: 'north' }, metrics: { count: 13 } }],
-  page: { pageNumber: 1, pageSize: 50, totalRows: 1 },
+  page: { pageNumber: 1, pageSize: 50, totalGroups: 1 },
   executionMeta: { durationMs: 1, rowCount: 1, cacheHit: false, definitionHash: 'x' },
 };
 

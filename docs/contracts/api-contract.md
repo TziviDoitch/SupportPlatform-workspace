@@ -75,7 +75,7 @@ Response `200`:
   "aggregations": [
     { "key": { "supportYear": 2023 }, "metrics": { "count": 12 } }
   ],
-  "page": { "pageNumber": 1, "pageSize": 50, "totalRows": 3 },
+  "page": { "pageNumber": 1, "pageSize": 50, "totalGroups": 3 },
   "executionMeta": {
     "durationMs": 41,
     "rowCount": 3,
@@ -86,11 +86,15 @@ Response `200`:
 ```
 
 - `questionText` — Hebrew sentence from `QuestionTextRenderer` (S2).
-- `rows` — the page of result rows (shape depends on `segmentation` + `metrics`).
-- `aggregations` — one entry per `segmentation` group; `key` echoes the grouped
-  field ids, `metrics` holds the requested metric values. No `segmentation` → a
-  single entry with an empty `key`.
-- `page` — echoes `paging` plus `totalRows` (total groups/rows before paging).
+- `rows` — **the requested page** of result rows (shape depends on `segmentation` +
+  `metrics`). Bounded by `paging.pageSize`.
+- `aggregations` — **every** `segmentation` group, not just the page: `key` echoes the
+  grouped field ids, `metrics` holds the requested metric values. No `segmentation` → a
+  single entry with an empty `key`. This is the field to sum for totals and to plot —
+  summing `rows` would describe only the page the client happens to show.
+- `page` — echoes `paging` plus `totalGroups` (number of groups before paging;
+  `aggregations.length` equals it).
+- `executionMeta.rowCount` — how many rows were actually returned, i.e. `rows.length`.
 - `executionMeta.definitionHash` — canonical SHA-256 of the definition (S5),
   drives `cacheHit`.
 

@@ -68,11 +68,51 @@ public class SearchServiceTests
 
         Assert.Equal(2, response.Rows.Count);
         Assert.Equal(2, response.Aggregations.Count);
-        Assert.Equal(2, response.Page.TotalRows);
+        Assert.Equal(2, response.Page.TotalGroups);
         Assert.Equal(2, response.ExecutionMeta.RowCount);
         Assert.False(response.ExecutionMeta.CacheHit);
         Assert.StartsWith("sha256:", response.ExecutionMeta.DefinitionHash);
         Assert.NotEmpty(response.QuestionText);
+    }
+
+    [Fact]
+    public async Task Aggregations_cover_every_group_while_rows_are_only_the_page()
+    {
+        // 60 groups over a 50-row page: `rows` is the page the table renders, but `aggregations`
+        // must stay the whole result — the client's charts and header totals are summed from it.
+        _executor.Result = Enumerable.Range(1, 60)
+            .Select(i => new AggregateBucket(
+                new Dictionary<string, object> { ["supportYear"] = 2000 + i }, i, i * 100m))
+            .ToList();
+
+        var response = await _service.Search(
+            Valid() with { Paging = new Paging(PageSize: 50, PageNumber: 1) });
+
+        Assert.Equal(50, response.Rows.Count);
+        Assert.Equal(60, response.Aggregations.Count);
+        Assert.Equal(60, response.Page.TotalGroups);
+        Assert.Equal(50, response.ExecutionMeta.RowCount);
+
+        // The sum over aggregations is the full-result total, not the page's.
+        var total = response.Aggregations.Sum(a => (long)a.Metrics[Metric.Count]);
+        Assert.Equal(Enumerable.Range(1, 60).Sum(), total);
+    }
+
+    [Fact]
+    public async Task The_second_page_still_carries_every_aggregation()
+    {
+        _executor.Result = Enumerable.Range(1, 60)
+            .Select(i => new AggregateBucket(
+                new Dictionary<string, object> { ["supportYear"] = 2000 + i }, i, i * 100m))
+            .ToList();
+
+        var response = await _service.Search(
+            Valid() with { Paging = new Paging(PageSize: 50, PageNumber: 2) });
+
+        Assert.Equal(10, response.Rows.Count);
+        Assert.Equal(60, response.Aggregations.Count);
+        Assert.Equal(60, response.Page.TotalGroups);
+        Assert.Equal(10, response.ExecutionMeta.RowCount);
     }
 
     [Fact]

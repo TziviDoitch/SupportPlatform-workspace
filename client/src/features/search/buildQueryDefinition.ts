@@ -13,6 +13,9 @@ export interface YearInput {
   to?: number;
 }
 
+/** Earliest year the form offers, and the open end of a "to"-only range. */
+export const MIN_YEAR = 2000;
+
 export interface SearchFormState {
   /** Keyed by registry field id. */
   values: Record<string, FieldValue>;
@@ -85,10 +88,12 @@ function toFilterValue(entry: FilterFieldRegistryEntry, raw: FieldValue): Filter
     return codes.length > 0 ? codes : undefined;
   }
 
-  // yearRange
+  // yearRange. "To" alone reads as "עד שנה X" — up to and including — so it becomes a range from
+  // MIN_YEAR, not an equality filter on that single year. "From" alone keeps its existing
+  // single-year meaning (ARCHITECTURE §6.1); the asymmetry is deliberate and untouched here.
   const { from, to } = Array.isArray(raw) ? ({} as YearInput) : raw;
   if (from != null && to != null) return { type: 'range', from, to };
   if (from != null) return { type: 'single', value: from };
-  if (to != null) return { type: 'single', value: to };
+  if (to != null) return { type: 'range', from: MIN_YEAR, to };
   return undefined;
 }

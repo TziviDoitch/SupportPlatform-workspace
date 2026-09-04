@@ -29,6 +29,13 @@ public sealed class SearchQueryExecutor(
 {
     private const string KeySeparator = "|"; // no reference code or year contains a pipe
 
+    /// <summary>
+    /// Ceiling for the 2+ segmentation path, which groups in memory (see the class remarks and
+    /// <c>DESIGN_QA.md</c> §4). Well above anything the PoC dataset produces; it turns an
+    /// unbounded materialization into an explicit 400 instead of a slow request or an OOM.
+    /// </summary>
+    private const int MaxMaterializedRows = 50_000;
+
     public async Task<IReadOnlyList<AggregateBucket>> Execute(
         QueryDefinition definition,
         IReadOnlyList<FilterFieldRegistryEntry> registry,
@@ -70,7 +77,12 @@ public sealed class SearchQueryExecutor(
     private static async Task<List<AggregateBucket>> ManySegments(
         IQueryable<SupportRequest> q, IReadOnlyList<FilterHandler> segHandlers, CancellationToken ct)
     {
-        var rows = await q.Include(x => x.SubmittingBody).ToListAsync(ct);
+        // Take one past the ceiling so an over-large result is detected without loading it all.
+        var rows = await q.Include(x => x.SubmittingBody).Take(MaxMaterializedRows + 1).ToListAsync(ct);
+        if (rows.Count > MaxMaterializedRows)
+            throw new InvalidQueryException(
+                "segmentation",
+                $"This breakdown matches more than {MaxMaterializedRows:N0} requests. Narrow the filters.");
 
         return rows
             .GroupBy(r => CompositeKey(segHandlers, r))

@@ -1,7 +1,7 @@
 import { Col, Form, Row, Select } from 'antd';
 import { CalendarOutlined } from '@ant-design/icons';
 import type { FilterFieldRegistryEntry } from '../../../models/metadata';
-import type { YearInput } from '../buildQueryDefinition';
+import { MIN_YEAR, type YearInput } from '../buildQueryDefinition';
 import { t } from '../../../i18n';
 
 interface Props {
@@ -10,7 +10,6 @@ interface Props {
   onChange: (year: YearInput | undefined) => void;
 }
 
-const MIN_YEAR = 2000;
 const MAX_YEAR = new Date().getFullYear() + 1;
 
 const YEAR_OPTIONS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => {

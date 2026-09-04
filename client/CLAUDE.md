@@ -115,7 +115,7 @@ npm run lint         # oxlint
   works. `metrics` is fixed the same way. `ResultsTable` renders segmentation-cell values through
   `labelForCode` (Hebrew reference labels, not raw codes).
 - Paging and sorting are **server-side**: `ResultsTable` translates antd `Table.onChange` into a
-  `withPaging` / `withSort` patch on `submitted.definition`; `SearchResponse.page.totalRows` drives
+  `withPaging` / `withSort` patch on `submitted.definition`; `SearchResponse.page.totalGroups` drives
   the pager. `columns.ts` shows the sort arrow only for `sort[0]` (single-key indicator).
 - `questionText` always comes from the server (`POST /api/search`) — no client-side Hebrew renderer.
 - **"הוספת גרף לפי"** picks *graph fields only* (`form.state.graphFields`), snapshotted into

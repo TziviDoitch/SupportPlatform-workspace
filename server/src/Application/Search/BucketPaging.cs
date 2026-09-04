@@ -17,7 +17,9 @@ public static class BucketPaging
             .Take(def.Paging.PageSize)
             .ToList();
 
-        return new QueryExecutionResult(page, ordered.Count);
+        // Both shapes come from the same ordered list: the page feeds `rows`, the whole list feeds
+        // `aggregations` — the charts and header totals must not be a page-sized sample.
+        return new QueryExecutionResult(page, ordered);
     }
 
     private static IEnumerable<AggregateBucket> Order(IReadOnlyList<AggregateBucket> buckets, QueryDefinition def)
@@ -39,12 +41,9 @@ public static class BucketPaging
         return ordered ?? buckets.AsEnumerable();
     }
 
-    private static Func<AggregateBucket, object> Selector(string field) => field switch
-    {
-        Metric.Count => b => b.Count,
-        Metric.SumAmountApproved => b => b.SumAmountApproved,
-        _ => KeyOf(field)
-    };
+    // A metric name reads through AggregateBucket.Value; anything else is a segmentation key.
+    private static Func<AggregateBucket, object> Selector(string field) =>
+        Metric.All.Contains(field) ? b => b.Value(field) : KeyOf(field);
 
     private static Func<AggregateBucket, object> KeyOf(string fieldId) => b => b.Key[fieldId];
 }

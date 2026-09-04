@@ -26,7 +26,7 @@ const response: SearchResponse = {
   questionText: 'כמה בקשות תמיכה, לפי מחוז?',
   rows: [{ district: 'north', count: 7 }],
   aggregations: [{ key: { district: 'north' }, metrics: { count: 7 } }],
-  page: { pageNumber: 1, pageSize: 50, totalRows: 1 },
+  page: { pageNumber: 1, pageSize: 50, totalGroups: 1 },
   executionMeta: { durationMs: 1, rowCount: 1, cacheHit: false, definitionHash: 'x' },
 };
 

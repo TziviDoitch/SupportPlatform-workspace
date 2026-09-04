@@ -59,8 +59,10 @@ public sealed class SearchService(
 
         var response = new SearchResponse(
             QuestionText: questionText.Render(definition, meta.Snapshot),
+            // rows = the requested page; aggregations = every group, so the client's charts and
+            // header totals describe the whole result and not just the page it happens to show.
             Rows: execution.Buckets.Select(b => Row(b, metrics)).ToList(),
-            Aggregations: execution.Buckets
+            Aggregations: execution.Ordered
                 .Select(b => new AggregationDto(b.Key, Metrics(b, metrics)))
                 .ToList(),
             Page: new PageDto(definition.Paging.PageNumber, definition.Paging.PageSize, execution.TotalBuckets),
@@ -83,12 +85,7 @@ public sealed class SearchService(
     {
         var values = new Dictionary<string, object>();
         foreach (var m in requested)
-            values[m] = m switch
-            {
-                Metric.Count => bucket.Count,
-                Metric.SumAmountApproved => bucket.SumAmountApproved,
-                _ => throw new ArgumentOutOfRangeException(nameof(requested), m, "unknown metric")
-            };
+            values[m] = bucket.Value(m);
         return values;
     }
 
