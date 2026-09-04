@@ -12,6 +12,7 @@ import type { FilterFieldRegistryEntry, References } from '../../../models/metad
 import type { FieldValue, SearchFormState, YearInput } from '../buildQueryDefinition';
 import { CodeListField } from './CodeListField';
 import { YearRangeField } from './YearRangeField';
+import { t } from '../../../i18n';
 
 interface Props {
   registry: FilterFieldRegistryEntry[];
@@ -24,14 +25,12 @@ interface Props {
   onClear: () => void;
 }
 
-/** A wide field (year range) takes more grid columns than a single-control field. */
 const colSpan = (kind: FilterFieldRegistryEntry['kind']) =>
   kind === 'yearRange'
     ? { xs: 24, md: 12, xl: 8 }
     : { xs: 24, md: 12, xl: 6 };
 
-/** Dynamic search form: one control per registry entry, in registry order. Nothing is hard-coded. */
-export function SearchForm({
+export const SearchForm = ({
   registry,
   references,
   state,
@@ -40,16 +39,16 @@ export function SearchForm({
   onGraphFieldsChange,
   onSearch,
   onClear,
-}: Props) {
+}: Props) => {
   const [open, setOpen] = useState(true);
   const segmentable = registry.filter((e) => e.segmentable);
 
   return (
     <Card
-      title={<SectionTitle icon={<FilterOutlined />}>מאפייני חיפוש</SectionTitle>}
+      title={<SectionTitle icon={<FilterOutlined />}>{t.search.filterTitle}</SectionTitle>}
       extra={
         <Button type="text" onClick={() => setOpen((v) => !v)}>
-          {open ? 'הסתרת מאפייני חיפוש' : 'הצגת מאפייני חיפוש'}
+          {open ? t.search.hideFilters : t.search.showFilters}
           {open ? <UpOutlined aria-hidden /> : <DownOutlined aria-hidden />}
         </Button>
       }
@@ -79,13 +78,13 @@ export function SearchForm({
 
           <Col {...colSpan('codeList')}>
             <Form.Item
-              label="הוספת גרף לפי"
-              tooltip="גרף לכל שדה שנבחר. הטבלה תמיד מציגה תחום תמיכה, מחוז ושנת תמיכה."
+              label={t.search.graphLabel}
+              tooltip={t.search.graphTooltip}
             >
               <Select
                 mode="multiple"
                 allowClear
-                placeholder="בחרו שדה (למשל: מחוז)"
+                placeholder={t.search.graphPlaceholder}
                 value={state.graphFields}
                 onChange={onGraphFieldsChange}
                 options={segmentable.map((e) => ({ value: e.id, label: e.label }))}
@@ -99,16 +98,16 @@ export function SearchForm({
 
         <Space>
           <Button type="primary" icon={<SearchOutlined aria-hidden />} loading={isSearching} onClick={onSearch}>
-            חיפוש
+            {t.search.searchButton}
           </Button>
           <Button type="link" icon={<ReloadOutlined aria-hidden />} onClick={onClear}>
-            ניקוי מאפייני חיפוש
+            {t.search.clearButton}
           </Button>
         </Space>
       </Form>
     </Card>
   );
-}
+};
 
 const asCodes = (v: FieldValue | undefined): string[] => (Array.isArray(v) ? v : []);
 const asYear = (v: FieldValue | undefined): YearInput => (v && !Array.isArray(v) ? v : {});

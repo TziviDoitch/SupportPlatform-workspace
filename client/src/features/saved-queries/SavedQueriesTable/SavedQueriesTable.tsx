@@ -3,6 +3,7 @@ import type { TableProps } from 'antd';
 import { DataTable } from '../../../components/DataTable';
 import { formatDateHe } from '../../../lib/format';
 import type { SavedQuery } from '../../../models/savedQuery';
+import { t } from '../../../i18n';
 
 interface Props {
   rows: SavedQuery[];
@@ -13,24 +14,22 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-/** The saved-queries list with per-row re-run / rename / delete actions. */
-export function SavedQueriesTable({ rows, loading, runningId, onRun, onRename, onDelete }: Props) {
-  // Cheap to build; the render funcs close over per-render props so memoising it buys nothing.
+export const SavedQueriesTable = ({ rows, loading, runningId, onRun, onRename, onDelete }: Props) => {
   const columns: TableProps<SavedQuery>['columns'] = [
-    { title: 'שם', dataIndex: 'name', key: 'name' },
+    { title: t.savedQueries.tableName, dataIndex: 'name', key: 'name' },
     {
-      title: 'הרצה אחרונה',
+      title: t.savedQueries.tableLastRun,
       key: 'lastRunAt',
       render: (_, row) => formatDateHe(row.lastRunAt),
     },
     {
-      title: 'קבוצות בהרצה האחרונה',
+      title: t.savedQueries.tableRowCount,
       dataIndex: 'lastRunRowCount',
       key: 'lastRunRowCount',
       render: (value: number | null) => value ?? '—',
     },
     {
-      title: 'פעולות',
+      title: t.savedQueries.tableActions,
       key: 'actions',
       render: (_, row) => (
         <Space>
@@ -40,19 +39,19 @@ export function SavedQueriesTable({ rows, loading, runningId, onRun, onRename, o
             loading={runningId === row.id}
             onClick={() => onRun(row.id)}
           >
-            הרץ
+            {t.savedQueries.runButton}
           </Button>
           <Button size="small" onClick={() => onRename(row)}>
-            שנה שם
+            {t.savedQueries.renameButton}
           </Button>
           <Popconfirm
-            title="למחוק את השאילתה?"
-            okText="מחק"
-            cancelText="ביטול"
+            title={t.savedQueries.deleteConfirm}
+            okText={t.common.delete}
+            cancelText={t.common.cancel}
             onConfirm={() => onDelete(row.id)}
           >
             <Button size="small" danger>
-              מחק
+              {t.common.delete}
             </Button>
           </Popconfirm>
         </Space>
@@ -61,4 +60,4 @@ export function SavedQueriesTable({ rows, loading, runningId, onRun, onRename, o
   ];
 
   return <DataTable<SavedQuery> rows={rows} columns={columns} rowKey="id" loading={loading} pagination={false} />;
-}
+};

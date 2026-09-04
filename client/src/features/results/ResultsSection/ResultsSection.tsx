@@ -13,19 +13,12 @@ interface Props {
   registry: FilterFieldRegistryEntry[];
   references: References;
   definition: QueryDefinition;
-  /** Fields to draw a chart for. Defaults to the definition's segmentation (nl-query / re-run). */
   graphFields?: string[];
-  /** Omit both for a read-only render (no pager / sort) — e.g. the saved-query re-run. */
   onPageChange?: (pageNumber: number, pageSize: number) => void;
   onSortChange?: (sort: SortSpec[]) => void;
 }
 
-/**
- * The whole results area: the server's readable question, a spinner until the first response lands,
- * then the table + a chart per graph field. Every screen that shows search results renders this, so
- * they all look the same.
- */
-export function ResultsSection({ response, error, isFetching, ...rest }: Props) {
+export const ResultsSection = ({ response, error, isFetching, ...rest }: Props) => {
   return (
     <Space direction="vertical" size={16} style={{ display: 'flex' }}>
       <QuestionPanel text={response?.questionText} isFetching={isFetching} />
@@ -36,4 +29,4 @@ export function ResultsSection({ response, error, isFetching, ...rest }: Props) 
       ) : null}
     </Space>
   );
-}
+};

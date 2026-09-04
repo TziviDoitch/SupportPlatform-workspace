@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button, Result } from 'antd';
+import { t } from '../../i18n';
 
 interface Props {
   children: ReactNode;
@@ -31,11 +32,11 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <Result
         status="error"
-        title="משהו השתבש"
-        subTitle="אירעה שגיאה בלתי צפויה בתצוגה. רענון הדף אמור לפתור זאת."
+        title={t.error.title}
+        subTitle={t.error.message}
         extra={
           <Button type="primary" onClick={() => window.location.reload()}>
-            רענן דף
+            {t.common.reload}
           </Button>
         }
       />

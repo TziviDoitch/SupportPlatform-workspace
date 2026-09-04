@@ -13,15 +13,15 @@ import { useSearch } from '../../results/hooks/useSearch';
 import { SearchForm } from '../SearchForm';
 import { useMetadata } from '../../../hooks/useMetadata';
 import { useSearchForm } from '../hooks/useSearchForm';
+import { t } from '../../../i18n';
 
-/** The S3 vertical slice: metadata → dynamic form → QueryDefinition → /api/search → question + table. */
-export function SearchPage() {
+export const SearchPage = () => {
   const { data: metadata, isLoading, error } = useMetadata(getActiveUser().tenantId);
 
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        <SectionTitle icon={<SearchOutlined />}>חיפוש בקשות תמיכה</SectionTitle>
+        <SectionTitle icon={<SearchOutlined />}>{t.search.title}</SectionTitle>
       </Typography.Title>
 
       {isLoading ? (
@@ -29,20 +29,17 @@ export function SearchPage() {
           <PageLoader />
         </Card>
       ) : error || !metadata ? (
-        <Alert type="error" showIcon message="טעינת נתוני הסינון נכשלה" />
+        <Alert type="error" showIcon message={t.search.filterError} />
       ) : (
         <SearchView metadata={metadata} />
       )}
     </Space>
   );
-}
+};
 
-function SearchView({ metadata }: { metadata: MetadataResponse }) {
+const SearchView = ({ metadata }: { metadata: MetadataResponse }) => {
   const form = useSearchForm(metadata.filterFieldRegistry, getActiveUser().tenantId);
 
-  // The query only runs on an explicit "search". `submitted` is the last run — its definition (the
-  // form above stays free to be re-edited) plus the graph fields chosen at that moment. Paging and
-  // sorting patch the snapshot's definition directly.
   const [submitted, setSubmitted] = useState<{ definition: QueryDefinition; graphFields: string[] }>();
   const { data, error, isFetching } = useSearch(submitted?.definition);
 
@@ -89,4 +86,4 @@ function SearchView({ metadata }: { metadata: MetadataResponse }) {
       )}
     </>
   );
-}
+};

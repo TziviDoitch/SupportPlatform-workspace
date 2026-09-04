@@ -13,9 +13,9 @@ import { useMetadata } from '../../../hooks/useMetadata';
 import { RenameQueryModal } from '../RenameQueryModal';
 import { SavedQueriesTable } from '../SavedQueriesTable';
 import { useSavedQueries } from '../hooks/useSavedQueries';
+import { t } from '../../../i18n';
 
-/** S5 screen: list saved queries, re-run / rename / delete them. Saving happens on the search screen. */
-export function SavedQueriesPage() {
+export const SavedQueriesPage = () => {
   const { list, rename, remove, run } = useSavedQueries();
   const { data: metadata } = useMetadata(getActiveUser().tenantId);
   const [renaming, setRenaming] = useState<SavedQuery | null>(null);
@@ -25,7 +25,7 @@ export function SavedQueriesPage() {
   return (
     <Space direction="vertical" size={20} style={{ display: 'flex' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        <SectionTitle icon={<StarOutlined />}>שאילתות שמורות</SectionTitle>
+        <SectionTitle icon={<StarOutlined />}>{t.savedQueries.title}</SectionTitle>
       </Typography.Title>
 
       {run.data && (
@@ -37,11 +37,11 @@ export function SavedQueriesPage() {
           <PageLoader />
         </Card>
       ) : list.error ? (
-        <Alert type="error" showIcon message="טעינת השאילתות השמורות נכשלה" />
+        <Alert type="error" showIcon message={t.savedQueries.loadError} />
       ) : rows.length === 0 ? (
-        <Alert type="info" showIcon message="עדיין אין שאילתות שמורות. שמור אחת ממסך החיפוש." />
+        <Alert type="info" showIcon message={t.savedQueries.empty} />
       ) : (
-        <Card title={<SectionTitle icon={<StarOutlined />}>השאילתות שלי</SectionTitle>} styles={{ body: { padding: 0 } }}>
+        <Card title={<SectionTitle icon={<StarOutlined />}>{t.savedQueries.myQueries}</SectionTitle>} styles={{ body: { padding: 0 } }}>
           <SavedQueriesTable
             rows={rows}
             runningId={run.isPending ? (run.variables ?? null) : null}
@@ -67,14 +67,9 @@ export function SavedQueriesPage() {
       />
     </Space>
   );
-}
+};
 
-/**
- * A re-run's result — the same question + chart(s) + table the search screen shows. Paging and
- * sorting aren't offered here: the run endpoint takes no definition override (`api-contract.md` §5);
- * the search screen is where a query is adjusted.
- */
-function RunResult({
+const RunResult = ({
   response,
   definition,
   metadata,
@@ -82,7 +77,7 @@ function RunResult({
   response: SearchResponse;
   definition: QueryDefinition | undefined;
   metadata: MetadataResponse | undefined;
-}) {
+}) => {
   if (!definition || !metadata) return null;
 
   return (
@@ -95,4 +90,4 @@ function RunResult({
       definition={definition}
     />
   );
-}
+};

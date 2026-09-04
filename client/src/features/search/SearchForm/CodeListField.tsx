@@ -8,8 +8,7 @@ interface Props {
   onChange: (codes: string[]) => void;
 }
 
-/** Multi-select for a `codeList` registry field, filled from `references[entry.referenceList]`. */
-export function CodeListField({ entry, references, value, onChange }: Props) {
+export const CodeListField = ({ entry, references, value, onChange }: Props) => {
   const items = entry.referenceList ? references[entry.referenceList] : [];
   return (
     <Form.Item label={entry.label}>
@@ -24,4 +23,4 @@ export function CodeListField({ entry, references, value, onChange }: Props) {
       />
     </Form.Item>
   );
-}
+};

@@ -4,6 +4,7 @@ import { SectionTitle } from '../../../components/SectionTitle';
 import type { MetadataResponse } from '../../../models/metadata';
 import type { NlParseResponse } from '../../../models/nlQuery';
 import { describeDefinition } from '../describeDefinition';
+import { t } from '../../../i18n';
 
 interface Props {
   parsed: NlParseResponse;
@@ -12,16 +13,11 @@ interface Props {
   isRunning: boolean;
 }
 
-/**
- * What the parser understood, shown before anything is executed: the server's read-back sentence,
- * the resulting filters field by field, and anything it could not map. Running is the user's
- * explicit click — nothing here triggers a search.
- */
-export function InterpretationPanel({ parsed, metadata, onRun, isRunning }: Props) {
+export const InterpretationPanel = ({ parsed, metadata, onRun, isRunning }: Props) => {
   const fields = describeDefinition(parsed.definition, metadata);
 
   return (
-    <Card size="small" title={<SectionTitle icon={<ProfileOutlined />}>פירשתי את הבקשה כך</SectionTitle>}>
+    <Card size="small" title={<SectionTitle icon={<ProfileOutlined />}>{t.interpretation.title}</SectionTitle>}>
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Typography.Text>{parsed.interpretationText}</Typography.Text>
 
@@ -33,8 +29,8 @@ export function InterpretationPanel({ parsed, metadata, onRun, isRunning }: Prop
           <Alert
             type="warning"
             showIcon
-            message="לא זוהו סינונים בשאלה"
-            description="הרצה כזו תחזיר את כל הבקשות. אפשר לנסח מחדש או להשתמש במסך החיפוש."
+            message={t.interpretation.noFilters}
+            description={t.interpretation.noFiltersDescription}
           />
         )}
 
@@ -42,15 +38,15 @@ export function InterpretationPanel({ parsed, metadata, onRun, isRunning }: Prop
           <Alert
             type="info"
             showIcon
-            message="מילים שלא זוהו"
-            description={`${parsed.unresolved.join(', ')} — לא נוספו לשאילתה.`}
+            message={t.interpretation.unresolvedTitle}
+            description={`${parsed.unresolved.join(', ')} ${t.interpretation.unresolvedDescription}`}
           />
         )}
 
         <Button type="primary" onClick={onRun} loading={isRunning}>
-          הרץ
+          {t.common.run}
         </Button>
       </Space>
     </Card>
   );
-}
+};

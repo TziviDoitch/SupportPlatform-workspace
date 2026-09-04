@@ -1,20 +1,19 @@
 import { Card, Skeleton, Tag, Typography } from 'antd';
 import { MessageOutlined } from '@ant-design/icons';
 import { SectionTitle } from '../../../components/SectionTitle';
+import { t } from '../../../i18n';
 
 interface Props {
-  /** The server's Hebrew read-back of the current query (`SearchResponse.questionText`). */
   text: string | undefined;
   isFetching: boolean;
 }
 
-/** Live "readable question" panel — echoes what the server understood the query to mean. */
-export function QuestionPanel({ text, isFetching }: Props) {
+export const QuestionPanel = ({ text, isFetching }: Props) => {
   return (
     <Card
       size="small"
-      title={<SectionTitle icon={<MessageOutlined />}>השאלה</SectionTitle>}
-      extra={isFetching ? <Tag color="processing">מעדכן…</Tag> : null}
+      title={<SectionTitle icon={<MessageOutlined />}>{t.results.questionTitle}</SectionTitle>}
+      extra={isFetching ? <Tag color="processing">{t.results.updating}</Tag> : null}
     >
       {text ? (
         <Typography.Text>{text}</Typography.Text>
@@ -23,4 +22,4 @@ export function QuestionPanel({ text, isFetching }: Props) {
       ) : null}
     </Card>
   );
-}
+};
