@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { FilterFieldRegistryEntry } from '../../models/metadata';
-import { buildQueryDefinition, emptyFormState, type SearchFormState } from './buildQueryDefinition';
+import {
+  buildQueryDefinition,
+  emptyFormState,
+  MIN_YEAR,
+  type SearchFormState,
+} from './buildQueryDefinition';
 
 const registry: FilterFieldRegistryEntry[] = [
   { id: 'bodyType', label: 'סוג גוף', kind: 'codeList', referenceList: 'bodyTypes', operators: ['in'], segmentable: true },
@@ -55,6 +60,13 @@ describe('buildQueryDefinition', () => {
       buildQueryDefinition(state({ values: { supportYear: { from: 2024 } } }), registry, 't')
         .filters.supportYear,
     ).toEqual({ type: 'single', value: 2024 });
+  });
+
+  it('treats "to" without "from" as up-to-and-including, not as that single year', () => {
+    expect(
+      buildQueryDefinition(state({ values: { supportYear: { to: 2025 } } }), registry, 't')
+        .filters.supportYear,
+    ).toEqual({ type: 'range', from: MIN_YEAR, to: 2025 });
   });
 
   it('passes an explicit page and sort through, overriding the default sort', () => {

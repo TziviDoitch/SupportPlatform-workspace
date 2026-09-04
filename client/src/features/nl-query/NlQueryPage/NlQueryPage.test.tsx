@@ -67,7 +67,7 @@ describe('NlQueryPage', () => {
       questionText: parsed.interpretationText,
       rows: [{ district: 'north', count: 4 }],
       aggregations: [{ key: { district: 'north' }, metrics: { count: 4 } }],
-      page: { pageNumber: 1, pageSize: 50, totalRows: 1 },
+      page: { pageNumber: 1, pageSize: 50, totalGroups: 1 },
       executionMeta: { durationMs: 3, rowCount: 1, cacheHit: false, definitionHash: 'sha256:x' },
     });
   });

@@ -149,7 +149,9 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 - **0 שדות פילוח** → aggregate בודד ב-DB.
 - **שדה פילוח אחד** → `handler.AggregateGroups` — `GroupBy` ב-DB לפי עמודת ה-handler.
 - **2+ שדות** → materialization מינימלי + GroupBy בזיכרון (פשטת PoC; שאילתות
-  כבדות = `DESIGN_QA` §4).
+  כבדות = `DESIGN_QA` §4). זהו המסלול של מסך החיפוש הראשי, שמפלח תמיד בשלושה שדות —
+  ולכן הוא חסום בתקרה של 50,000 שורות (`SearchQueryExecutor.MaxMaterializedRows`):
+  חריגה מחזירה 400 `validation` מפורש במקום בקשה אטית או OOM.
 
 מיון (לפי `Sort`, אחרת לפי שדות ה-`segmentation` בסדר עולה) וחיתוך העמוד נעשים
 אחרי כן ב-`BucketPaging` (Application) — עיצוב תוצאה טהור בזיכרון, מחוץ ל-executor
@@ -157,7 +159,11 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 
 הסכומים נלקחים מעל `double` כדי שה-provider של SQLite בטסטים יתרגם את ה-aggregate;
 SQL Server היה שומר `decimal` נייטיב (הסכומים קטנים דיים כדי שזה יהיה מדויק לאגורה).
-מיון וניפוי עמודים על ה-buckets; `page.totalRows` = מספר הקבוצות לפני עימוד.
+מיון וניפוי עמודים על ה-buckets; `page.totalGroups` = מספר הקבוצות לפני עימוד.
+`BucketPaging.Apply` מחזיר את שתי הצורות מאותה רשימה ממוינת: `Buckets` = העמוד שמזין
+`rows`, ו-`Ordered` = כל הקבוצות שמזינות `aggregations` — כך שהסיכומים והגרפים בלקוח
+מתארים את התוצאה כולה ולא את העמוד שבמקרה מוצג. `executionMeta.rowCount` נשאר מספר
+השורות שהוחזרו בפועל.
 
 ### 4.5 `QuestionTextRenderer`
 
@@ -314,8 +320,9 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
   זוג from/to. פקד הפילוח מציע רק רשומות `segmentable`. שום שדה לא מקודד קשיח; שורת
   registry חדשה = פקד חדש בטעינה הבאה (§8 Q1, צד הלקוח).
 - **`QueryDefinition` נבנה בלקוח.** `buildQueryDefinition` (פונקציה טהורה) ממפה את מצב
-  הטופס לאובייקט הקנוני: פקדים ריקים מושמטים, שנה עם שני קצוות → `range` ועם קצה אחד →
-  `single`, `metrics` תמיד `["count","sumAmountApproved"]`. ולידציה חוצת-שדות (טווח הפוך,
+  הטופס לאובייקט הקנוני: פקדים ריקים מושמטים, שנה עם שני קצוות → `range`, עם "משנה" בלבד →
+  `single`, ועם "עד שנה" בלבד → `range` מ-`MIN_YEAR` (הפקד נקרא "עד", ולכן הוא מסנן עד השנה
+  הזו ולא עליה בלבד), `metrics` תמיד `["count","sumAmountApproved"]`. ולידציה חוצת-שדות (טווח הפוך,
   id לא מוכר) נשארת בשרת. שדה `yearRange` (`YearRangeField`) הוא זוג רשימות נפתחות
   (`Select`) של שנים (2000 עד השנה הבאה), ורשימת "עד שנה" מסתירה שנים שלפני "משנה" —
   בלי שדות מספר חופשיים; השרת עדיין הסמכות.
@@ -324,7 +331,7 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
   את `questionText` **מהשרת** (`QuestionTextRenderer`, §4.5) — אין renderer שני בלקוח.
 - **עימוד ומיון בצד השרת.** `ResultsTable` בונה עמודות דינמית מ-`segmentation` +
   `metrics`, וממפה את `onChange` של `antd` Table ל-`paging` / `sort` ב-`QueryDefinition`;
-  `page.totalRows` מזין את סה"כ העמודים. מצבי loading / empty / error מטופלים
+  `page.totalGroups` מזין את סה"כ העמודים. מצבי loading / empty / error מטופלים
   (`ResultsPanel` — באנר שגיאה עם `traceId`; ריק / טעינה — ברירת המחדל של הטבלה).
   `ResultsPanel` מציג גם את `ResultsChart` (§6.4) מעל הטבלה. אותו `ResultsPanel` משמש את
   מסך החיפוש, מסך השאלה החופשית (§6.3) ותצוגת ההרצה-מחדש (§6.2).
@@ -339,8 +346,8 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 `http` (נוספו `put` / `del`). הרצה מחדש מרנדרת את **אותו `ResultsSection`** של מסך החיפוש
 (משפט השאלה + גרף/גרפים + טבלה) במצב קריאה-בלבד, מ-`SearchResponse` שחזר ומ-`definition`
 השמור. עימוד/מיון לא מוצעים שם: `POST /{id}/run` לא מקבל override ל-`definition`
-(`api-contract.md` §5) — כוונון שאילתה נעשה במסך החיפוש. כותרת הטבלה מציגה את מספר הרשומות
-ואת סכום המאושר (סכימה על `aggregations`). מנוע החיפוש הוא מנוע אגרגציה — שאילתה בלי
+(`api-contract.md` §5) — כוונון שאילתה נעשה במסך החיפוש. כותרת הטבלה מציגה את מספר הקבוצות
+ואת סכום המאושר (סכימה על `aggregations`, שמכיל את כל הקבוצות ולא רק את העמוד). מנוע החיפוש הוא מנוע אגרגציה — שאילתה בלי
 `segmentation` מחזירה קבוצה אחת (הסך הכולל); לכן `lastRunRowCount` הוא מספר **קבוצות**, לא רשומות.
 
 ### 6.3 מסך השאלה החופשית (מומש ב-S6)

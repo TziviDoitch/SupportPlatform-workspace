@@ -72,7 +72,7 @@
   },
   "results": {
     "title": "תוצאות",
-    "totalRows": "סה״כ {count} רשומות",
+    "totalGroups": "סה״כ {count} קבוצות",
     "approvedAmount": "סכום מאושר {amount}",
     "questionTitle": "השאלה",
     "updating": "מעדכן…",

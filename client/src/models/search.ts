@@ -11,7 +11,7 @@ export interface AggregationRow {
 export interface PageInfo {
   pageNumber: number;
   pageSize: number;
-  totalRows: number;
+  totalGroups: number;
 }
 
 export interface ExecutionMeta {

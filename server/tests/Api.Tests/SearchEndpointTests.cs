@@ -39,7 +39,7 @@ public class SearchEndpointTests(TestApiFactory factory) : IClassFixture<TestApi
         Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("questionText").GetString()));
         Assert.True(root.GetProperty("aggregations").GetArrayLength() > 0);
         Assert.True(root.GetProperty("rows").GetArrayLength() > 0);
-        Assert.True(root.GetProperty("page").GetProperty("totalRows").GetInt32() > 0);
+        Assert.True(root.GetProperty("page").GetProperty("totalGroups").GetInt32() > 0);
 
         var meta = root.GetProperty("executionMeta");
         Assert.StartsWith("sha256:", meta.GetProperty("definitionHash").GetString());

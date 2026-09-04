@@ -83,7 +83,7 @@ public class SavedQueryServiceTests
         Assert.Same(_search.Response, response);
         var stored = Assert.Single(_repo.Items);
         Assert.NotNull(stored.LastRunAt);
-        Assert.Equal(_search.Response.Page.TotalRows, stored.LastRunRowCount);
+        Assert.Equal(_search.Response.Page.TotalGroups, stored.LastRunRowCount);
         Assert.Contains(_audit.Records, r => r.Action == "run" && r.EntityType == "SavedQuery");
     }
 

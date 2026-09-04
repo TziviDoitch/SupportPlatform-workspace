@@ -31,7 +31,7 @@ const runResponse: SearchResponse = {
   questionText: 'כמה בקשות תמיכה, בפילוח לפי שנת תמיכה?',
   rows: [{ supportYear: 2023, count: 12, sumAmountApproved: 1000 }],
   aggregations: [{ key: { supportYear: 2023 }, metrics: { count: 12, sumAmountApproved: 1000 } }],
-  page: { pageNumber: 1, pageSize: 50, totalRows: 1 },
+  page: { pageNumber: 1, pageSize: 50, totalGroups: 1 },
   executionMeta: { durationMs: 3, rowCount: 1, cacheHit: false, definitionHash: 'x' },
 };
 

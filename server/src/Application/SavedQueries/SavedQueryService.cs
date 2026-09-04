@@ -87,7 +87,9 @@ public sealed class SavedQueryService(
         var response = await search.Search(Deserialize(entity.DefinitionJson), ct);
 
         entity.LastRunAt = DateTimeOffset.UtcNow;
-        entity.LastRunRowCount = response.Page.TotalRows;
+        // The engine aggregates, so this is a group count (ARCHITECTURE §6.2) — the column name is
+        // kept as-is rather than spending a migration on it in the PoC.
+        entity.LastRunRowCount = response.Page.TotalGroups;
         await repo.Save(ct);
         await audit.Record("run", "SavedQuery", id.ToString(), null, ct);
         return response;

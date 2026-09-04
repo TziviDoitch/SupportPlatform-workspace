@@ -114,13 +114,14 @@ Filter של EF Core מבטיח שאין דרך לשכוח את הסינון.
 **מומש (S2):**
 
 - **paging חובה** — `QueryDefinition.paging` עם `pageSize` מוגבל ל-1–200
-  (`QueryDefinitionValidator`); ברירת מחדל 50. `page.totalRows` מוחזר בנפרד.
+  (`QueryDefinitionValidator`); ברירת מחדל 50. `page.totalGroups` מוחזר בנפרד.
 - **aggregation ב-DB** — `SearchQueryExecutor` מריץ `GroupBy` בצד השרת עבור 0–1
   שדות פילוח; רק מחזירים count/sum, לא שורות גולמיות.
 - **אינדקסים** — `support_requests` מאונדקס על `TenantId` ועל
   `(TenantId, SupportYear)` (`SupportRequestConfig`).
 - **פשטת PoC מודעת** — 2+ שדות פילוח מבוצעים עם GroupBy בזיכרון אחרי
-  materialization מינימלי (`ARCHITECTURE.md` §4.4, §10 החלטה 7).
+  materialization מינימלי (`ARCHITECTURE.md` §4.4, §10 החלטה 7), חסום בתקרה של
+  50,000 שורות שמעליה חוזר 400 מפורש. **הצעד הבא:** GroupBy קומפוזיטי ב-DB.
 
 **הצעד הבא:** command timeout + `AsNoTracking` בכל שאילתת קריאה; אינדקסים
 מכוסים לצירופי הפילוח הנפוצים; read-model / materialized view לצירופים כבדים

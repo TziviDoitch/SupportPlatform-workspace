@@ -58,7 +58,7 @@ export const ResultsTable = ({
     }
   };
 
-  const totalRows = response?.page.totalRows ?? 0;
+  const totalGroups = response?.page.totalGroups ?? 0;
   const approved =
     response && definition.metrics.includes('sumAmountApproved')
       ? response.aggregations.reduce((sum, agg) => sum + (agg.metrics.sumAmountApproved ?? 0), 0)
@@ -70,7 +70,7 @@ export const ResultsTable = ({
       extra={
         response ? (
           <Typography.Text type="secondary">
-            {formatMessage(t.results.totalRows, { count: formatIntHe(totalRows) })}
+            {formatMessage(t.results.totalGroups, { count: formatIntHe(totalGroups) })}
             {approved !== undefined && ` · ${formatMessage(t.results.approvedAmount, { amount: formatCurrencyIls(approved) })}`}
           </Typography.Text>
         ) : null
@@ -88,7 +88,7 @@ export const ResultsTable = ({
             ? {
                 current: response?.page.pageNumber ?? 1,
                 pageSize: response?.page.pageSize ?? DEFAULT_PAGE_SIZE,
-                total: totalRows,
+                total: totalGroups,
                 showSizeChanger: false,
               }
             : false

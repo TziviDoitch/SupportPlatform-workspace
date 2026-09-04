@@ -8,6 +8,9 @@ namespace SupportPlatform.Api.Identity;
 /// Resolves <see cref="ICurrentUser"/> from the <c>X-User</c> request header against the seeded
 /// users. A missing or unrecognized header falls back to the default seed user — the PoC has no
 /// real authentication (that is S8). Resolved once per request and cached.
+///
+/// The identity and its tenant are always read from a real <c>users</c> row: with no row to fall
+/// back to, this throws rather than inventing a username and tenant.
 /// </summary>
 public sealed class HttpCurrentUser(IHttpContextAccessor accessor, SupportPlatformDbContext db) : ICurrentUser
 {
@@ -31,11 +34,13 @@ public sealed class HttpCurrentUser(IHttpContextAccessor accessor, SupportPlatfo
         var name = string.IsNullOrWhiteSpace(requested) ? DefaultUsername : requested;
 
         var user = db.Users.AsNoTracking().FirstOrDefault(u => u.Username == name)
-                   ?? db.Users.AsNoTracking().FirstOrDefault(u => u.Username == DefaultUsername);
+                   ?? db.Users.AsNoTracking().FirstOrDefault(u => u.Username == DefaultUsername)
+                   ?? throw new InvalidOperationException(
+                       $"No user row resolves the request: '{HeaderName}: {name}' is unknown and the " +
+                       $"default seed user '{DefaultUsername}' is missing. The identity and its tenant " +
+                       "always come from the database — never from a hard-coded fallback.");
 
-        _resolved = user is null
-            ? (DefaultUsername, "culture-sport-admin", Roles.Analyst)
-            : (user.Username, user.TenantId, user.Role);
+        _resolved = (user.Username, user.TenantId, user.Role);
         return _resolved.Value;
     }
 }

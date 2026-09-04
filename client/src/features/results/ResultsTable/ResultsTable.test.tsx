@@ -30,7 +30,7 @@ const response: SearchResponse = {
     { supportYear: 2024, count: 7 },
   ],
   aggregations: [],
-  page: { pageNumber: 1, pageSize: 50, totalRows: 2 },
+  page: { pageNumber: 1, pageSize: 50, totalGroups: 2 },
   executionMeta: { durationMs: 4, rowCount: 2, cacheHit: false, definitionHash: 'sha256:x' },
 };
 
@@ -55,6 +55,38 @@ describe('ResultsTable', () => {
     expect(screen.getByText('כמות')).toBeTruthy(); // metric label
     expect(screen.getByText('2023')).toBeTruthy();
     expect(screen.getByText('12')).toBeTruthy();
+  });
+
+  it('sums the approved amount over every aggregation, not just the rows on this page', () => {
+    // `rows` is the page (2 of 3 groups); `aggregations` is the whole result. The header total
+    // must come from the latter — otherwise paging silently changes the "total".
+    renderTable(
+      <ResultsTable
+        response={{
+          ...response,
+          rows: [
+            { supportYear: 2023, count: 12, sumAmountApproved: 1000 },
+            { supportYear: 2024, count: 7, sumAmountApproved: 2000 },
+          ],
+          aggregations: [
+            { key: { supportYear: 2023 }, metrics: { count: 12, sumAmountApproved: 1000 } },
+            { key: { supportYear: 2024 }, metrics: { count: 7, sumAmountApproved: 2000 } },
+            { key: { supportYear: 2025 }, metrics: { count: 3, sumAmountApproved: 4000 } },
+          ],
+          page: { pageNumber: 1, pageSize: 2, totalGroups: 3 },
+        }}
+        registry={registry}
+        references={references}
+        definition={{ ...definition, metrics: ['count', 'sumAmountApproved'] }}
+        onPageChange={noop}
+        onSortChange={noop}
+      />,
+    );
+
+    // 1000 + 2000 + 4000 — including the group that is not on this page.
+    expect(screen.getByText(/7,000/)).toBeTruthy();
+    // ...and not 1000 + 2000, which is what summing only the page would give.
+    expect(screen.queryByText(/3,000/)).toBeNull();
   });
 
   it('maps a sort-header click to onSortChange (server-side sort)', () => {
@@ -86,7 +118,7 @@ describe('ResultsTable', () => {
   it('shows an empty state when there are no rows', () => {
     renderTable(
       <ResultsTable
-        response={{ ...response, rows: [], page: { ...response.page, totalRows: 0 } }}
+        response={{ ...response, rows: [], page: { ...response.page, totalGroups: 0 } }}
         registry={registry}
         references={references}
         definition={definition}

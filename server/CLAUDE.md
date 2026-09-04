@@ -50,7 +50,9 @@ curl http://localhost:5080/health          # -> 200 Healthy
 
 Endpoints so far: `GET /api/metadata?tenantId=` (S1; S8 ⇒ 403 if `tenantId` ≠ caller's) ·
 `POST /api/search` (S2 — body is a `QueryDefinition`, response has `questionText` / `rows` /
-`aggregations` / `page` / `executionMeta`; S8 ⇒ 403 on `tenantId` mismatch)
+`aggregations` / `page` / `executionMeta`; **`rows` is the requested page, `aggregations` is every
+group** — sum and plot the latter; `page.totalGroups` counts groups, not records; S8 ⇒ 403 on
+`tenantId` mismatch)
 · `GET/POST/PUT/DELETE /api/saved-queries[/{id}]` + `POST /api/saved-queries/{id}/run` (S5 —
 CRUD + re-run, scoped to owner + tenant; out-of-scope ⇒ 404; S8 — DELETE requires role `admin` ⇒ 403).
 · `POST /api/nl-queries/parse` (S6 — free text ⇒ `{ definition, interpretationText, confidence,
@@ -61,7 +63,8 @@ in Development lists them all.
 
 Caller identity (S5 seam, S8 authoritative): `ICurrentUser` (`Application/Identity`) — `Username` /
 `TenantId` / `Role` / `CorrelationId`. Impl `HttpCurrentUser` (`Api/Identity`) reads the `X-User`
-header and resolves the seeded `users` row; a missing/unknown header falls back to `sarah`. Send
+header and resolves the seeded `users` row; a missing/unknown header falls back to the seeded
+`sarah` **row** — never to a hard-coded identity: with no `users` row to resolve, it throws. Send
 `X-User: <username>` from tests/clients to act as someone else. **No JWT / `/api/auth/login`** —
 that stays the production target (`docs/ARCHITECTURE.md` §8.1, decision 13).
 
