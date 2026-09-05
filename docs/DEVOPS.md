@@ -26,10 +26,11 @@
 
 **ההבדלים המתוכננים:**
 
-- **TEST** — `Migrate()` כבר רץ בכל סביבה שאינה `Testing`, כך שהסכימה תיווצר לבד
-  (אך ראו §5.3). נתוני דמו יצריכו שלב טעינה נפרד, כי ה-seeder רץ רק ב-Development —
-  הוא דטרמיניסטי ו-idempotent ולכן מתאים לכך בלי שינוי. Swagger יצריך תנאי סביבה
-  נוסף. **פערים מודעים — לא תוקנו; S10 הוא שלב תיעוד.**
+- **TEST** — כיום ב-PoC, `Migrate()` רץ בעליית האפליקציה בכל סביבה שאינה `Testing`.
+  ביעד ה-TEST/PROD המיגרציות יעברו לשלב מיגרציה ייעודי בפייפליין (§5.3). נתוני דמו
+  יצריכו שלב טעינה נפרד, כי ה-seeder רץ רק ב-Development — הוא דטרמיניסטי ו-idempotent
+  ולכן מתאים לכך בלי שינוי. Swagger יצריך תנאי סביבה נוסף. **פערים מודעים — לא תוקנו;
+  S10 הוא שלב תיעוד.**
 - **PROD** — Swagger סגור · **משתמש DB בהרשאות מצומצמות, לא `sa`** (ה-PoC מתחבר
   כ-`sa`) · ריבוי מופעים מאחורי load balancer, שיחייב cache מבוזר במקום
   `IMemoryCache` per-instance ([`DESIGN_QA.md`](DESIGN_QA.md) §5) · client כ-build
@@ -67,7 +68,7 @@ flowchart LR
 **מודל ה-branches:**
 
 - **`main`** — ענף הפיתוח והאינטגרציה. כל ה-PRs מתמזגים אליו קודם. `main` הוא המקור
-  לפריסת TEST, ואחרי merge מתבצעים CI/CD ופריסה אוטומטית ל-TEST. **אין לפרוס
+  לפריסת TEST: בתכנון, אחרי merge יתבצעו CI ופריסה אוטומטית ל-TEST. **אין לפרוס
   Production ישירות מ-`main`.**
 - **`master`** — ענף ה-Production. מעבר מ-`main` ל-`master` נעשה רק אחרי שהגרסה נבדקה
   ואושרה ב-TEST, דרך PR שדורש Code Review ואישור. `master` מייצג אך ורק קוד שאושר
@@ -79,7 +80,7 @@ flowchart LR
 | טריגר | מה קורה |
 |---|---|
 | PR ל-`main` | Build + Tests + Quality + Code Review; ללא deploy, merge חסום עד ירוק ומאושר |
-| merge ל-`main` | אותן בדיקות → package → deploy אוטומטי ל-TEST |
+| merge ל-`main` | בתכנון: CI → package → deploy אוטומטי ל-TEST |
 | Validation ב-TEST + אישור | נפתח PR מ-`main` ל-`master` (Code Review + אישור) |
 | merge ל-`master` | Tag לגרסה + Manual Approval → deploy ל-PROD מ-`master` |
 
@@ -167,8 +168,8 @@ env var עוקף מפתח מקונן עם `__`. דוגמה חיה ב-Compose: `C
 **5.2 ל-PROD: Blue/Green.** הפריסה מ-`master`, על Tag ו-Manual Approval. מרימים סביבה
 חדשה לצד הפעילה, בודקים מול `/health`, ורק אז מעבירים תעבורה. מתאים כאן כי **ה-API חסר-מצב** (הזהות בכותרת בכל בקשה, אין
 session) — אפשר להריץ שתי גרסאות במקביל; המצב היחיד שנשמר הוא ה-DB המשותף, ולכן
-ההחלפה בטוחה רק בתנאי §5.3; ו**rollback הוא החזרת נתב**, שניות במקום דקות.
-מחיר מודע: cache שאינו משותף מתחמם מחדש.
+ההחלפה בטוחה רק בתנאי §5.3; ו**rollback יכול להתבצע באמצעות החזרת התעבורה לגרסה
+הקודמת, ללא צורך בבנייה מחדש**. מחיר מודע: cache שאינו משותף מתחמם מחדש.
 
 `/health` קיים ([`Program.cs`](../server/src/Api/Program.cs)) וישמש כ-**readiness gate**.
 ל-PROD הייתי מרחיבה אותו לבדיקת חיבור DB ומפרידה `live` מ-`ready`.
@@ -179,9 +180,11 @@ session) — אפשר להריץ שתי גרסאות במקביל; המצב הי
 עולים יחד וממגררים במקביל, וה-deploy נכשל על שגיאת סכימה במקום בשלב ייעודי. היעד:
 
 1. **שלב מיגרציה ייעודי בפייפליין**, לפני deploy האפליקציה.
-2. **Additive בלבד.** העיקרון כבר נשמר: `InitialCreate` →
-   `TenantAndReferenceFkDeleteBehavior` → `SavedQueriesAndAudit`, והאחרונה יוצרת
-   `saved_queries` ו-`audit_log` בלי לגעת בטבלה קיימת.
+2. **ב-Production: מיגרציות יתוכננו כ-additive/backward-compatible ככל האפשר**, כדי
+   לאפשר rollback של האפליקציה ללא rollback של הסכימה. כראיה למצב הנוכחי — שרשרת
+   המיגרציות הקיימת כבר additive: `InitialCreate` → `TenantAndReferenceFkDeleteBehavior`
+   → `SavedQueriesAndAudit`, והאחרונה יוצרת `saved_queries` ו-`audit_log` בלי לגעת
+   בטבלה קיימת.
 3. **תאימות לאחור לגרסה אחת** — אחרת אין rollback. מחיקת עמודה נעשית בשני deploy:
    קודם הקוד מפסיק להשתמש בה, ורק אז היא נמחקת.
 
@@ -203,7 +206,7 @@ session) — אפשר להריץ שתי גרסאות במקביל; המצב הי
 | ניהול קוד + PR | Git / GitHub | branch protection ל-`main` ול-`master`, PR + review חובה (§2) |
 | CI/CD | GitHub Actions | הפקודות שבטבלת §2, בלי חדשות |
 | Container Registry | Azure Container Registry | image ה-API אחרי שלב ה-package |
-| אירוח ה-API | אירוח קונטיינרים (Azure Container Apps) | ה-API חסר-מצב (§5.2) |
+| אירוח ה-API | Azure Container Apps (או שירות Container Hosting מקביל) | ה-API חסר-מצב (§5.2) |
 | אירוח ה-Client | Static hosting (Azure Static Web Apps) | build סטטי, לא קונטיינר |
 | Database | Azure SQL Database | מנוהל, עם גיבויים; אותו provider כמו ה-PoC |
 | Secrets | Azure Key Vault | מוזרק כ-env vars; Managed Identity (§3) |
