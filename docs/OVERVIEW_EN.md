@@ -107,6 +107,24 @@ audit log, query deduplication by canonical hash, tenant isolation, and a role c
 
 Nothing above is an oversight — each is a scoping decision, recorded with its reasoning.
 
+## AI-assisted engineering
+
+Claude was used as a development agent inside a defined engineering workflow — not a
+substitute for developer judgement. The agent worked within
+[`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md) (locked technology choices §2,
+the working agreement §3, the S0–S11 build order §6), the frozen contracts in
+[`contracts/`](contracts/), and a per-stage Definition of Done. It runs the verification
+checks defined for each stage; architectural decisions, review and final validation stay
+with the developer.
+
+| Asset | What it defines |
+|---|---|
+| [`../CLAUDE.md`](../CLAUDE.md) + [`../server/CLAUDE.md`](../server/CLAUDE.md) + [`../client/CLAUDE.md`](../client/CLAUDE.md) | Architectural boundaries, structure, conventions and a "don't" list per side |
+| [`../.claude/commands/build-stage.md`](../.claude/commands/build-stage.md) | The single-stage loop: sanity check → worktree → task card → **stop for approval** → implement → DoD gate → PR |
+| [`../.claude/skills/new-task`](../.claude/skills/new-task) | Every task in an isolated git worktree on a branch off `origin/main` |
+| [`../server/.claude/skills/dotnet`](../server/.claude/skills/dotnet) | C# / .NET conventions and the responsibility boundaries between layers |
+| [`../client/.claude/skills/react-components`](../client/.claude/skills/react-components) | Small React components, UI/logic split, a typed API layer |
+
 ## Where to read more
 
 All authoritative documentation is in Hebrew:
