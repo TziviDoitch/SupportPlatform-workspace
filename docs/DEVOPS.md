@@ -35,6 +35,10 @@
   `IMemoryCache` per-instance ([`DESIGN_QA.md`](DESIGN_QA.md) §5) · client כ-build
   סטטי, לא Vite dev server כמו ב-PoC.
 
+**Docker — היקף.** לא כל המערכת חייבת להיות Dockerized. ב-DEV, Docker Compose הוא כלי
+להרצה נוחה של ה-PoC בפקודה אחת. ב-PROD ה-API ירוץ כ-Container, ה-Client כ-build סטטי
+מ-static hosting, וה-DB כ-Managed Database — לא כקונטיינר.
+
 ---
 
 ## 2. CI/CD — תכנון
@@ -57,6 +61,13 @@ flowchart LR
 
 **מתי רץ:** על כל PR ל-`main` — build ובדיקות, ללא deploy; merge חסום עד ירוק.
 אחרי merge — אותן בדיקות, ואז package ו-deploy ל-TEST. PROD — רק על tag.
+
+**כל PR חייב לעבור:** Build + Tests + Quality Checks ירוקים, **וגם** Code Review
+ואישור של reviewer. אין push ישיר ל-`main`.
+
+**ענפים ו-Production:** `main` הוא ה-source of truth של הקוד המאושר ל-Production. עם
+merge ל-`main` מתבצע deployment אוטומטי ל-TEST; PROD מקודם **מאותו קוד** באמצעות
+Tag + אישור ידני — לא build נפרד.
 
 **מה נבדק** — בדיוק מה שרץ היום ידנית, בלי פקודות חדשות:
 
@@ -85,14 +96,18 @@ flowchart LR
 `appsettings.*.local.json`, ומחריג רק `!.env.example`. הסודות מגיעים כ-env vars, לא
 כקבצים ב-image.
 
-**פער מודע:** `appsettings.Development.json` מכיל connection string עם סיסמת SA של
-קונטיינר מקומי חד-פעמי, כדי ש-`dotnet run` יעבוד מ-clone נקי. אינו secret פרודקשן,
-אך זו אנטי-דוגמה שלא הייתה נכנסת למערכת אמיתית.
+**פער מודע:** סיסמת ה-SA ב-`appsettings.Development.json` היא **פתרון מקומי ל-PoC
+בלבד** — connection string עם סיסמת קונטיינר חד-פעמי, כדי ש-`dotnet run` יעבוד מ-clone
+נקי. אינה secret פרודקשן, אך זו אנטי-דוגמה שלא הייתה נכנסת למערכת אמיתית.
 
-**יעד:** secret store מנוהל (Key Vault / Secrets Manager / Vault) שמוזרק כ-env vars
-בזמן ריצה · **Managed Identity** במקום סיסמה היכן שאפשר · **secret נפרד לכל סביבה**
-(ל-DEV אין ולא תהיה גישה לסודות PROD) · סודות CI ב-GitHub Secrets ברמת environment
-עם approval gate · רוטציה תקופתית.
+**יעד:**
+
+- **TEST** — הסודות מוזרקים כ-Environment Variables מתוך secret store (למשל Azure Key
+  Vault); אין ערכים בקוד או ב-image.
+- **PROD** — ניהול ב-**Azure Key Vault**, עם **Managed Identity** במקום סיסמה ככל
+  שניתן (למשל בחיבור ל-Azure SQL).
+- **secret נפרד לכל סביבה** — ל-DEV אין ולא תהיה גישה לסודות PROD · סודות CI ב-GitHub
+  Secrets ברמת environment עם approval gate · רוטציה תקופתית.
 
 > **כלל מחייב:** אין לשמור Secrets ב-Git או בקובץ configuration שנכנס ל-repository.
 > ערך אמיתי בקובץ מעוקב הוא באג אבטחה, לא נוחות פיתוח.
@@ -162,7 +177,26 @@ DB — **אין down-migration בנתיב ה-rollback**; מכיוון שהמיג
 
 ---
 
-## 6. מגבלות מודעות
+## 6. רכיבי תשתית — בחירה מתוכננת
+
+**לא מומש** — המטלה אינה דורשת מימוש. הטבלה מציגה איזה רכיב הייתי בוחרת לכל צורך, כדי
+שהתכנון יהיה קונקרטי. הבחירה מוטה ל-Azure כ-cloud יעד אחד ועקבי.
+
+| צורך | רכיב | הערה |
+|---|---|---|
+| ניהול קוד + PR | Git / GitHub | branch protection ל-`main`, PR + review חובה (§2) |
+| CI/CD | GitHub Actions | הפקודות שבטבלת §2, בלי חדשות |
+| Container Registry | Azure Container Registry | image ה-API אחרי שלב ה-package |
+| אירוח ה-API | אירוח קונטיינרים (Azure Container Apps) | ה-API חסר-מצב (§5.2) |
+| אירוח ה-Client | Static hosting (Azure Static Web Apps) | build סטטי, לא קונטיינר |
+| Database | Azure SQL Database | מנוהל, עם גיבויים; אותו provider כמו ה-PoC |
+| Secrets | Azure Key Vault | מוזרק כ-env vars; Managed Identity (§3) |
+| ניטור ותקלות | Application Insights / Azure Monitor | correlation id כבר בכל בקשה ולוג ([`DESIGN_QA.md`](DESIGN_QA.md) §7) |
+| IaC | Terraform או Bicep | הסביבות והרשתות כקוד — לא קיים היום (§7) |
+
+---
+
+## 7. מגבלות מודעות
 
 ההיקף נקבע מדרישת המטלה עצמה — *"אין צורך לממש בפועל"* — וההשקעה הופנתה למנוע
 השאילתות, להפשטת ה-AI ולתיעוד הארכיטקטוני. **בחירת היקף, לא פער שנשכח:**
