@@ -13,7 +13,7 @@ const entry: FilterFieldRegistryEntry = {
 
 const thisYear = new Date().getFullYear();
 
-/** Open an antd Select and wait for its option list (rendered in a body portal). */
+// Open an antd Select and wait for its option list (rendered in a body portal).
 async function open(combobox: HTMLElement): Promise<HTMLElement> {
   fireEvent.mouseDown(combobox);
   return waitFor(() => {

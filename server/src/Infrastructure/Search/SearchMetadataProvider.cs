@@ -6,10 +6,8 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Search;
 
-/// <summary>
-/// Loads the reference/registry snapshot and the known tenant ids once per request (the type is
-/// scoped, so the memoized value is per request).
-/// </summary>
+// Loads the reference/registry snapshot and known tenant ids once per request (scoped, so the
+// memoized value is per request).
 public sealed class SearchMetadataProvider(IMetadataRepository metadata, IRepository<Tenant> tenants)
     : ISearchMetadataProvider
 {

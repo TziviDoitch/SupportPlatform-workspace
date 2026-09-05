@@ -4,12 +4,9 @@ using System.Text.Json;
 
 namespace SupportPlatform.Api.Tests;
 
-/// <summary>
-/// The one end-to-end happy path (plan §6 S9): a single caller walks the whole chain over HTTP —
-/// identity ⇒ metadata ⇒ search ⇒ save ⇒ run ⇒ NL parse — and each hop feeds the next. The
-/// per-endpoint edge cases live in the other <c>*EndpointTests</c>; this test only proves the
-/// pieces compose.
-/// </summary>
+// The one end-to-end happy path: a single caller walks the whole chain over HTTP —
+// identity -> metadata -> search -> save -> run -> NL parse — and each hop feeds the next.
+// Per-endpoint edge cases live in the other *EndpointTests.
 public class HappyPathIntegrationTests(TestApiFactory factory) : IClassFixture<TestApiFactory>
 {
     private const string Tenant = "culture-sport-admin";
@@ -17,7 +14,7 @@ public class HappyPathIntegrationTests(TestApiFactory factory) : IClassFixture<T
     [Fact]
     public async Task Identity_metadata_search_save_run_and_parse_compose()
     {
-        // 1. Identity — the PoC login seam is the X-User header (no JWT; server/CLAUDE.md).
+        // 1. Identity — the PoC login seam is the X-User header (no JWT).
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-User", "sarah"); // seeded analyst in culture-sport-admin
 

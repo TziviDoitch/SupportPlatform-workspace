@@ -3,11 +3,8 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.Search;
 
-/// <summary>
-/// Everything validation, execution, and question-text rendering need about the shape of the
-/// world: the reference lists + filter-field whitelist (<see cref="Snapshot"/>) and the set of
-/// known tenant ids.
-/// </summary>
+// The reference lists + filter-field whitelist plus the set of known tenant ids — what
+// validation, execution and question-text rendering need.
 public sealed record SearchMetadata(MetadataSnapshot Snapshot, IReadOnlySet<string> TenantIds)
 {
     public IReadOnlyList<FilterFieldRegistryEntry> Registry => Snapshot.Registry;

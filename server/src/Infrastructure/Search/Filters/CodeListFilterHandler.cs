@@ -4,12 +4,11 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Search.Filters;
 
-/// <summary>Handles <c>kind: "codeList"</c> — IN over a string code column.</summary>
+// Handles kind: "codeList" — IN over a string code column.
 public sealed class CodeListFilterHandler(
     string fieldId,
     Expression<Func<SupportRequest, string>> column) : FilterHandler(fieldId)
 {
-    /// <summary>The code column, e.g. <c>r =&gt; r.SubmittingBody!.BodyTypeCode</c>. Also the group key.</summary>
     public Expression<Func<SupportRequest, string>> Column { get; } = column;
 
     public override string Kind => FieldKind.CodeList;

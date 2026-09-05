@@ -1,6 +1,3 @@
-/** Response of `POST /api/search` (`docs/contracts/api-contract.md` §3). */
-
-/** A result row. Shape depends on `segmentation` + `metrics` (e.g. `{ supportYear: 2023, count: 12 }`). */
 export type ResultRow = Record<string, string | number>;
 
 export interface AggregationRow {

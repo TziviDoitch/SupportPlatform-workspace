@@ -1,6 +1,5 @@
 namespace SupportPlatform.Application.Search;
 
-/// <summary>The metric names allowed by the API contract.</summary>
 public static class Metric
 {
     public const string Count = "count";

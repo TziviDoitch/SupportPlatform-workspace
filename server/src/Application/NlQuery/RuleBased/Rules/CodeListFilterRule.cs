@@ -2,12 +2,9 @@ using SupportPlatform.Application.Search;
 
 namespace SupportPlatform.Application.NlQuery.RuleBased.Rules;
 
-/// <summary>
-/// Matches reference values mentioned in the question against every <c>codeList</c> field in the
-/// registry — one rule for all of them, because the vocabulary is metadata, not code. A domain,
-/// body type, status or district added to the seed is recognised here with no code change
-/// (<c>DESIGN_QA.md</c> Q1). Several values for one field become an IN list.
-/// </summary>
+// Matches reference values in the question against every codeList field in the registry — one
+// rule for all of them, because the vocabulary is metadata. Several values for one field become
+// an IN list.
 internal static class CodeListFilterRule
 {
     public static void Apply(NlText text, SearchMetadata meta, IDictionary<string, FilterValue> filters)

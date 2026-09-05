@@ -59,7 +59,7 @@ public class MetadataEndpointTests(TestApiFactory factory) : IClassFixture<TestA
     [Fact]
     public async Task Another_tenants_metadata_is_a_403()
     {
-        // 'michal' is seeded in welfare-admin; the caller's tenant is authoritative (S8).
+        // 'michal' is seeded in welfare-admin; the caller's tenant is authoritative.
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-User", "michal");
 

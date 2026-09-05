@@ -1,10 +1,7 @@
 namespace SupportPlatform.Application.NlQuery.RuleBased;
 
-/// <summary>
-/// Function words and question scaffolding that carry no filter meaning. Only used to keep
-/// <c>unresolved</c> honest — a word listed here is not reported back as "not understood".
-/// Grammar, not business vocabulary: filter values always come from the metadata.
-/// </summary>
+// Function words and question scaffolding that carry no filter meaning. Only used to keep
+// `unresolved` honest — a word listed here is not reported back as "not understood".
 internal static class HebrewStopWords
 {
     private static readonly HashSet<string> Stems =

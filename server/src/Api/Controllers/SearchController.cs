@@ -9,7 +9,6 @@ namespace SupportPlatform.Api.Controllers;
 [ProducesErrorResponseType(typeof(ProblemDetails))]
 public class SearchController(ISearchService search) : ControllerBase
 {
-    /// <summary>Run a <see cref="QueryDefinition"/>: rows + aggregations + question text.</summary>
     [HttpPost]
     [ProducesResponseType<SearchResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

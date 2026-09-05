@@ -10,10 +10,8 @@ using SupportPlatform.Infrastructure.Persistence;
 
 namespace SupportPlatform.Api.Tests;
 
-/// <summary>
-/// Boots the API against an isolated in-memory SQLite database, seeded once. Replaces the
-/// SQL Server context registered by <c>AddInfrastructure</c>.
-/// </summary>
+// Boots the API against an isolated in-memory SQLite database, seeded once, replacing the
+// SQL Server context registered by AddInfrastructure.
 public class TestApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");

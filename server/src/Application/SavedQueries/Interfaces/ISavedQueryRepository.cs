@@ -2,10 +2,7 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.SavedQueries.Interfaces;
 
-/// <summary>
-/// Persistence for <see cref="SavedQuery"/>. Every read is scoped to owner + tenant; a record
-/// outside that scope is simply not found.
-/// </summary>
+// Every read is scoped to owner + tenant; a record outside that scope is simply not found.
 public interface ISavedQueryRepository
 {
     Task<IReadOnlyList<SavedQuery>> List(string ownerUsername, string tenantId, CancellationToken ct = default);

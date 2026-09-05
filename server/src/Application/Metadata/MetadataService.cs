@@ -4,17 +4,13 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.Metadata;
 
-/// <summary>
-/// Builds the <see cref="MetadataResponse"/> — reference lists + filter-field registry — for the
-/// caller's tenant. The requested <c>tenantId</c> is validated against identity, not trusted (S8).
-/// </summary>
+// Builds the metadata response (reference lists + filter-field registry) for the caller's tenant.
 public sealed class MetadataService(IMetadataRepository repository, TenantAccessGuard tenantAccess)
     : IMetadataService
 {
     public async Task<MetadataResponse> Get(string tenantId, CancellationToken ct = default)
     {
-        // The authenticated caller's tenant is authoritative (S8): a request for another tenant's
-        // metadata is a 403, not a silent scope switch (docs/ARCHITECTURE.md §8.1).
+        // The requested tenantId is validated against identity, not trusted.
         tenantId = tenantAccess.EnsureTenant(tenantId);
 
         var snapshot = await repository.GetSnapshot(ct);

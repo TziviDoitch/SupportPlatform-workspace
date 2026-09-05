@@ -3,11 +3,9 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Persistence;
 
-/// <summary>
-/// Deterministic, idempotent seed: reference lists + the filter-field registry (data, not code —
-/// §8 Q1), two tenants, three users, ~40 submitting bodies and ~500 support requests in a
-/// deliberately skewed distribution. Reproducible across runs via a fixed RNG seed.
-/// </summary>
+// Deterministic, idempotent seed: reference lists + filter-field registry, two tenants, three
+// users, ~40 submitting bodies and ~500 support requests in a deliberately skewed distribution.
+// Reproducible via a fixed RNG seed.
 public static class DbSeeder
 {
     private const int RngSeed = 20240901;

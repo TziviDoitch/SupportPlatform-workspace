@@ -42,7 +42,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddMemoryCache(o => o.SizeLimit = 1000); // bound the search dedup cache (§ DESIGN_QA 5)
+builder.Services.AddMemoryCache(o => o.SizeLimit = 1000); // bound the search dedup cache
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddSingleton(new SearchCacheOptions
 {
@@ -55,8 +55,7 @@ builder.Services.AddSingleton(new NlQueryOptions
 
 var app = builder.Build();
 
-// Fail fast on a bad NlQuery:Provider — a misconfigured AI seam should stop the app here, not
-// surface as a 500 on the first question (DESIGN_QA §6).
+// Fail fast on a bad NlQuery:Provider — stop the app here, not as a 500 on the first question.
 using (var startup = app.Services.CreateScope())
     startup.ServiceProvider.GetRequiredService<INlQueryProvider>();
 
@@ -65,8 +64,7 @@ app.UseStatusCodePages();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
-// Schema must exist in every real environment. The test host ("Testing") builds its own SQLite
-// schema via EnsureCreated (TestApiFactory) and must not run the SQL Server migrations.
+// The test host ("Testing") builds its own SQLite schema and must not run the SQL Server migrations.
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
@@ -88,5 +86,5 @@ app.MapControllers();
 
 app.Run();
 
-/// <summary>Exposed so the test host (<c>WebApplicationFactory</c>) can boot the API.</summary>
+// Exposed so the test host (WebApplicationFactory) can boot the API.
 public partial class Program;

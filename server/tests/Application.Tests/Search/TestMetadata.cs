@@ -5,7 +5,7 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.Tests.Search;
 
-/// <summary>The frozen S1 reference lists + 5-row registry, for validator / renderer tests.</summary>
+// The frozen reference lists + 5-row registry, for validator / renderer tests.
 internal static class TestMetadata
 {
     public static MetadataSnapshot Snapshot { get; } = new(

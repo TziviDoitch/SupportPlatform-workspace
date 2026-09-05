@@ -5,10 +5,8 @@ using SupportPlatform.Infrastructure.Persistence.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Tests;
 
-/// <summary>
-/// An isolated in-memory SQLite database. Holds the connection open for the fixture's lifetime
-/// (an in-memory SQLite db is dropped when its last connection closes).
-/// </summary>
+// An isolated in-memory SQLite database. Holds the connection open for the fixture's lifetime
+// (an in-memory SQLite db is dropped when its last connection closes).
 public sealed class TestDb : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -31,7 +29,7 @@ public sealed class TestDb : IDisposable
 
     public MutableTenantContext Tenant { get; }
 
-    /// <summary>A fresh context over the same database — used to read back what another context wrote.</summary>
+    // A fresh context over the same database — used to read back what another context wrote.
     public SupportPlatformDbContext NewContext(ITenantContext? tenant = null)
     {
         var options = new DbContextOptionsBuilder<SupportPlatformDbContext>()

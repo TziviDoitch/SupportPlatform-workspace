@@ -14,14 +14,10 @@ using SupportPlatform.Application.Search.Validation;
 
 namespace SupportPlatform.Application;
 
-/// <summary>Composition root for the Application layer.</summary>
 public static class DependencyInjection
 {
-    /// <summary>
-    /// The AI seam (<c>DESIGN_QA.md</c> §6): one entry per <see cref="INlQueryProvider"/>
-    /// implementation, keyed by the value <c>NlQuery:Provider</c> selects. Adding an LLM-backed
-    /// provider is one entry here plus one configuration value — no other type changes.
-    /// </summary>
+    // One entry per INlQueryProvider implementation, keyed by the value NlQuery:Provider selects.
+    // Adding an LLM-backed provider is one entry here plus one configuration value.
     private static readonly Dictionary<string, Type> NlQueryProviders = new()
     {
         [RuleBasedNlQueryProvider.ProviderKey] = typeof(RuleBasedNlQueryProvider)
@@ -47,8 +43,6 @@ public static class DependencyInjection
         return services;
     }
 
-    /// <summary>Resolves the provider named by <c>NlQuery:Provider</c>.</summary>
-    /// <exception cref="InvalidOperationException">No provider is registered under that key.</exception>
     private static INlQueryProvider ResolveNlQueryProvider(IServiceProvider services)
     {
         // No options bound (a bare AddApplication in a test) means the type default, not a failure.

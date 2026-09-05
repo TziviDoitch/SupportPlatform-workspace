@@ -2,17 +2,14 @@ using Serilog.Context;
 
 namespace SupportPlatform.Api.Middleware;
 
-/// <summary>
-/// Gives every request a correlation id: taken from the <c>X-Correlation-Id</c> request header or
-/// generated. It is echoed on the response, pushed onto every Serilog line as
-/// <c>CorrelationId</c>, and used as <c>HttpContext.TraceIdentifier</c> so it surfaces as
-/// <c>traceId</c> in ProblemDetails (<c>docs/contracts/error-model.md</c>).
-/// </summary>
+// Gives every request a correlation id (from X-Correlation-Id or generated): echoed on the
+// response, pushed onto every Serilog line, and used as HttpContext.TraceIdentifier so it
+// surfaces as traceId in ProblemDetails.
 public sealed class CorrelationIdMiddleware(RequestDelegate next)
 {
     public const string HeaderName = "X-Correlation-Id";
 
-    /// <summary>Bounds a client-supplied id so it fits every downstream store (e.g. <c>audit_log</c>).</summary>
+    // Bound a client-supplied id so it fits every downstream store (e.g. audit_log).
     public const int MaxLength = 64;
 
     public async Task Invoke(HttpContext context)

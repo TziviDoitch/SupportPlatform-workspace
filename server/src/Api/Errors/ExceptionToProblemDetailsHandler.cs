@@ -7,12 +7,9 @@ using SupportPlatform.Application.Search;
 
 namespace SupportPlatform.Api.Errors;
 
-/// <summary>
-/// Turns an unhandled exception into an RFC 7807 response (<c>docs/contracts/error-model.md</c>).
-/// FluentValidation failures and the Application <see cref="InvalidQueryException"/> become 400
-/// <c>validation</c>; <see cref="ForbiddenException"/> is 403, <see cref="NotFoundException"/> is
-/// 404; anything else is a logged 500 <c>unexpected</c>.
-/// </summary>
+// Turns an unhandled exception into an RFC 7807 response. FluentValidation failures and
+// InvalidQueryException become 400; ForbiddenException 403; NotFoundException 404; anything else
+// a logged 500.
 public sealed class ExceptionToProblemDetailsHandler(ILogger<ExceptionToProblemDetailsHandler> logger)
     : IExceptionHandler
 {

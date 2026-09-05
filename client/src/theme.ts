@@ -1,13 +1,10 @@
 import type { ThemeConfig } from 'antd';
 
-/** Dark-purple accent for section / card-title / nav icons — the one place this colour is defined. */
+// Dark-purple accent for section / card-title / nav icons.
 export const SECTION_ICON_COLOR = '#5b21b6';
 
-/**
- * The one place the app's look is decided. A calm indigo-on-slate palette, roomy radii and a
- * single quiet elevation — tuned for dense Hebrew data screens. Components read these tokens, so
- * screens never hard-code colours or spacing.
- */
+// The one place the app's look is decided. Components read these tokens, so screens never
+// hard-code colours or spacing.
 export const theme: ThemeConfig = {
   token: {
     colorPrimary: '#3a5bd9',

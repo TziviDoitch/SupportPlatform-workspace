@@ -4,11 +4,9 @@ using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Search;
 
-/// <summary>
-/// Translates a validated <see cref="QueryDefinition"/>'s filters into a safe
-/// <see cref="IQueryable{SupportRequest}"/> (§3.4 red line). It only enforces the whitelist and
-/// folds the resolved handlers — no per-field logic, no <c>switch</c>, no reflection.
-/// </summary>
+// Translates a validated QueryDefinition's filters into a safe IQueryable<SupportRequest>. It
+// only enforces the whitelist and folds the resolved handlers — no per-field logic, no switch,
+// no reflection.
 public sealed class DynamicQueryBuilder(IFilterHandlerResolver handlers)
 {
     public IQueryable<SupportRequest> Apply(

@@ -3,15 +3,10 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.NlQuery.RuleBased.Rules;
 
-/// <summary>
-/// Reads the grouping clause — "לפי מחוז", "בפילוח לפי שנה" — into
-/// <see cref="QueryDefinition.Segmentation"/>. A field is only considered after a grouping marker,
-/// so "בתחום התרבות" stays a filter while "לפי תחום" becomes a segmentation.
-///
-/// A field matches on its full registry label, or on a single label word that belongs to exactly
-/// one segmentable field. "תמיכה" is shared by "תחום תמיכה" and "שנת תמיכה", so it matches
-/// neither — an ambiguous word is left unresolved rather than resolved by guessing.
-/// </summary>
+// Reads the grouping clause ("לפי מחוז", "בפילוח לפי שנה") into Segmentation. A field is only
+// considered after a grouping marker, so "בתחום התרבות" stays a filter while "לפי תחום" becomes
+// a segmentation. A field matches on its full label, or on a label word unique to one segmentable
+// field; an ambiguous word ("תמיכה", shared by two fields) matches neither.
 internal static class SegmentationRule
 {
     private static readonly IReadOnlyList<string>[] Markers = [HebrewText.Stems("לפי"), HebrewText.Stems("פילוח")];
@@ -54,7 +49,7 @@ internal static class SegmentationRule
         return segmentation;
     }
 
-    /// <summary>The full label first, then any label word that names this field unambiguously.</summary>
+    // The full label first, then any label word that names this field unambiguously.
     private static IEnumerable<IReadOnlyList<string>> Candidates(
         FilterFieldRegistryEntry field, IReadOnlySet<string> unique)
     {
@@ -65,7 +60,7 @@ internal static class SegmentationRule
             yield return [word];
     }
 
-    /// <summary>Label words that identify exactly one segmentable field.</summary>
+    // Label words that identify exactly one segmentable field.
     private static IReadOnlySet<string> UniqueLabelWords(IEnumerable<FilterFieldRegistryEntry> fields)
     {
         var counts = new Dictionary<string, int>();

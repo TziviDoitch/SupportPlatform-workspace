@@ -2,7 +2,7 @@ using SupportPlatform.Infrastructure.Persistence.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Tests;
 
-/// <summary>Test double for <see cref="ITenantContext"/> whose scope can be changed between queries.</summary>
+// Test double for ITenantContext whose scope can be changed between queries.
 public sealed class MutableTenantContext : ITenantContext
 {
     public string? TenantId { get; private set; }

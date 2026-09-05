@@ -3,11 +3,8 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Search.Filters;
 
-/// <summary>
-/// Builds <see cref="Expression"/> predicates over <see cref="SupportRequest"/> from a field's
-/// strongly-typed column selector. No string parsing and no name reflection — the selectors are
-/// compiled lambdas supplied at registration.
-/// </summary>
+// Builds Expression predicates over SupportRequest from a field's typed column selector. No
+// string parsing, no name reflection — the selectors are lambdas supplied at registration.
 internal static class FilterPredicates
 {
     // MethodInfo via a delegate, not a magic string — Enumerable.Contains<string>.

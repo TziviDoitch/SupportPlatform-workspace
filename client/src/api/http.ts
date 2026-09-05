@@ -5,20 +5,14 @@ import { notifyError } from './notificationHost';
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 interface RequestOptions {
-  /**
-   * Raise the error toast on a non-2xx response. Default `true`. Pass `false` for a call whose
-   * screen already shows the failure inline (e.g. the search results area), so the same error
-   * isn't surfaced twice.
-   */
+  // Raise the error toast on a non-2xx response. Default true. Pass false for a call whose screen
+  // already shows the failure inline, so the same error isn't surfaced twice.
   notify?: boolean;
 }
 
-/**
- * The one HTTP seam. Every `src/api` service goes through here; components never call `fetch`.
- * On a non-2xx response it parses RFC 7807 ProblemDetails, surfaces it as a notification
- * (the "interceptor") unless `notify: false`, and throws {@link ApiError} so callers still see
- * the failure.
- */
+// The one HTTP seam. Every src/api service goes through here; components never call fetch. On a
+// non-2xx response it parses ProblemDetails, raises a notification unless notify: false, and
+// throws ApiError.
 async function request<T>(
   method: Method,
   url: string,
@@ -59,8 +53,8 @@ async function safeParseProblem(res: Response): Promise<ProblemDetails> {
 function toApiError(problem: ProblemDetails, notify: boolean): ApiError {
   const error = new ApiError(problem);
   if (notify) {
-    // Routed through `notificationHost` so the toast is raised by the antd `<App>` instance
-    // (theme + RTL aware); it falls back to the static API outside the UI tree.
+    // Routed through notificationHost so the toast is raised by the antd <App> instance
+    // (theme + RTL aware), falling back to the static API outside the UI tree.
     notifyError({ message: problem.title, description: formatProblemDetail(problem) });
   }
   return error;

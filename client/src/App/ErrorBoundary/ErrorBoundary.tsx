@@ -10,11 +10,8 @@ interface State {
   hasError: boolean;
 }
 
-/**
- * Last-resort boundary for render-time exceptions (a bad server shape, a chart edge case).
- * Data/HTTP errors are surfaced earlier by `api/http.ts`; this catches what slips past and
- * keeps a thrown render from blanking the whole app.
- */
+// Last-resort boundary for render-time exceptions. Data/HTTP errors are surfaced earlier by
+// api/http.ts; this catches what slips past and keeps a thrown render from blanking the app.
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 

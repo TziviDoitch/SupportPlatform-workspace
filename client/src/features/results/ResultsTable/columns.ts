@@ -14,13 +14,9 @@ const METRIC_RENDER: Record<string, (value: unknown) => string> = {
   sumAmountApproved: (value) => formatCurrencyIls(Number(value) || 0),
 };
 
-/**
- * Columns are derived from the query, not hard-coded: one per segmentation field (labelled from
- * the registry, values resolved to their Hebrew reference label) followed by one per metric.
- * Sorting is server-side — `sorter: true` only marks the header; the active order comes from
- * `sort` (the primary key). Pass `sortable: false` for a read-only render (the saved-query re-run
- * panel), so the headers aren't clickable-but-inert.
- */
+// Columns are derived from the query: one per segmentation field (labelled from the registry,
+// values resolved to their Hebrew reference label) followed by one per metric. Sorting is
+// server-side — `sorter: true` only marks the header. Pass sortable: false for a read-only render.
 export function buildColumns(
   segmentation: string[],
   metrics: string[],
@@ -58,8 +54,8 @@ export function buildColumns(
     title: METRIC_LABELS[m] ?? m,
     dataIndex: m,
     key: m,
-    // No physical `align` — the cells inherit `text-align: start`, i.e. right under RTL, so the
-    // numbers line up with their headers instead of drifting to the far edge.
+    // No physical `align` — cells inherit `text-align: start` (right under RTL) so the numbers
+    // line up with their headers.
     render: METRIC_RENDER[m],
     ...sortProps(m),
   }));

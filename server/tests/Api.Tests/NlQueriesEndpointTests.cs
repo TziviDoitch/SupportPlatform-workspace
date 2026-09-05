@@ -4,10 +4,6 @@ using System.Text.Json;
 
 namespace SupportPlatform.Api.Tests;
 
-/// <summary>
-/// <c>POST /api/nl-queries/parse</c> (contract §4): free text in, a reviewable definition out.
-/// It never runs the query — the client posts the definition to <c>/api/search</c> after review.
-/// </summary>
 public class NlQueriesEndpointTests(TestApiFactory factory) : IClassFixture<TestApiFactory>
 {
     private static StringContent Json(string body) => new(body, Encoding.UTF8, "application/json");
@@ -66,7 +62,7 @@ public class NlQueriesEndpointTests(TestApiFactory factory) : IClassFixture<Test
     [Fact]
     public async Task A_tenant_that_is_not_the_callers_is_a_403()
     {
-        // S8: the caller's tenant is authoritative; naming another in the body is forbidden.
+        // The caller's tenant is authoritative; naming another in the body is forbidden.
         var root = await Parse(
             """{ "text": "בקשות בתרבות", "tenantId": "welfare-admin" }""", HttpStatusCode.Forbidden);
 

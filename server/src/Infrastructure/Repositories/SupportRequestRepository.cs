@@ -5,7 +5,6 @@ using SupportPlatform.Infrastructure.Repositories.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Repositories;
 
-/// <inheritdoc />
 public sealed class SupportRequestRepository(SupportPlatformDbContext db) : ISupportRequestRepository
 {
     public IQueryable<SupportRequest> Query() => db.SupportRequests.AsNoTracking();

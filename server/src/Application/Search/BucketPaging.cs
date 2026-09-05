@@ -1,10 +1,7 @@
 namespace SupportPlatform.Application.Search;
 
-/// <summary>
-/// Orders the aggregated buckets (by <see cref="QueryDefinition.Sort"/>, else by the segmentation
-/// fields ascending) and cuts the requested page. Pure in-memory shaping of the query result —
-/// kept in the Application layer, out of the EF executor.
-/// </summary>
+// Orders the aggregated buckets and cuts the requested page. In-memory shaping, kept out of
+// the EF executor.
 public static class BucketPaging
 {
     private static readonly IComparer<object> KeyComparer = Comparer<object>.Default;
@@ -17,8 +14,8 @@ public static class BucketPaging
             .Take(def.Paging.PageSize)
             .ToList();
 
-        // Both shapes come from the same ordered list: the page feeds `rows`, the whole list feeds
-        // `aggregations` — the charts and header totals must not be a page-sized sample.
+        // The page feeds `rows`; the whole ordered list feeds `aggregations` — charts and header
+        // totals must not be a page-sized sample.
         return new QueryExecutionResult(page, ordered);
     }
 

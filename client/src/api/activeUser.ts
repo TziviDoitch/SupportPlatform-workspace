@@ -1,11 +1,7 @@
 import { DEFAULT_USERNAME, SEED_USERS, type SeedUser } from './config';
 
-/**
- * The seeded user the client currently acts as. Module-level (not React state) so `http.ts` — which
- * is not a component — can read it for the `X-User` header. The header row picker is the only
- * writer; it also remounts the screens and clears the query cache so nothing leaks between
- * identities. Persisted to `localStorage` so a reload keeps the choice.
- */
+// The seeded user the client currently acts as. Module-level (not React state) so http.ts can
+// read it for the X-User header. Persisted to localStorage so a reload keeps the choice.
 const STORAGE_KEY = 'sp.activeUser';
 
 const byName = (username: string | null): SeedUser =>

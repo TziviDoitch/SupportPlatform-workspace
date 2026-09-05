@@ -5,7 +5,6 @@ using SupportPlatform.Infrastructure.Persistence;
 
 namespace SupportPlatform.Infrastructure.Repositories;
 
-/// <summary>EF Core persistence for <see cref="SavedQuery"/>; every read is scoped to owner + tenant.</summary>
 public sealed class SavedQueryRepository(SupportPlatformDbContext db) : ISavedQueryRepository
 {
     public async Task<IReadOnlyList<SavedQuery>> List(

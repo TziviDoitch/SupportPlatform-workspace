@@ -2,10 +2,8 @@ using SupportPlatform.Application.NlQuery.RuleBased;
 
 namespace SupportPlatform.Application.Tests.NlQuery;
 
-/// <summary>
-/// The stems only have to be consistent, not linguistically right — these pin the forms the
-/// parser actually depends on, and the separations it must not blur.
-/// </summary>
+// The stems only have to be consistent, not linguistically right — these pin the forms the
+// parser depends on, and the separations it must not blur.
 public class HebrewTextTests
 {
     [Theory]
