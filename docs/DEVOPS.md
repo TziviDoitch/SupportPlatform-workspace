@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | **DEV** — *קיים* | `cd infra && docker compose up --build`, או [`run-local.ps1`](../run-local.ps1) בלי Docker | SQL Server בקונטיינר (volume `mssql-data`), או LocalDB | `appsettings.json` + `appsettings.Development.json` + env מ-Compose | `infra/.env` מקומי, מתוך [`.env.example`](../infra/.env.example) |
 | **TEST** — *מתוכנן* | deploy אוטומטי אחרי merge ל-`main` | מופע ייעודי, נבנה מהמיגרציות | `ASPNETCORE_ENVIRONMENT=Test` + env vars | secret store של הסביבה |
-| **PROD** — *מתוכנן* | deploy מתויג בלבד, אחרי אישור ידני | DB מנוהל עם גיבויים | `ASPNETCORE_ENVIRONMENT=Production` + env vars | secret store מנוהל בלבד |
+| **PROD** — *מתוכנן* | deploy מ-`master`, מתויג, אחרי Validation ב-TEST + Manual Approval | DB מנוהל עם גיבויים | `ASPNETCORE_ENVIRONMENT=Production` + env vars | secret store מנוהל בלבד |
 
 **קיים היום:** הרצה בפקודה אחת ([`docker-compose.yml`](../infra/docker-compose.yml) — `db` + `api` על
 `aspnet:8.0` + `client`); הפרדת סביבות כבר בקוד — `Program.cs` פותח Swagger ומריץ
@@ -47,27 +47,41 @@
 
 ```mermaid
 flowchart LR
-  PR[Pull Request] --> B[Build]
+  PR1[Pull Request] --> B[Build]
   B --> T[Tests]
   T --> Q[Quality Checks]
-  Q -->|ירוק| M{Merge ל-main}
-  M --> P["Package — Docker images"]
-  P --> DT["Deploy ל-TEST"]
-  DT --> G{{"Gate: אישור ידני + מיגרציות עברו + /health ירוק"}}
-  G --> DP["Deploy ל-PROD"]
+  Q --> CR1[Code Review]
+  CR1 -->|מאושר| M1{Merge ל-main}
+  M1 --> P["Package — Docker image"]
+  P --> DT["Deploy ל-TEST (אוטומטי)"]
+  DT --> V{{"Validation ב-TEST + אישור"}}
+  V --> PR2["PR: main → master"]
+  PR2 --> CR2[Code Review]
+  CR2 -->|מאושר| M2{Merge ל-master}
+  M2 --> TAG["Tag גרסה + Manual Approval"]
+  TAG --> DP["Deploy ל-PROD מ-master"]
 ```
 
 *דיאגרמת תכנון בלבד.*
 
-**מתי רץ:** על כל PR ל-`main` — build ובדיקות, ללא deploy; merge חסום עד ירוק.
-אחרי merge — אותן בדיקות, ואז package ו-deploy ל-TEST. PROD — רק על tag.
+**מודל ה-branches:**
 
-**כל PR חייב לעבור:** Build + Tests + Quality Checks ירוקים, **וגם** Code Review
-ואישור של reviewer. אין push ישיר ל-`main`.
+- **`main`** — ענף הפיתוח והאינטגרציה. כל ה-PRs מתמזגים אליו קודם. `main` הוא המקור
+  לפריסת TEST, ואחרי merge מתבצעים CI/CD ופריסה אוטומטית ל-TEST. **אין לפרוס
+  Production ישירות מ-`main`.**
+- **`master`** — ענף ה-Production. מעבר מ-`main` ל-`master` נעשה רק אחרי שהגרסה נבדקה
+  ואושרה ב-TEST, דרך PR שדורש Code Review ואישור. `master` מייצג אך ורק קוד שאושר
+  ל-Production; הפריסה ל-PROD מתבצעת ממנו, עם Manual Approval ו-Tag לגרסה.
 
-**ענפים ו-Production:** `main` הוא ה-source of truth של הקוד המאושר ל-Production. עם
-merge ל-`main` מתבצע deployment אוטומטי ל-TEST; PROD מקודם **מאותו קוד** באמצעות
-Tag + אישור ידני — לא build נפרד.
+**כל PR** (ל-`main` או ל-`master`) חייב לעבור Build + Tests + Quality Checks ירוקים
+ו-Code Review עם אישור reviewer. אין push ישיר לאף אחד מהענפים.
+
+| טריגר | מה קורה |
+|---|---|
+| PR ל-`main` | Build + Tests + Quality + Code Review; ללא deploy, merge חסום עד ירוק ומאושר |
+| merge ל-`main` | אותן בדיקות → package → deploy אוטומטי ל-TEST |
+| Validation ב-TEST + אישור | נפתח PR מ-`main` ל-`master` (Code Review + אישור) |
+| merge ל-`master` | Tag לגרסה + Manual Approval → deploy ל-PROD מ-`master` |
 
 **מה נבדק** — בדיוק מה שרץ היום ידנית, בלי פקודות חדשות:
 
@@ -77,8 +91,9 @@ Tag + אישור ידני — לא build נפרד.
 | Tests (שרת) | `dotnet test SupportPlatform.sln` | על SQLite ⇒ אין צורך ב-SQL Server ב-CI |
 | Quality + Build + Tests (לקוח) | `npm run lint` · `npm run build` · `npm test` | oxlint · `tsc -b && vite build` · vitest |
 
-**Gates לפני PROD:** הכל ירוק ב-`main` · מיגרציות עברו ב-TEST על סכימה מאפס ·
-מעבר על [`TEST_PLAN.md`](TEST_PLAN.md) · `/health` = 200 · אישור ידני + tag.
+**Gates לפני PROD:** הגרסה עברה Validation ב-TEST (מיגרציות על סכימה מאפס · מעבר על
+[`TEST_PLAN.md`](TEST_PLAN.md) · `/health` = 200) · PR `main`→`master` מאושר ·
+Tag + Manual Approval.
 
 ---
 
@@ -149,8 +164,8 @@ env var עוקף מפתח מקונן עם `__`. דוגמה חיה ב-Compose: `C
 **5.1 ל-TEST:** אוטומטי מ-`main`, **rolling** — סביבה לא-קריטית שצריכה לשקף את
 `main` תוך דקות.
 
-**5.2 ל-PROD: Blue/Green.** מרימים סביבה חדשה לצד הפעילה, בודקים מול `/health`, ורק
-אז מעבירים תעבורה. מתאים כאן כי **ה-API חסר-מצב** (הזהות בכותרת בכל בקשה, אין
+**5.2 ל-PROD: Blue/Green.** הפריסה מ-`master`, על Tag ו-Manual Approval. מרימים סביבה
+חדשה לצד הפעילה, בודקים מול `/health`, ורק אז מעבירים תעבורה. מתאים כאן כי **ה-API חסר-מצב** (הזהות בכותרת בכל בקשה, אין
 session) — אפשר להריץ שתי גרסאות במקביל; המצב היחיד שנשמר הוא ה-DB המשותף, ולכן
 ההחלפה בטוחה רק בתנאי §5.3; ו**rollback הוא החזרת נתב**, שניות במקום דקות.
 מחיר מודע: cache שאינו משותף מתחמם מחדש.
@@ -170,8 +185,9 @@ session) — אפשר להריץ שתי גרסאות במקביל; המצב הי
 3. **תאימות לאחור לגרסה אחת** — אחרת אין rollback. מחיקת עמודה נעשית בשני deploy:
    קודם הקוד מפסיק להשתמש בה, ורק אז היא נמחקת.
 
-**5.4 Rollback:** אפליקציה — החזרת תעבורה ל-blue, או ה-image הקודם (מתויג לפי commit).
-DB — **אין down-migration בנתיב ה-rollback**; מכיוון שהמיגרציות additive והסכימה
+**5.4 Rollback:** אפליקציה — החזרת תעבורה ל-blue, או פריסה מחדש של ה-Tag/Artifact
+הקודם שאושר ל-Production (image מתויג לפי גרסה). DB — **אין down-migration בנתיב
+ה-rollback**; מכיוון שהמיגרציות additive והסכימה
 תואמת לאחור, הגרסה הקודמת עובדת מולה כמו שהיא. down-migration בפרודקשן היא מתכון
 לאובדן נתונים; אם מיגרציה כן היתה הרסנית, ה-rollback היחיד הוא restore מגיבוי.
 
@@ -184,7 +200,7 @@ DB — **אין down-migration בנתיב ה-rollback**; מכיוון שהמיג
 
 | צורך | רכיב | הערה |
 |---|---|---|
-| ניהול קוד + PR | Git / GitHub | branch protection ל-`main`, PR + review חובה (§2) |
+| ניהול קוד + PR | Git / GitHub | branch protection ל-`main` ול-`master`, PR + review חובה (§2) |
 | CI/CD | GitHub Actions | הפקודות שבטבלת §2, בלי חדשות |
 | Container Registry | Azure Container Registry | image ה-API אחרי שלב ה-package |
 | אירוח ה-API | אירוח קונטיינרים (Azure Container Apps) | ה-API חסר-מצב (§5.2) |
