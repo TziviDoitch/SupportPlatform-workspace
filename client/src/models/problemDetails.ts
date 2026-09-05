@@ -1,18 +1,15 @@
-/** RFC 7807 ProblemDetails — the shape every API error uses (`docs/contracts/error-model.md`). */
+// RFC 7807 ProblemDetails — the shape every API error uses.
 export interface ProblemDetails {
   type: string;
   title: string;
   status: number;
   detail?: string;
   traceId?: string;
-  /** Field-path → messages, present on 400 only. */
+  // Field-path -> messages, present on 400 only.
   errors?: Record<string, string[]>;
 }
 
-/**
- * One-line human description of a problem: its `detail`, then the `traceId` for a bug report.
- * The single place that formatting lives — used by the `http` toast and by inline error banners.
- */
+// One-line human description of a problem: its detail, then the traceId for a bug report.
 export function formatProblemDetail(problem: {
   detail?: string;
   traceId?: string;
@@ -22,7 +19,7 @@ export function formatProblemDetail(problem: {
     .join(' · ');
 }
 
-/** Thrown by the `src/api` layer for any non-2xx response. Carries the parsed ProblemDetails. */
+// Thrown by the src/api layer for any non-2xx response. Carries the parsed ProblemDetails.
 export class ApiError extends Error {
   readonly status: number;
   readonly title: string;

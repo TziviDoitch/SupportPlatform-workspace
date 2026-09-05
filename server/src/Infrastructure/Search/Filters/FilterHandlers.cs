@@ -2,11 +2,8 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Search.Filters;
 
-/// <summary>
-/// The registered filter handlers — one per <c>filter_field_registry</c> row, each pairing a
-/// field id with its strongly-typed column selector. A new filter field is one more line here;
-/// a new <c>kind</c> is one more <see cref="FilterHandler"/> subclass.
-/// </summary>
+// One handler per filter_field_registry row, pairing a field id with its typed column selector.
+// A new filter field is one more line here; a new kind is one more FilterHandler subclass.
 public static class FilterHandlers
 {
     public static IReadOnlyList<FilterHandler> Default { get; } =

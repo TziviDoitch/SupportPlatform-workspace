@@ -32,7 +32,7 @@ public class DependencyInjectionTests
     public void Configuration_selects_a_provider_registered_under_another_key()
     {
         // The point of the seam: implement a provider, register it under a key, name that key in
-        // NlQuery:Provider — no other type changes (DESIGN_QA §6).
+        // NlQuery:Provider — no other type changes.
         using var provider = new ServiceCollection()
             .AddApplication()
             .AddKeyedScoped<INlQueryProvider, FakeNlQueryProvider>(FakeNlQueryProvider.ProviderKey)
@@ -71,7 +71,7 @@ public class DependencyInjectionTests
         return scope.ServiceProvider.GetRequiredService<INlQueryProvider>();
     }
 
-    /// <summary>Stands in for a future LLM-backed provider — only its registration matters here.</summary>
+    // Stands in for a future LLM-backed provider — only its registration matters here.
     private sealed class FakeNlQueryProvider : INlQueryProvider
     {
         public const string ProviderKey = "fake";

@@ -4,18 +4,12 @@ using SupportPlatform.Application.Search;
 
 namespace SupportPlatform.Application.NlQuery.RuleBased;
 
-/// <summary>
-/// The PoC provider: a deterministic parser over a deliberately limited subset of Hebrew. The
-/// same question always yields the same <see cref="QueryDefinition"/>, and every value it emits
-/// came from the metadata — when a word cannot be mapped it is reported in
-/// <see cref="NlTranslation.Unresolved"/>, never replaced by a guess.
-///
-/// It stays thin on purpose: build the text, run the rules, assemble the definition. The matching
-/// lives in <c>Rules/</c>.
-/// </summary>
+// PoC provider: a deterministic parser over a deliberately limited subset of Hebrew. The same
+// question always yields the same QueryDefinition, and every value came from the metadata — an
+// unmappable word is reported as unresolved, never guessed. Build the text, run the rules,
+// assemble the definition; the matching lives in Rules/.
 public sealed class RuleBasedNlQueryProvider : INlQueryProvider
 {
-    /// <summary>Selects this provider via <c>NlQuery:Provider</c>.</summary>
     public const string ProviderKey = "ruleBased";
 
     public Task<NlTranslation> Translate(
@@ -40,14 +34,9 @@ public sealed class RuleBasedNlQueryProvider : INlQueryProvider
         return Task.FromResult(new NlTranslation(definition, question.Coverage(), question.Unclaimed()));
     }
 
-    /// <summary>
-    /// Words that named a field the parser actually used — "בתחום" in "בתחום התרבות", "בשנת" in
-    /// "בשנת 2024". They were understood, so they must not surface as unresolved.
-    ///
-    /// Only <paramref name="resolved"/> fields count. A field named in the question but not used —
-    /// "לפי סטטוס", where status is not segmentable — stays unclaimed, so the user is told the
-    /// grouping was dropped instead of getting a full-confidence parse that silently ignored it.
-    /// </summary>
+    // Claims words that named a field the parser actually used ("בתחום" in "בתחום התרבות"), so
+    // they don't surface as unresolved. A field named but not used ("לפי סטטוס", not segmentable)
+    // stays unclaimed, so the user is told the grouping was dropped.
     private static void ClaimFieldNames(NlText question, SearchMetadata metadata, IEnumerable<string> resolved)
     {
         var words = resolved

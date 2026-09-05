@@ -4,7 +4,6 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Infrastructure.Persistence.Configurations;
 
-/// <summary>Shared mapping for every <see cref="ReferenceItem"/> table: <c>Code</c> is the key.</summary>
 public abstract class ReferenceItemConfig<T> : IEntityTypeConfiguration<T> where T : ReferenceItem
 {
     protected abstract string TableName { get; }

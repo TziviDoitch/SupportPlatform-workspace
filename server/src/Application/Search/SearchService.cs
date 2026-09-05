@@ -7,15 +7,9 @@ using SupportPlatform.Application.Search.Interfaces;
 
 namespace SupportPlatform.Application.Search;
 
-/// <summary>
-/// The S2 use case: validate a <see cref="QueryDefinition"/>, run it, and shape the response
-/// (question text, rows, aggregations, paging, execution meta). All business decisions for
-/// <c>POST /api/search</c> live here; the controller only forwards.
-///
-/// S5 adds dedup: identical definitions (by canonical <see cref="DefinitionHasher"/> hash) are
-/// served from an in-memory cache with <c>executionMeta.cacheHit = true</c>, and every run is
-/// recorded via <see cref="IAuditService"/>.
-/// </summary>
+// Validates a QueryDefinition, runs it, and shapes the response. Identical definitions (by
+// canonical hash) are served from an in-memory cache with executionMeta.cacheHit = true; every
+// run is audited.
 public sealed class SearchService(
     ISearchMetadataProvider metadata,
     IValidator<QueryDefinition> validator,
@@ -28,7 +22,7 @@ public sealed class SearchService(
 {
     public async Task<SearchResponse> Search(QueryDefinition definition, CancellationToken ct = default)
     {
-        // Identity is authoritative for the tenant (S8): fill it in when omitted, 403 on a mismatch.
+        // Identity is authoritative for the tenant: fill it in when omitted, 403 on a mismatch.
         definition = definition with { TenantId = tenantAccess.EnsureTenant(definition.TenantId) };
 
         var result = await validator.ValidateAsync(definition, ct);
@@ -59,8 +53,7 @@ public sealed class SearchService(
 
         var response = new SearchResponse(
             QuestionText: questionText.Render(definition, meta.Snapshot),
-            // rows = the requested page; aggregations = every group, so the client's charts and
-            // header totals describe the whole result and not just the page it happens to show.
+            // rows = the requested page; aggregations = every group.
             Rows: execution.Buckets.Select(b => Row(b, metrics)).ToList(),
             Aggregations: execution.Ordered
                 .Select(b => new AggregationDto(b.Key, Metrics(b, metrics)))

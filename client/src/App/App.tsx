@@ -19,7 +19,6 @@ import { t } from '../i18n';
 
 const { Header, Content } = Layout;
 
-/** Nav icon per route path — kept here so `routes.tsx` stays a plain data list. */
 const NAV_ICONS: Record<string, ReactNode> = {
   '/search': <SearchOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />,
   '/saved-queries': <StarOutlined aria-hidden style={{ color: SECTION_ICON_COLOR }} />,

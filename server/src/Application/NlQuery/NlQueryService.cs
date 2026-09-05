@@ -8,15 +8,9 @@ using SupportPlatform.Application.Search.Interfaces;
 
 namespace SupportPlatform.Application.NlQuery;
 
-/// <summary>
-/// The S6 use case. It owns everything around the AI seam so the provider itself stays a pure
-/// translation: fetch the vocabulary, hand it to <see cref="INlQueryProvider"/>, then run the
-/// definition it produced through the same <c>QueryDefinition</c> validator and Hebrew renderer
-/// that <c>POST /api/search</c> uses.
-///
-/// Parsing does not execute a search — the client reviews the interpretation first and then posts
-/// the definition to <c>/api/search</c> (<c>api-contract.md</c> §4).
-/// </summary>
+// Owns everything around the AI seam so the provider stays a pure translation: fetch the
+// vocabulary, hand it to the provider, then run the definition it produced through the same
+// validator and Hebrew renderer that POST /api/search uses. Parsing does not execute a search.
 public sealed class NlQueryService(
     INlQueryProvider provider,
     ISearchMetadataProvider metadata,
@@ -31,7 +25,7 @@ public sealed class NlQueryService(
         if (text.Length == 0)
             throw new ValidationException([new ValidationFailure("text", "text is required.")]);
 
-        // Identity is authoritative for the tenant (S8): use the caller's when omitted, 403 on a mismatch.
+        // Identity is authoritative for the tenant: use the caller's when omitted, 403 on a mismatch.
         var tenantId = tenantAccess.EnsureTenant(request.TenantId);
 
         var meta = await metadata.Get(ct);

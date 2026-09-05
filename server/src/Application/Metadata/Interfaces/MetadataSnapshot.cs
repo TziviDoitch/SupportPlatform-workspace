@@ -2,7 +2,7 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.Metadata.Interfaces;
 
-/// <summary>Raw reference + registry rows, before mapping to the API shape.</summary>
+// Raw reference + registry rows, before mapping to the API shape.
 public record MetadataSnapshot(
     IReadOnlyList<ReferenceDomain> Domains,
     IReadOnlyList<ReferenceBodyType> BodyTypes,
@@ -10,10 +10,7 @@ public record MetadataSnapshot(
     IReadOnlyList<ReferenceDistrict> Districts,
     IReadOnlyList<FilterFieldRegistryEntry> Registry)
 {
-    /// <summary>
-    /// The rows behind a registry entry's <c>referenceList</c> name; empty for an unknown name.
-    /// The one place that maps list name → rows.
-    /// </summary>
+    // The rows behind a registry entry's referenceList name; empty for an unknown name.
     public IReadOnlyList<ReferenceItem> ReferenceList(string? name) => name switch
     {
         "domains" => Domains,

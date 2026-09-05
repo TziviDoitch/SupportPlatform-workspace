@@ -2,7 +2,6 @@ using SupportPlatform.Infrastructure.Persistence.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Persistence;
 
-/// <summary>Scoped, request-lifetime implementation of <see cref="ITenantContext"/>.</summary>
 public sealed class TenantContext : ITenantContext
 {
     public string? TenantId { get; private set; }

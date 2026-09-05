@@ -4,11 +4,8 @@ using SupportPlatform.Infrastructure.Persistence.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Persistence;
 
-/// <summary>
-/// EF Core context for the whole model. Tenant-scoped entities carry a <b>fail-closed</b>
-/// global query filter (see <see cref="ITenantContext"/>): with no tenant scope set, they
-/// return no rows. Use <c>IgnoreQueryFilters()</c> explicitly for tests or admin paths.
-/// </summary>
+// Tenant-scoped entities carry a fail-closed global query filter: with no tenant scope set they
+// return no rows. Use IgnoreQueryFilters() explicitly for tests or admin paths.
 public class SupportPlatformDbContext(
     DbContextOptions<SupportPlatformDbContext> options,
     ITenantContext tenant) : DbContext(options)

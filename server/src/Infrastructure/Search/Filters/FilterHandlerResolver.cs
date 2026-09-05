@@ -3,11 +3,8 @@ using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Search.Filters;
 
-/// <summary>
-/// Indexes the registered handlers by field id — the "registration replaces a switch" mechanism.
-/// A new filter field is one more registration; a new <c>kind</c> is one more subclass. This
-/// class never changes.
-/// </summary>
+// Indexes the registered handlers by field id — registration replaces a switch. A new filter
+// field is one more registration; a new kind is one more subclass. This class never changes.
 public sealed class FilterHandlerResolver : IFilterHandlerResolver
 {
     private readonly IReadOnlyDictionary<string, FilterHandler> _byFieldId;

@@ -64,7 +64,7 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     [Fact]
     public async Task Delete_by_an_admin_removes_the_record()
     {
-        // 'dan' is the seeded admin in culture-sport-admin; deleting a saved query requires 'admin' (S8).
+        // 'dan' is the seeded admin in culture-sport-admin; deleting a saved query requires 'admin'.
         var client = Client("dan");
         var id = (await Create(client, "to delete")).GetProperty("id").GetString();
 

@@ -3,11 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace SupportPlatform.Application.Search;
 
-/// <summary>
-/// Reads/writes the polymorphic <see cref="FilterValue"/>: a JSON array is a code list, a JSON
-/// object with <c>"type": "range" | "single"</c> is a year filter. Shape from
-/// <c>docs/contracts/query-definition.schema.json</c>.
-/// </summary>
+// A JSON array is a code list; a JSON object with "type": "range" | "single" is a year filter.
 public sealed class FilterValueJsonConverter : JsonConverter<FilterValue>
 {
     public override FilterValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

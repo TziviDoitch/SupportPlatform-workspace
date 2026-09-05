@@ -3,13 +3,9 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.Search;
 
-/// <summary>
-/// Renders the Hebrew read-back sentence for a <see cref="QueryDefinition"/> from the wording the
-/// contract actually specifies (<c>docs/contracts/query-definition.md</c> "Reads as" +
-/// <c>api-contract.md</c> §3): the opener "כמה בקשות תמיכה", the registry field labels, the
-/// reference value labels, and the "בפילוח לפי" segmentation clause. No wording is invented
-/// beyond that; the sum metric has no contract phrasing and is not narrated here.
-/// </summary>
+// Renders the Hebrew read-back sentence for a QueryDefinition from the wording the contract
+// specifies. Nothing is invented beyond that; the sum metric has no contract phrasing and is
+// not narrated.
 public sealed class QuestionTextRenderer
 {
     private const string Opener = "כמה בקשות תמיכה";

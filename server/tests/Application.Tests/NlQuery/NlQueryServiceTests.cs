@@ -10,10 +10,8 @@ using SupportPlatform.Application.Tests.Search;
 
 namespace SupportPlatform.Application.Tests.NlQuery;
 
-/// <summary>
-/// The service owns everything around the AI seam: validation, the Hebrew read-back, and audit.
-/// Parsing must never run a search.
-/// </summary>
+// The service owns everything around the AI seam: validation, the Hebrew read-back, and audit.
+// Parsing must never run a search.
 public class NlQueryServiceTests
 {
     private readonly RecordingAuditService _audit = new();
@@ -86,7 +84,7 @@ public class NlQueryServiceTests
         Assert.Contains(("nl-parse", "QueryDefinition", (string?)null), _audit.Records);
     }
 
-    /// <summary>A provider that returns a fixed definition — the seam under test, not the parser.</summary>
+    // A provider that returns a fixed definition — the seam under test, not the parser.
     private sealed class StubProvider(QueryDefinition definition) : INlQueryProvider
     {
         public Task<NlTranslation> Translate(

@@ -9,18 +9,10 @@ using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Search;
 
-/// <summary>
-/// EF Core execution of a validated <see cref="QueryDefinition"/>: apply the tenant scope and the
-/// whitelisted filters (<see cref="DynamicQueryBuilder"/>), then aggregate every group. Ordering
-/// and paging are done afterwards by <see cref="BucketPaging"/> in the Application layer.
-///
-/// Aggregation (PoC — see docs/ARCHITECTURE.md §4):
-/// <list type="bullet">
-///   <item>0 segmentation fields → one aggregate computed in the database.</item>
-///   <item>1 segmentation field → <c>GroupBy</c> in the database (via the field's handler).</item>
-///   <item>2+ fields → minimal materialization + in-memory grouping.</item>
-/// </list>
-/// </summary>
+// EF Core execution of a validated QueryDefinition: apply the tenant scope and the whitelisted
+// filters, then aggregate every group. Ordering and paging happen afterwards in BucketPaging.
+// Aggregation: 0 segmentation fields -> one DB aggregate; 1 field -> GroupBy in the DB; 2+ fields
+// -> minimal materialization + in-memory grouping.
 public sealed class SearchQueryExecutor(
     ISupportRequestRepository requests,
     ITenantContext tenant,
@@ -29,11 +21,8 @@ public sealed class SearchQueryExecutor(
 {
     private const string KeySeparator = "|"; // no reference code or year contains a pipe
 
-    /// <summary>
-    /// Ceiling for the 2+ segmentation path, which groups in memory (see the class remarks and
-    /// <c>DESIGN_QA.md</c> §4). Well above anything the PoC dataset produces; it turns an
-    /// unbounded materialization into an explicit 400 instead of a slow request or an OOM.
-    /// </summary>
+    // Ceiling for the 2+ segmentation path (grouped in memory): turns an unbounded
+    // materialization into an explicit 400 instead of a slow request or an OOM.
     private const int MaxMaterializedRows = 50_000;
 
     public async Task<IReadOnlyList<AggregateBucket>> Execute(
@@ -41,7 +30,6 @@ public sealed class SearchQueryExecutor(
         IReadOnlyList<FilterFieldRegistryEntry> registry,
         CancellationToken ct = default)
     {
-        // The service has already validated that this tenant exists; apply the scope.
         tenant.SetTenant(definition.TenantId);
 
         var filtered = builder.Apply(requests.Query(), definition, registry);

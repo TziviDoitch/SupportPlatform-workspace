@@ -7,10 +7,7 @@ using SupportPlatform.Infrastructure.Persistence;
 
 namespace SupportPlatform.Infrastructure.Auditing;
 
-/// <summary>
-/// Writes one <see cref="AuditLog"/> row per call, stamped with the current user and the
-/// request correlation id. Invoked explicitly by the use-case services (S5).
-/// </summary>
+// Writes one AuditLog row per call, stamped with the current user and request correlation id.
 public sealed class AuditService(SupportPlatformDbContext db, ICurrentUser user) : IAuditService
 {
     public async Task Record(

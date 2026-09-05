@@ -93,9 +93,8 @@ public class SearchEndpointTests(TestApiFactory factory) : IClassFixture<TestApi
     [Fact]
     public async Task A_tenant_that_is_not_the_callers_is_a_403()
     {
-        // Identity is authoritative for the tenant (S8): the caller (default 'sarah') is in
-        // culture-sport-admin, so any other tenant in the body is forbidden — you cannot probe
-        // which tenants exist. The unknown-tenant validation rule is still covered as a unit test.
+        // Identity is authoritative for the tenant: the caller ('sarah') is in culture-sport-admin,
+        // so any other tenant in the body is forbidden — you cannot probe which tenants exist.
         var body = WorkedExample.Replace("culture-sport-admin", "welfare-admin");
 
         var root = await Post(body, HttpStatusCode.Forbidden);

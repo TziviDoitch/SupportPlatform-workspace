@@ -1,10 +1,7 @@
 namespace SupportPlatform.Application.NlQuery.RuleBased;
 
-/// <summary>
-/// The question under analysis: its tokens, their stems, and which of them a rule has already
-/// claimed. Claiming is what makes <c>unresolved</c> and <c>confidence</c> meaningful — whatever
-/// no rule claimed is reported back to the user rather than guessed at.
-/// </summary>
+// The question under analysis: its tokens, their stems, and which a rule has already claimed.
+// Whatever no rule claimed is reported back to the user rather than guessed at.
 internal sealed class NlText
 {
     private readonly string[] _tokens;
@@ -21,8 +18,7 @@ internal sealed class NlText
         _meaningful = _tokens.Select(t => t.Length > 1 && !HebrewStopWords.Is(t)).ToArray();
     }
 
-    /// <summary>Index of the first unclaimed occurrence of <paramref name="stems"/> at or after
-    /// <paramref name="from"/>, or -1.</summary>
+    // Index of the first unclaimed occurrence of `stems` at or after `from`, or -1.
     public int IndexOf(IReadOnlyList<string> stems, int from = 0)
     {
         if (stems.Count == 0)
@@ -41,7 +37,7 @@ internal sealed class NlText
         return -1;
     }
 
-    /// <summary>Claims <paramref name="stems"/> where it first occurs. True when it was present.</summary>
+    // Claims `stems` where it first occurs. True when it was present.
     public bool TryClaim(IReadOnlyList<string> stems)
     {
         var start = IndexOf(stems);
@@ -58,7 +54,7 @@ internal sealed class NlText
             _claimed[i] = true;
     }
 
-    /// <summary>Unclaimed 4-digit tokens, with their positions, in reading order.</summary>
+    // Unclaimed 4-digit tokens, with their positions, in reading order.
     public IEnumerable<(int Index, int Value)> Years()
     {
         for (var i = 0; i < _tokens.Length; i++)
@@ -66,7 +62,7 @@ internal sealed class NlText
                 yield return (i, year);
     }
 
-    /// <summary>Meaningful words no rule claimed — reported to the user as <c>unresolved</c>.</summary>
+    // Meaningful words no rule claimed — reported to the user as `unresolved`.
     public IReadOnlyList<string> Unclaimed() =>
         Enumerable.Range(0, _tokens.Length)
             .Where(i => !_claimed[i] && _meaningful[i])
@@ -74,7 +70,7 @@ internal sealed class NlText
             .Distinct()
             .ToList();
 
-    /// <summary>Share of the meaningful words a rule claimed; 0 when nothing was understood.</summary>
+    // Share of the meaningful words a rule claimed; 0 when nothing was understood.
     public double Coverage()
     {
         var meaningful = Enumerable.Range(0, _tokens.Length).Where(i => _meaningful[i]).ToList();

@@ -10,7 +10,6 @@ export interface AppRoute {
   element: ReactNode;
 }
 
-/** The feature screens. `/` redirects to the first. Results are shown inline on the search screen. */
 export const routes: AppRoute[] = [
   { path: '/search', label: t.routes.search, element: <SearchPage /> },
   { path: '/saved-queries', label: t.routes.savedQueries, element: <SavedQueriesPage /> },

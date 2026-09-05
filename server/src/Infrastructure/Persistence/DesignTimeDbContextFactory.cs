@@ -4,10 +4,8 @@ using SupportPlatform.Infrastructure.Persistence.Interfaces;
 
 namespace SupportPlatform.Infrastructure.Persistence;
 
-/// <summary>
-/// Used only by <c>dotnet ef</c> at design time (migrations). The connection string is a
-/// placeholder — EF never opens it to scaffold a migration.
-/// </summary>
+// Used only by `dotnet ef` at design time. The connection string is a placeholder — EF never
+// opens it to scaffold a migration.
 public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<SupportPlatformDbContext>
 {
     public SupportPlatformDbContext CreateDbContext(string[] args)

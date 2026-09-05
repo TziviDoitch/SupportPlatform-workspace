@@ -3,12 +3,9 @@ using System.Text;
 
 namespace SupportPlatform.Infrastructure.Persistence;
 
-/// <summary>
-/// Deterministic password hashing for seed data only. A plaintext password is never stored.
-/// The salt is derived from the username so the same seed run always produces the same hash,
-/// keeping <see cref="DbSeeder"/> reproducible. S8 owns the production hash/verify scheme and
-/// may replace this entirely.
-/// </summary>
+// Deterministic password hashing for seed data only — never a plaintext password. The salt is
+// derived from the username so a seed run always produces the same hash. S8 owns the production
+// hash/verify scheme.
 public static class SeedPasswordHasher
 {
     private const int Iterations = 100_000;

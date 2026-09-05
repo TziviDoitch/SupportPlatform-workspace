@@ -5,10 +5,7 @@ using SupportPlatform.Application.Search;
 
 namespace SupportPlatform.Api.Controllers;
 
-/// <summary>
-/// CRUD + re-run for saved queries (<c>docs/contracts/api-contract.md</c> §5–6). Scope (owner +
-/// tenant) and validation live in <see cref="ISavedQueryService"/>; this only forwards.
-/// </summary>
+// CRUD + re-run for saved queries. Scope (owner + tenant) and validation live in the service.
 [ApiController]
 [Route("api/saved-queries")]
 [ProducesErrorResponseType(typeof(ProblemDetails))]

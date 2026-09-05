@@ -4,8 +4,8 @@ import type { SaveSavedQueryRequest } from '../../../models/savedQuery';
 
 const QUERY_KEY = ['saved-queries'];
 
-/** Create a saved query and refresh the list. Standalone so the search screen can save
- *  without also subscribing to the list query. */
+// Create a saved query and refresh the list. Standalone so the search screen can save without
+// also subscribing to the list query.
 export function useCreateSavedQuery() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -14,7 +14,7 @@ export function useCreateSavedQuery() {
   });
 }
 
-/** List + rename / delete / re-run for the saved-queries screen. Mutations refresh the list. */
+// List + rename / delete / re-run for the saved-queries screen. Mutations refresh the list.
 export function useSavedQueries() {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY });

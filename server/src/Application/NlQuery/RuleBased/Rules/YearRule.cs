@@ -2,14 +2,10 @@ using SupportPlatform.Application.Search;
 
 namespace SupportPlatform.Application.NlQuery.RuleBased.Rules;
 
-/// <summary>
-/// Reads the years out of the question and fills the registry's <c>yearRange</c> field: one year
-/// becomes a single value, two or more become the inclusive range they span ("בין 2023 ל-2025").
-/// A 4-digit number outside a plausible calendar range is not a year — it stays unclaimed and is
-/// reported as unresolved rather than turned into a filter nobody asked for.
-/// Skipped when the registry has anything other than exactly one year field — which one was meant
-/// would be a guess, and the words are left in <c>unresolved</c> instead.
-/// </summary>
+// Reads the years from the question into the registry's yearRange field: one year -> single
+// value, two or more -> the inclusive range they span. A 4-digit number outside a plausible
+// calendar range is left unclaimed. Skipped unless the registry has exactly one year field —
+// which one was meant would be a guess.
 internal static class YearRule
 {
     private const int MinYear = 1900;

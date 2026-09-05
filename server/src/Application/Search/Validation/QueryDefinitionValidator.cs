@@ -3,11 +3,8 @@ using SupportPlatform.Application.Search.Interfaces;
 
 namespace SupportPlatform.Application.Search.Validation;
 
-/// <summary>
-/// Runtime validation of a <see cref="QueryDefinition"/> against the registry whitelist and the
-/// known tenants (<c>docs/contracts/error-model.md</c> — the 400 <c>validation</c> catalogue).
-/// Structural rules already covered by the JSON schema are not repeated here.
-/// </summary>
+// Runtime validation of a QueryDefinition against the registry whitelist and known tenants.
+// Structural rules already covered by the JSON schema are not repeated here.
 public sealed class QueryDefinitionValidator : AbstractValidator<QueryDefinition>
 {
     private static readonly string[] Directions = ["asc", "desc"];

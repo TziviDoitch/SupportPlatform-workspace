@@ -11,11 +11,8 @@ using SupportPlatform.Domain.Entities;
 
 namespace SupportPlatform.Application.SavedQueries;
 
-/// <summary>
-/// The S5 use case: CRUD + re-run for saved queries. Every record is scoped to the current
-/// user + tenant; out-of-scope access is a <see cref="NotFoundException"/> (404, not 403, so
-/// existence is not leaked). The definition is validated exactly like <c>POST /api/search</c>.
-/// </summary>
+// CRUD + re-run for saved queries. Every record is scoped to the current user + tenant;
+// out-of-scope access is a NotFoundException (404, not 403, so existence is not leaked).
 public sealed class SavedQueryService(
     ISavedQueryRepository repo,
     ICurrentUser user,
@@ -70,8 +67,7 @@ public sealed class SavedQueryService(
 
     public async Task Delete(Guid id, CancellationToken ct = default)
     {
-        // Scope first (a record outside the caller's scope stays a 404, no existence leak), then the
-        // one role rule the PoC demonstrates: deleting requires 'admin' (DESIGN_QA §3).
+        // Scope first (out-of-scope stays a 404), then the role rule: deleting requires 'admin'.
         var entity = await Require(id, ct);
         if (!string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
             throw new ForbiddenException("Deleting a saved query requires the 'admin' role.");
@@ -87,8 +83,7 @@ public sealed class SavedQueryService(
         var response = await search.Search(Deserialize(entity.DefinitionJson), ct);
 
         entity.LastRunAt = DateTimeOffset.UtcNow;
-        // The engine aggregates, so this is a group count (ARCHITECTURE §6.2) — the column name is
-        // kept as-is rather than spending a migration on it in the PoC.
+        // The engine aggregates, so this is a group count; the column name is kept as-is.
         entity.LastRunRowCount = response.Page.TotalGroups;
         await repo.Save(ct);
         await audit.Record("run", "SavedQuery", id.ToString(), null, ct);
@@ -109,8 +104,7 @@ public sealed class SavedQueryService(
 
         await validator.ValidateAndThrowAsync(request.Definition, ct);
 
-        // The record belongs to the caller's tenant; keep the stored definition consistent with it.
-        // Enforcing a body/caller tenant match with a 403 is S8 (DESIGN_QA §3).
+        // Keep the stored definition's tenant consistent with the record's owner.
         return request.Definition with { TenantId = user.TenantId };
     }
 

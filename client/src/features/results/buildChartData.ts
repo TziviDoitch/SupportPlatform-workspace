@@ -5,23 +5,14 @@ import type { AggregationRow } from '../../models/search';
 export interface ChartData {
   labels: string[];
   values: number[];
-  /** Registry label of the segmentation field this chart is for — the card title + dataset label. */
   seriesLabel: string;
 }
 
-/** The metric the bar charts plot. Fixed to `count` in this PoC. */
 const CHART_METRIC = 'count';
 
-/**
- * One bar chart per segmentation field: the marginal distribution of `count` over that field's
- * buckets, summed across the other segmentation fields. Returns `[]` when there is nothing to plot
- * (no groups, no segmentation, or none of the fields are in the registry).
- *
- * Summing the returned `aggregations` is exact because the server's groups partition the data and
- * `count` is additive — and in this PoC every group fits on the first page (see `summarizeRun`).
- * Bucket labels resolve through the same reference lists the form is built from; a `yearRange`
- * field has no list, so its numeric key shows as-is.
- */
+// One bar chart per segmentation field: the marginal distribution of `count` over that field's
+// buckets, summed across the other segmentation fields. Returns [] when there is nothing to plot.
+// Summing is exact because the server's groups partition the data and `count` is additive.
 export function buildCharts(
   aggregations: AggregationRow[],
   segmentation: string[],

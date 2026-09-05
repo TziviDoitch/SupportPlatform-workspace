@@ -9,11 +9,9 @@ export interface InterpretedField {
 
 const SEGMENTATION_LABEL = 'גרף לפי';
 
-/**
- * The definition as a label/value list, for the review panel — the same registry and reference
- * labels the search form is built from. It reads the definition, it does not compose Hebrew
- * prose: the sentence is `interpretationText` from the server.
- */
+// The definition as a label/value list for the review panel, using the same registry and
+// reference labels the form is built from. It reads the definition; it does not compose Hebrew
+// prose — the sentence is interpretationText from the server.
 export function describeDefinition(
   definition: QueryDefinition,
   metadata: MetadataResponse,

@@ -4,10 +4,8 @@ using SupportPlatform.Application.Tests.Search;
 
 namespace SupportPlatform.Application.Tests.NlQuery;
 
-/// <summary>
-/// The parser is the whole of S6's "AI": deterministic, metadata-driven, and never inventing a
-/// value it did not read in the question.
-/// </summary>
+// The parser is the whole of the "AI" here: deterministic, metadata-driven, and never inventing
+// a value it did not read in the question.
 public class RuleBasedNlQueryProviderTests
 {
     private const string Tenant = "culture-sport-admin";

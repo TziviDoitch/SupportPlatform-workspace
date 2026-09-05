@@ -10,16 +10,12 @@ import {
 
 export interface SearchForm {
   state: SearchFormState;
-  /** Live definition rebuilt on every edit. */
   definition: QueryDefinition;
   setFieldValue: (fieldId: string, value: FieldValue | undefined) => void;
-  /** The registry ids the user wants a chart for ("הוספת גרף לפי"). */
   setGraphFields: (ids: string[]) => void;
-  /** Back to the empty form (the "clear filters" action). */
   reset: () => void;
 }
 
-/** Holds the search-form state and rebuilds the canonical {@link QueryDefinition} from it. */
 export function useSearchForm(registry: FilterFieldRegistryEntry[], tenantId: string): SearchForm {
   const [state, setState] = useState<SearchFormState>(emptyFormState);
 

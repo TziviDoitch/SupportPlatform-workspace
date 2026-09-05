@@ -18,7 +18,6 @@ using SupportPlatform.Infrastructure.Search.Filters.Interfaces;
 
 namespace SupportPlatform.Infrastructure;
 
-/// <summary>Composition root for the Infrastructure layer.</summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
