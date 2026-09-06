@@ -188,7 +188,7 @@ Unit: `DynamicQueryBuilder` (כל פילטר + **דחיית שדה זר**), Aggr
 *רזה: `DEVOPS.md` חצי עמוד, בלי Sequence.*
 
 ### S11 · Polish + Review + README + הגשה — 3.5 / 2.5
-`code-review` (high) + `security-review` (injection ב‑builder, Secrets, scoping) + תיקונים + `docs/REVIEW_NOTES.md` · `README.md` מלא (§8) · **הדגמת "הוספת תחום תמיכה בלי שינוי קוד"** דרך seed/JSON + תיעוד · ניקוי סודות/קוד מת, lint נקי · `docker compose up` מ‑clone נקי עובד · מעבר על `TEST_PLAN.md` · tag `submission-v1`.
+`code-review` (high) + `security-review` (injection ב‑builder, Secrets, scoping) + תיקונים + סיכום ממצאים · `README.md` מלא (§8) · **הדגמת "הוספת תחום תמיכה בלי שינוי קוד"** דרך seed/JSON + תיעוד · ניקוי סודות/קוד מת, lint נקי · `docker compose up` מ‑clone נקי עובד · מעבר על `TEST_PLAN.md` · tag `submission-v1`.
 
 **סה"כ: ~44 / ~28ש׳.** יעד ריאלי: **32–36ש׳** (מלא S0–S6, רזה S7–S11). המסמכים נכתבים תוך כדי.
 

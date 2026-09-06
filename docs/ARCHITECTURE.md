@@ -1,12 +1,7 @@
 # ארכיטקטורה — מערכת תמיכות רוחבית (PoC)
 
-> **סטטוס: עודכן עד S9.** התוכן נכתב ב-S4 ומתעדכן בכל שלב לפי ה-DoD
-> (`IMPLEMENTATION_PLAN.md` §3.8); ליטוש ההגשה (S11) טרם בוצע. מקור לתוכן:
-> §4 (ארכיטקטורת יעד) ו-§2 (החלטות טכנולוגיות נעולות).
->
-> **מומש מול מתוכנן.** המסמך מסמן במפורש מה כבר קיים בקוד ומה יעד עתידי:
-> פסקאות המתחילות ב-**מומש (S#)** מתארות קוד קיים; פסקאות **יעד (S#)** מתארות
-> כיוון שטרם מומש. PoC — ההיקף מכוון, לא שלם.
+> **מומש מול מתוכנן.** המסמך מסמן במפורש מה כבר קיים בקוד (**מומש**) ומה כיוון
+> עתידי שטרם מומש (**מתוכנן**). PoC — ההיקף מכוון, לא שלם.
 
 ## 1. סקירה כללית
 
@@ -14,7 +9,7 @@
 בוחר פילטרים בטופס, המערכת מתרגמת אותם לשאילתה בטוחה, מריצה אותה מול מסד הנתונים,
 ומחזירה ספירה/סכום בפילוח נבחר יחד עם ניסוח השאלה בעברית.
 
-**ה-vertical slice המרכזי** (מומש S1–S3, רץ מקצה-לקצה):
+**ה-vertical slice המרכזי** (רץ מקצה-לקצה):
 
 ```
 GET /api/metadata ──▶ טופס דינמי בלקוח ──▶ QueryDefinition ──▶ POST /api/search
@@ -22,7 +17,7 @@ GET /api/metadata ──▶ טופס דינמי בלקוח ──▶ QueryDefini
                         משפט שאלה בעברית + טבלת תוצאות בפילוח ◀───────┘
 ```
 
-`QueryDefinition` הוא האובייקט הקנוני היחיד שעובר בין כל החלקים (§4.1, §10 החלטה 3):
+`QueryDefinition` הוא האובייקט הקנוני היחיד שעובר בין כל החלקים (§4.1, §10):
 הטופס בונה אותו, מנוע ה-SQL מתרגם אותו, מנסח השאלה קורא אותו, ובשלבים הבאים גם
 ה-NL parser יפיק אותו והשאילתה השמורה *תהיה* הוא.
 
@@ -87,18 +82,18 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 
 | מודול | סטטוס | מכסה | היכן |
 |---|---|---|---|
-| **Metadata** | מומש (S1) | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
-| **Search** | מומש (S2–S3) | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
-| **Identity** | מומש (S8 — auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + כלל role אחד (מחיקת שאילתה שמורה דורשת `admin`) | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
-| **Search** (dedup) | מומש (S5) | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
-| **SavedQueries** | מומש (S5) | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
-| **NlQuery** | מומש (S6) | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryProvider`; מנתח דטרמיניסטי, בלי LLM חיצוני | `NlQueriesController` · `NlQueryService` · `RuleBasedNlQueryProvider` + `RuleBased/Rules/` (§4.7, §6.3) |
-| **Audit** | מומש (S5) | `IAuditService.Record(...)` — קריאות מפורשות ב-services (לא interceptor) על mutations + search | `AuditService` (Infrastructure) → `audit_log` (§5.2) |
+| **Metadata** | מומש | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
+| **Search** | מומש | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
+| **Identity** | מומש (auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + כלל role אחד (מחיקת שאילתה שמורה דורשת `admin`) | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
+| **Search** (dedup) | מומש | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
+| **SavedQueries** | מומש | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
+| **NlQuery** | מומש | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryProvider`; מנתח דטרמיניסטי, בלי LLM חיצוני | `NlQueriesController` · `NlQueryService` · `RuleBasedNlQueryProvider` + `RuleBased/Rules/` (§4.7, §6.3) |
+| **Audit** | מומש | `IAuditService.Record(...)` — קריאות מפורשות ב-services (לא interceptor) על mutations + search | `AuditService` (Infrastructure) → `audit_log` (§5.2) |
 
 גישת הנתונים עברה ל-repositories ב-S8: `IRepository<T>` (קריאה בלבד, `Application/Common`)
 + `ISupportRequestRepository` / `TenantRepository` (`Infrastructure/Repositories`) מחליפים את
 הזרקות ה-`DbContext` הישירות שמנוע ה-S2 נשא. `MetadataRepository` / `SavedQueryRepository`
-(S1/S5) נשארים כפי שהם. אין הפשטת כתיבה גנרית.
+נשארים כפי שהם. אין הפשטת כתיבה גנרית.
 
 חתכים רוחביים (Correlation Id, Serilog, ProblemDetails, Validation) משותפים לכל
 המודולים ומפורטים ב-§8.
@@ -106,7 +101,7 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 ## 4. מנוע השאילתות
 
 חוזה: [`contracts/query-definition.md`](contracts/query-definition.md) ·
-[`contracts/api-contract.md`](contracts/api-contract.md) §3. מומש ב-S2.
+[`contracts/api-contract.md`](contracts/api-contract.md) §3.
 
 ### 4.1 `QueryDefinition` — האובייקט הקנוני
 
@@ -178,30 +173,20 @@ SQL Server היה שומר `decimal` נייטיב (הסכומים קטנים ד�
 Controller (`SearchController`) = HTTP בלבד: bind → `ISearchService` → תוצאה.
 כל החלטה עסקית (ולידציה, בחירת metrics, הרכבת התשובה, hashing, תזמון) ב-`SearchService`.
 Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת ה-tenant scope).
-### 4.7 שכבת ה-NL (מומש ב-S6)
+
+### 4.7 שכבת ה-NL
 
 `INlQueryProvider` הוא הגבול היחיד של ה-AI: `text + tenantId + SearchMetadata → NlTranslation`.
 ספק **לא** ניגש למסד, לא מריץ חיפוש ולא מוודא — ה-metadata נמסר לו כקלט, ו-`NlQueryService`
-מריץ את אותו `IValidator<QueryDefinition>` ואת אותו `QuestionTextRenderer` ש-`/api/search`
-משתמש בהם, ורושם audit (`nl-parse`). פרסור לא מריץ שאילתה.
+מריץ על הפלט את אותו `IValidator<QueryDefinition>` ואת אותו `QuestionTextRenderer` ש-`/api/search`
+משתמש בהם, ורושם audit. פרסור לא מריץ שאילתה — המשתמש רואה את הפרשנות ולוחץ "הרץ".
 
-**מונחים:** `Parse` הוא ה-use case בגובה ה-API (`POST /api/nl-queries/parse`, `INlQueryService`),
-ו-`Translate` הוא ה-seam. הזרימה: `API Parse → NlQueryService → provider Translate → QueryDefinition`.
-המילה "parse" מתארת את מקרה השימוש בחוזה, לא את הדרך שבה ספק עובד: מנתח כללים מפרסר, ספק
-LLM מתרגם. לכן הממשק מתאר תפקיד ולא מימוש.
-
-#### בחירת ספק — קונפיגורציה, לא קומפילציה
-
-`AddApplication` מחזיק מפה קטנה של `provider key → סוג מימוש`, רושם כל אחד ב-**keyed DI**
-(`AddKeyedScoped`, מובנה ב-.NET 8 — בלי Factory תוצרת בית), ורושם את `INlQueryProvider` כ-resolver
-שקורא את `NlQueryOptions.Provider` ומחזיר את הספק בעל המפתח הזה. הערך מגיע מ-`NlQuery:Provider`
-ב-`appsettings.json` (ברירת מחדל `ruleBased`).
-
-**הוספת ספק = שתי נגיעות:** שורה במפה + הערך בקונפיג. `SearchService`, `QueryDefinition`,
-ה-validator, `SearchQueryExecutor`, המסד וחוזה `/api/search` לא משתנים.
-
-מפתח לא מוכר נכשל **בעליית האפליקציה** (`Program.cs` פותר את הספק פעם אחת אחרי `Build()`) עם
-הודעה שמציינת את המפתח שהוגדר ואת הספקים המובנים — ולא כ-500 בשאלה הראשונה.
+**בחירת ספק — קונפיגורציה, לא קומפילציה.** `AddApplication` מחזיק מפת `provider key → סוג`,
+רושם כל אחד ב-**keyed DI** (`AddKeyedScoped`, מובנה ב-.NET 8), ורושם את `INlQueryProvider`
+כ-resolver שקורא את `NlQuery:Provider` (ברירת מחדל `ruleBased`). **הוספת ספק = שורה במפה +
+ערך בקונפיג**; `SearchService`, `QueryDefinition`, ה-validator, המסד וחוזה `/api/search` לא
+משתנים. מפתח לא מוכר מפיל את האפליקציה **בעלייה** (`Program.cs` פותר את הספק פעם אחת אחרי
+`Build()`), לא כ-500 בשאלה הראשונה.
 
 `RuleBasedNlQueryProvider` (מפתח `ruleBased`) דק: בונה `NlText`, מפעיל שלושה כללים
 ב-`RuleBased/Rules/`, ומרכיב `QueryDefinition`:
@@ -212,17 +197,11 @@ LLM מתרגם. לכן הממשק מתאר תפקיד ולא מימוש.
 | `YearRule` | שנה בודדת, או הטווח שבין השנים שנמצאו | שדה ה-`yearRange` היחיד ב-registry |
 | `SegmentationRule` | סעיף קיבוץ אחרי "לפי" / "פילוח" | תוויות השדות ה-`segmentable` |
 
-כלל **אחד** לכל השדות מסוג `codeList` — לא כלל לכל שדה עסקי — כך שתחום/סטטוס/מחוז חדש
-ב-seed מזוהה בלי שינוי קוד (§7.1). `HebrewText` מבצע נרמול מורפולוגי גס (תחיליות ב/ה/ו/ל/מ/כ/ש,
-ריבוי, סיומות חלשות); שני הצדדים עוברים את אותה פונקציה, ולכן די שהגזעים יהיו **עקביים**.
-הנרמול **מוגבל בכוונה** — ראה §10 החלטה 12.
-
-מה שאף כלל לא תבע חוזר ב-`unresolved`, ו-`confidence` הוא היחס שנתבע — אינדיקציה בלבד.
-שם שדה נחשב "מובן" רק אם השדה באמת שימש: "לפי סטטוס" (סטטוס אינו `segmentable`) חוזר
-ב-`unresolved`, ולא כפרשנות בביטחון מלא שהתעלמה מהבקשה. מספר בן 4 ספרות מחוץ לטווח
-לוח שנה סביר אינו שנה — הוא נשאר לא-תבוע במקום להפוך לפילטר.
-מילה דו-משמעית לא נפתרת בניחוש: "תמיכה" שייכת גם ל"תחום תמיכה" וגם ל"שנת תמיכה", ולכן
-אינה מזהה אף אחד מהם. **אין ערך מומצא**, בשום מסלול.
+כלל **אחד** לכל שדות ה-`codeList` — לא כלל לכל שדה עסקי — כך שתחום/סטטוס/מחוז חדש ב-seed
+מזוהה בלי שינוי קוד (§7.1). `HebrewText` מבצע נרמול מורפולוגי גס; שני הצדדים עוברים את אותה
+פונקציה, ולכן די שהגזעים יהיו **עקביים** (מגבלה מכוונת — §10). מה שאף כלל לא תבע חוזר
+ב-`unresolved`, ו-`confidence` הוא היחס שנתבע. מילה דו-משמעית לא נפתרת בניחוש, ומספר מחוץ
+לטווח לוח שנה סביר אינו שנה — **אין ערך מומצא בשום מסלול**.
 
 
 ## 5. מסד נתונים
@@ -242,7 +221,7 @@ LLM מתרגם. לכן הממשק מתאר תפקיד ולא מימוש.
 בטסטים (provider SQLite) ה-aggregate מחושב מעל `double` כדי שה-provider יתרגם אותו
 (§4.4). הסכומים קטנים דיים כדי שזה יישאר מדויק לאגורה.
 
-### 5.1 מודל הנתונים (מומש ב-S1)
+### 5.1 מודל הנתונים
 
 ישויות ב-`SupportPlatform.Domain/Entities/`, מיפוי ב-`Infrastructure/Persistence/Configurations/`:
 
@@ -270,7 +249,7 @@ LLM מתרגם. לכן הממשק מתאר תפקיד ולא מימוש.
   320/180). מופעל ב-`Program.cs` ב-Development בלבד (`Migrate()` + `Seed()`).
 - **`?tenantId=` הוא חוזה פיתוח זמני ל-S1** — ראה §8.
 
-### 5.2 שאילתות שמורות, Audit ו-dedup (מומש ב-S5)
+### 5.2 שאילתות שמורות, Audit ו-dedup
 
 **זהות הקורא (seam).** `ICurrentUser` (Application: `Username` / `TenantId` / `Role` /
 `CorrelationId`) עם מימוש `HttpCurrentUser` (Api) שקורא את הכותרת `X-User` ומאתר את שורת
@@ -303,7 +282,7 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 `features/<feature>/` (כל feature: קומפוננטות + `hooks/`) · `state/` (רק ה-`queryClient`
 המשותף).
 
-### 6.1 ה-Vertical slice (מומש ב-S3)
+### 6.1 ה-Vertical slice
 
 `metadata → טופס דינמי → QueryDefinition → POST /api/search → משפט שאלה + טבלה`, הכל
 במסך אחד (`features/search/SearchPage`). התוצאות מוצגות **inline** מתחת לטופס; אין מסך
@@ -338,7 +317,7 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 - **Tenant + user.** `DEFAULT_TENANT_ID` ו-`DEFAULT_USER` קבועים זמניים (`api/config.ts`);
   `http.ts` שולח `X-User` בכל בקשה. אין `login` עדיין — S8 יחליף בזהות המאומתת.
 
-### 6.2 מסך שאילתות שמורות (מומש ב-S5)
+### 6.2 מסך שאילתות שמורות
 
 `features/saved-queries/`: `useSavedQueries` (TanStack Query — list + rename/delete/run) למסך עצמו,
 `useCreateSavedQuery` (mutation בלבד, בלי query — כדי ש-`SaveQueryButton` במסך החיפוש לא ימשוך את
@@ -350,7 +329,7 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 ואת סכום המאושר (סכימה על `aggregations`, שמכיל את כל הקבוצות ולא רק את העמוד). מנוע החיפוש הוא מנוע אגרגציה — שאילתה בלי
 `segmentation` מחזירה קבוצה אחת (הסך הכולל); לכן `lastRunRowCount` הוא מספר **קבוצות**, לא רשומות.
 
-### 6.3 מסך השאלה החופשית (מומש ב-S6)
+### 6.3 מסך השאלה החופשית
 
 `features/nl-query/`: `useNlParse` (mutation — המשתמש שואל מפורשות, שאלה אחת בכל פעם),
 `InterpretationPanel` (משפט הפרשנות מהשרת + פירוט שדה-שדה + מה שלא זוהה + כפתור "הרץ"),
@@ -359,9 +338,9 @@ React + TypeScript + Vite, Ant Design v6 ב-RTL (`ConfigProvider direction="rtl"
 כולל `ResultsPanel`, עימוד ומיון. אין ממשק צ'אט ואין מנוע חיפוש שני.
 `describeDefinition` (טהור) מתרגם `QueryDefinition` לרשימת תווית/ערך לפי אותן תוויות
 registry ורשימות ייחוס שמזינות את הטופס — קריאה של הגדרה, לא ניסוח עברית: המשפט תמיד
-מגיע מהשרת (§10 החלטה 9).
+מגיע מהשרת (§10).
 
-### 6.4 גרף ולטישת UI (מומש ב-S7)
+### 6.4 גרף ולטישת UI
 
 - **גרף עמודות.** `components/BarChart` — עטיפה גנרית ל-`react-chartjs-2` (רישום מודולים
   של `chart.js` פעם אחת, ללא ידע דומיין). פקד ה"הוספת גרף לפי" (הוא ה-`segmentation`)
@@ -428,7 +407,7 @@ reference_domains: { code: "education", label: "חינוך" }
 
 תת-מחלקה חדשה של `FilterHandler` (כמו `YearRangeFilterHandler`) + שורת registry עם
 ה-`kind` החדש + פקד תואם בלקוח. `DynamicQueryBuilder` ו-`FilterHandlerResolver` לא
-משתנים — אין `switch` על סוג handler (§10 החלטה 4).
+משתנים — אין `switch` על סוג handler (§10).
 
 ## 8. חתכים רוחביים
 
@@ -448,7 +427,7 @@ reference_domains: { code: "education", label: "חינוך" }
 (`definitionHash` → `IMemoryCache` — §5.2) · **seam זהות** (`ICurrentUser` מ-`X-User`).
 ב-S8 הזהות הפכה סמכותית (§8.1). נשאר כיעד production: JWT + `POST /api/auth/login` + הנפקת token.
 
-### 8.1 גבול האימות — auth stub מבוסס `X-User` (מומש ב-S8)
+### 8.1 גבול האימות — auth stub מבוסס `X-User`
 
 זרימת היעד המלאה: `login → אימות credentials מול User.PasswordHash → הנפקת JWT → Bearer
 authentication → זיהוי User → פתירת TenantId + Role מה-User → הרשאה + בידוד tenant`.
@@ -468,7 +447,7 @@ Fallback §7.6 המוצהר ונשארים יעד production.
 - **`SavedQuery`:** ה-scoping (owner + tenant) כבר נאכף ב-S5 ב-`SavedQueryRepository`; on save
   ה-`TenantId` של ה-definition נכפה לזה של הקורא. גישה חוצת-scope נשארת 404 (לא 403).
 
-### 8.2 בדיקות (מומש ב-S9)
+### 8.2 בדיקות
 
 - **Unit** (`SupportPlatform.Application.Tests`, `SupportPlatform.Infrastructure.Tests`) על ליבת
   הלוגיקה: `DynamicQueryBuilder` — כל שדה ב-Registry (`Every_code_list_registry_field_narrows_on_its_own_column`)
@@ -602,141 +581,94 @@ flowchart TD
 ```
 
 יעד (לא ב-Compose הנוכחי): API gateway / reverse proxy, מסד logs מרוכז, ספק AI
-חיצוני מאחורי `INlQueryProvider` (§10 החלטה 11, DESIGN_QA §8) — ה-PoC עצמו לא מדבר עם
+חיצוני מאחורי `INlQueryProvider` (§10, DESIGN_QA §8) — ה-PoC עצמו לא מדבר עם
 אף שירות AI חיצוני: אין מפתח API, אין תלות רשת, ו-`docker compose up` מ-clone נקי עובד.
 
 ## 10. Decision Log
 
-החלטות מהותיות: מה הוחלט, למה, ואילו חלופות נשקלו. מתעדכן תוך כדי.
+ההחלטות שעיצבו את המערכת: מה הוחלט, למה, ואיזו חלופה נדחתה.
 
-### 1. SQL Server למימוש, PostgreSQL כיעד
+### 1. SQL Server למימוש, PostgreSQL כיעד קוד-פתוח
 
-מימוש מול SQL Server (§5): היכרות ורישוי קיימים — זמן הקמה הוא המשאב הקריטי ב-PoC.
-כדי שזה לא ינעל, כל הגישה דרך EF Core `IQueryable` בלבד, בלי SQL גולמי. במסמך היעד
-PostgreSQL הוא המומלץ (קוד פתוח, ללא רישוי). **חלופה שנדחתה:** SQLite למימוש — פשוט
-יותר להרים, אבל לא מייצג עומס/concurrency אמיתיים ולא נפרס בפרודקשן. SQLite כן משמש
-בטסטים בלבד.
+היכרות ורישוי קיימים — זמן הקמה הוא המשאב הקריטי ב-PoC. כדי שלא ינעל, כל הגישה דרך
+EF Core `IQueryable`, בלי SQL גולמי. **נדחה:** SQLite למימוש — לא מייצג עומס/concurrency
+ולא נפרס בפרודקשן (משמש בטסטים בלבד).
 
-### 2. ארבע שכבות עם תלות חד-כיוונית
+### 2. ארבע שכבות עם תלות חד-כיוונית, `Application` בלי EF
 
-`Api / Application / Domain / Infrastructure`, `Application` לא מכיר EF (§2). זה
-אוצר-המילים של המטלה ומאפשר להחליף provider או לבודד לוגיקה בטסט בלי framework.
-**חלופה שנדחתה:** פרויקט יחיד — פחות ceremony, אבל מטשטש את הגבול Service↔גישת-נתונים
-שהמטלה מודדת עליו.
+אוצר-המילים של המטלה; מאפשר החלפת provider ובידוד לוגיקה בטסט בלי framework.
+**נדחה:** פרויקט יחיד — מטשטש את הגבול Service↔גישת-נתונים שהמטלה מודדת.
 
 ### 3. `QueryDefinition` כאובייקט קנוני יחיד
 
-מבנה אחד ([`contracts/query-definition.md`](contracts/query-definition.md)) שהטופס
-בונה, מנוע ה-SQL מתרגם, מנסח השאלה קורא, ובהמשך ה-NL parser יפיק והשאילתה השמורה
-תאחסן. מונע שכפול לוגיקה ו-drift בין הצרכנים. **חלופה שנדחתה:** DTO נפרד לכל endpoint.
+מבנה אחד ([`contracts/query-definition.md`](contracts/query-definition.md)) שהטופס בונה,
+מנוע ה-SQL מתרגם, מנסח השאלה קורא, ה-NL parser מפיק, והשאילתה השמורה מאחסנת. מונע
+שכפול לוגיקה ו-drift. **נדחה:** DTO נפרד לכל endpoint.
 
 ### 4. Whitelist מ-`FilterFieldRegistry` + היררכיית handlers, בלי `switch`
 
-`DynamicQueryBuilder` דוחה כל `fieldId` שאינו ב-registry לפני שרץ handler (§3.4 קו
-אדום, §4.3). לכל שדה instance אחד של `FilterHandler` הנושא selector חזק
-(`Expression<Func<…>>`); `kind` חדש = תת-מחלקה, שדה חדש = שורת רישום. **חלופות
-שנדחו:** (א) `switch (fieldId)` מרכזי — נשבר עם כל שדה; (ב) בניית expression
-ממחרוזת / reflection — משטח התקפה של injection, בדיוק מה שהמטלה בודקת.
+`DynamicQueryBuilder` דוחה כל `fieldId` שאינו ב-registry לפני שרץ handler (§4.3). לכל
+שדה instance של `FilterHandler` עם selector חזק; `kind` חדש = תת-מחלקה, שדה חדש = שורת
+רישום. **נדחה:** (א) `switch (fieldId)` מרכזי — נשבר עם כל שדה; (ב) expression ממחרוזת /
+reflection — משטח התקפה של injection, בדיוק מה שהמטלה בודקת.
 
 ### 5. בידוד tenant fail-closed דרך Global Query Filter
 
 `e => tenant.HasTenant && e.TenantId == tenant.TenantId` על `SupportRequest` +
-`SubmittingBody` (§5.1). בלי tenant context — אפס שורות, לא "הכל". חוצה-tenant רק
-דרך `IgnoreQueryFilters()` מפורש. **חלופה שנדחתה:** סינון ידני בכל repository — שכחה
-אחת = דליפת נתונים בין ארגונים.
+`SubmittingBody`. בלי tenant context — אפס שורות, לא "הכל"; חוצה-tenant רק דרך
+`IgnoreQueryFilters()` מפורש. **נדחה:** סינון ידני בכל repository — שכחה אחת = דליפה
+בין ארגונים.
 
-### 6. `?tenantId=` כחוזה פיתוח זמני ל-S1
+### 6. עיצוב תוצאה (מיון/עימוד) ב-Application, לא ב-Infrastructure
 
-`GET /api/metadata?tenantId=` מקבל את ה-tenant מ-query param עד S8 (§8.1). ב-S8
-המשתמש המאומת הוא מקור הסמכות וה-API לא יבטח `tenantId` מהלקוח. תועד במפורש כדי
-שלא ייחשב כמנגנון הרשאה.
+`SearchQueryExecutor` מחזיר את כל קבוצות ה-aggregation; `BucketPaging` ממיין וחותך עמוד
+בזיכרון (§4.4). שומר את Infrastructure "גישת-נתונים בלבד". **פשטת PoC מודעת:** 2+ שדות
+פילוח → GroupBy בזיכרון; שאילתות כבדות אמיתיות = `DESIGN_QA.md` §4.
 
-### 7. עיצוב תוצאה (מיון/עימוד) ב-Application, לא ב-Infrastructure
+### 7. הלקוח בונה `QueryDefinition`, השרת מנסח את השאלה
 
-`SearchQueryExecutor` מחזיר את כל קבוצות ה-aggregation; `BucketPaging` (Application)
-ממיין וחותך עמוד בזיכרון (§4.4). שומר את Infrastructure "גישת-נתונים בלבד".
-**פשטת PoC מודעת:** 2+ שדות פילוח → GroupBy בזיכרון; שאילתות כבדות אמיתיות =
-DESIGN_QA §4.
+`buildQueryDefinition` (טהור) בונה את המבנה בלקוח; `questionText` מגיע תמיד מהשרת
+(`QuestionTextRenderer`) — אין renderer עברית שני בלקוח. מקור אמת אחד למשפט.
 
-### 8. חתכים רוחביים מוזרקים ב-S2 יחד עם `/search`
+### 8. חתכים רוחביים נכנסים עם הצרכן הראשון, לא כתשתית מוקדמת
 
-Correlation Id + Serilog + ProblemDetails (RFC 7807) נכנסו כשהיה endpoint אמיתי
-לתלות בו (§8), לא כתשתית מוקדמת בלי צרכן. **Audit ו-cache נכנסו ב-S5** עם הצרכן הראשון
-שלהם (שאילתות שמורות + חיפוש חוזר); Auth מלא נשאר seam עד S8 — §3.2 בתוכנית,
-"אפס over-engineering".
+Correlation Id + Serilog + ProblemDetails נכנסו יחד עם `POST /api/search`; Audit ו-cache
+יחד עם שאילתות שמורות + חיפוש חוזר; זהות מלאה נשארה seam עד שהיתה הרשאה לאכוף.
+עיקרון "אפס over-engineering" (`IMPLEMENTATION_PLAN.md` §3.2). **נדחה:** בניית כל התשתית
+הרוחבית מראש בלי צרכן.
 
-### 9. הלקוח בונה `QueryDefinition`, השרת מנסח את השאלה
+### 9. זהות דרך `X-User`, scoping ב-service ולא ב-interceptor
 
-`buildQueryDefinition` (טהור) בלקוח בונה את המבנה; `questionText` מגיע תמיד מהשרת
-(`QuestionTextRenderer`) — אין renderer עברית שני בלקוח (§6.1). מקור אמת אחד למשפט.
+`ICurrentUser` נגזר מכותרת `X-User` מול ה-seed users (auth stub, בלי JWT — §8.1).
+ה-scoping (owner + tenant) נאכף מפורשות ב-`SavedQueryService`, וה-audit נכתב בקריאות
+`IAuditService.Record` מפורשות מה-use-case — נראה בקוד, נושא payload סמנטי, לא נכתב על
+כתיבות פנימיות. **נדחה:** (א) JWT + `login` — הנפקת token וניהול secret שאינם נמדדים,
+מחליף seam שעובד; (ב) EF `SaveChanges` interceptor ל-audit — "קסום", קשה לצרף לו
+action/payload, וכותב גם על שורת ה-audit עצמה.
 
-### 10. זהות PoC דרך `X-User`, scoping ב-service, לא interceptor (S5)
+### 10. מנתח דטרמיניסטי כספק ה-AI, נבחר בקונפיגורציה
 
-שאילתות שמורות ו-audit דורשים "מי הקורא". במקום JWT מוקדם (S8), `ICurrentUser` נגזר
-מכותרת `X-User` מול ה-seed users, עם ברירת מחדל. ה-scoping (owner + tenant) נאכף
-מפורשות ב-`SavedQueryRepository`/`SavedQueryService`, וה-audit נכתב בקריאות
-`IAuditService.Record` מפורשות מה-service — **לא** EF `SaveChanges` interceptor: הקריאה
-המפורשת נראית בקוד ה-use-case, נושאת payload סמנטי, ולא מפעילה audit על כתיבות פנימיות.
-**חלופה שנדחתה:** interceptor גלובלי — "קסום", קשה לצרף לו action/payload נכונים, וכותב
-גם על שמירת שורת ה-audit עצמה.
+מאחורי `INlQueryProvider` יושב `RuleBasedNlQueryProvider` — parser שאוצר המילים שלו הוא
+ה-metadata, לא LLM חיצוני. מה שנמדד הוא **הגבול** (נבדק ב-DI ובטסטים), לא חוכמת המתרגם;
+ספק חיצוני היה מחייב מפתח API בתוך ה-repo, תלות רשת, ותשובה לא דטרמיניסטית. הבחירה היא
+קונפיגורציה — keyed DI של .NET 8 + `NlQuery:Provider` — כדי ש"ספק LLM נכנס כמימוש נוסף"
+יהיה נכון בקוד: ספק נוסף = שורה במפה + ערך בקונפיג. המימוש **לעולם לא ממציא ערך**: מה
+שלא זוהה חוזר ב-`unresolved`. **נדחה:** (א) אינטגרציית Gemini/OpenAI — תשתית שאינה נמדדת
+ומחלישה רפרודוקטיביות; (ב) מחלקת `Factory` תוצרת בית — keyed DI כבר עושה זאת.
 
-### 11. מנתח דטרמיניסטי כספק ה-AI ל-PoC, נבחר בקונפיגורציה (S6)
+### 11. נרמול עברי בקוד (~40 שורות), לא ספריית NLP
 
-מאחורי `INlQueryProvider` יושב `RuleBasedNlQueryProvider` — parser שקוף שאוצר המילים
-שלו הוא ה-metadata, ולא ספק LLM חיצוני. הנימוקים: (א) המטלה מבקשת ש**החלפת ספק AI**
-תהיה זולה, לא ש-PoC ידבר עם מודל; מה שנמדד הוא הגבול, והוא נבדק ב-DI ובטסטים;
-(ב) ספק חיצוני מחייב מפתח API — סוד ב-repo, תלות רשת, ותשובה לא דטרמיניסטית בטסטים;
-(ג) `docker compose up` מ-clone נקי חייב לעבוד אצל הבודק בלי הרשמה לשירות.
-המימוש **לעולם לא ממציא ערך**: מה שלא זוהה חוזר ב-`unresolved` והמשתמש רואה אותו לפני
-ההרצה. **חלופה שנדחתה:** אינטגרציית Gemini/OpenAI ב-S6 — מוסיפה תשתית (מפתחות, מכסות,
-retries, timeouts) שאינה נמדדת, ומחלישה את הרפרודוקטיביות.
+התאמת "בתחום התרבות" ל-"תרבות" דורשת מורפולוגיה. אין ל-.NET 8 אופציה שפויה: HebMorph
+היא AGPL-3.0 ותקועה על Lucene.NET ישן; שאר המחסניות (HebSpacy, DictaBERT, Stanza) הן
+Python + הורדת מודלים. `HebrewText` מקלף סיומת אחת ואז תחיליות; **שני צדי ההשוואה עוברים
+את אותה פונקציה**, ולכן די שהגזעים יהיו עקביים — לא נכונים לשונית. **המחיר:** צורות חריגות
+לא יותאמו — חוזרות ב-`unresolved`, גלוי ולא שגוי. הנרמול כולו תחת `RuleBased/`, כך שספק
+LLM מייתר אותו. **נדחה:** עמודת `aliases` בשורות הייחוס — שינוי חוזה מוקפא + migration,
+ועדיין לא פותרת תחיליות.
 
-כדי שהמשפט "ספק LLM נכנס כמימוש נוסף" יהיה **נכון בקוד ולא רק במסמך**, הבחירה היא
-קונפיגורציה: keyed DI מובנה של .NET 8 + `NlQuery:Provider` (§4.7). ספק נוסף = שורה במפה
-+ ערך בקונפיג, בלי קומפילציה מחדש. **חלופות שנדחו:** (א) רישום DI קשיח יחיד — מימוש שני
-פשוט לא נגיש, ושני רישומים לאותו ממשק נפתרים בשקט לאחרון; (ב) מחלקת `Factory` תוצרת בית —
-keyed DI כבר עושה את זה, ומחלקה נוספת היא ceremony בלי תועלת.
+### 12. `IRepository<T>` מינימלי לקריאה, בלי הפשטת כתיבה
 
-### 12. נרמול עברי בקוד, לא ספריית NLP (S6)
-
-התאמת "בתחום התרבות" לתווית "תרבות" דורשת מורפולוגיה כלשהי. **אין ל-.NET 8 אופציה שפויה:**
-[HebMorph](https://github.com/synhershko/HebMorph) היא היחידה — ברישיון **AGPL-3.0** (copyleft
-ויראלי, לא מתאים למסירת קוד לחברה), ה-port ל-.NET תקוע על Lucene.NET 3.0.3 עם באגים ידועים
-שתוקנו רק בענף ה-Java, ואין חבילת NuGet מתוחזקת. כל מחסניות ה-NLP העברי המתוחזקות
-(HebSpacy, AlephBERT/DictaBERT, Stanza) הן Python + הורדת מודלים — runtime שלם של ML כדי
-להתאים עשר תוויות.
-
-לכן `HebrewText`: ~40 שורות שמקלפות סיומת אחת ואז תחיליות. **שני צדי ההשוואה עוברים את אותה
-פונקציה**, ולכן הגזעים חייבים להיות עקביים בלבד — לא נכונים לשונית; זו הסיבה שזה עובד בלי
-מילון. מכוסה ב-`HebrewTextTests`, כולל הזוגות שהמנתח באמת נשען עליהם והמילים שאסור לו לטשטש.
-
-**המחיר, במודע:** אין למטיזציה אמיתית — צורות חריגות פשוט לא יותאמו. זה **גלוי ולא שגוי**:
-הן חוזרות ב-`unresolved` והמשתמש רואה אותן לפני ההרצה, במקום שהמערכת תנחש. **פתח מילוט:**
-הנרמול חי כולו תחת `RuleBased/`, כך שספק LLM (§4.7) הופך אותו ללא רלוונטי בלי לגעת בשום
-דבר אחר. **חלופה שנדחתה:** עמודת `aliases` בשורות הייחוס — תואמת את פילוסופיית ה-metadata,
-אבל דורשת שינוי חוזה מוקפא + migration, ועדיין לא פותרת תחיליות ("בתחום").
-
-### 13. Auth stub מבוסס `X-User`, ולא JWT, ב-S8
-
-תוכנית §6 S8 מגדירה "רזה: `X-User` header במקום JWT", ו-§7.6 הוא המנוף המוצהר. כל השלבים
-S5–S7 כבר נבנו סביב `ICurrentUser` מ-`X-User`. לכן S8 מממש את **ההרשאה** (tenant סמכותי +
-כלל role) על גבי אותו seam, ולא מוסיף `login`/JWT/scheme. הבודק שולח `X-User: <username>`;
-`docker compose up` עובד בלי שירות זהות. **חלופה שנדחתה:** JWT + `POST /api/auth/login` ב-S8 —
-מוסיף הנפקת token, חתימה, וניהול secret שאינם נמדדים, ומחליף seam שכבר עובד. נשאר יעד
-production מתועד (§8.1, `DESIGN_QA.md` §2–3).
-
-**`TenantAccessGuard` ולא בדיקה מפוזרת:** שלושת ה-services שמקבלים `tenantId` מהקלט
-(`Search`/`Metadata`/`NlQuery`) קוראים ל-`EnsureTenant` אחד — מקום יחיד, נבדק ב-
-`TenantAccessGuardTests`. `SavedQuery` לא עובר דרכו: ה-scoping שלו (owner + tenant) הוא 404,
-לא 403, וכבר נאכף ב-S5.
-
-### 14. `IRepository<T>` מינימלי לקריאה בלבד, בלי הפשטת כתיבה (S8)
-
-תוכנית §6 S8: "`IRepository<T>` + 2–3 ספציפיים (ניקוי הזרקות זמניות מ-S2)". מנוע ה-S2
-(`SearchQueryExecutor`, `SearchMetadataProvider`) הזריק `SupportPlatformDbContext` ישירות.
-S8 מכניס: `IRepository<T>` — ממשק קריאה יחיד (`ListAllAsync`) ב-`Application/Common` —
-ו-`TenantRepository` שמממש אותו; `ISupportRequestRepository` (Infrastructure) שחושף
-`IQueryable<SupportRequest>` ל-`DynamicQueryBuilder`. `MetadataRepository`/`SavedQueryRepository`
-לא נגעו. **אין `IRepository<T>` לכתיבה** ואין `EfRepository<T>` בסיס גנרי — `DbSet<T>` כבר
-Repository, וב-PoC הפשטה מעליו היא anti-pattern. **חלופה שנדחתה:** repository גנרי מלא
-(CRUD + `IUnitOfWork`) — ceremony בלי דרישה; רק שני seams נדרשים בפועל ל-S8.
+`IRepository<T>` (`ListAllAsync` ב-`Application/Common`) + `ISupportRequestRepository`
+(`IQueryable` ל-`DynamicQueryBuilder`) מחליפים את הזרקות ה-`DbContext` הישירות של מנוע
+החיפוש. **אין הפשטת כתיבה** — `DbSet<T>` כבר Repository, וב-PoC הפשטה מעליו היא
+anti-pattern. **נדחה:** repository גנרי מלא (CRUD + `IUnitOfWork`) — ceremony בלי דרישה.

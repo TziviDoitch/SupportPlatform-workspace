@@ -6,7 +6,7 @@
 
 ## מוקדמות
 
-1. `cd infra && docker compose up --build` — שלושת השירותים עולים.
+1. `.\run-local.ps1` — LocalDB, API ו-client עולים יחד (Windows).
 2. `http://localhost:5080/health` → `200 Healthy`.
 3. `http://localhost:5173` נטען, ללא שגיאות ב-console.
 4. ה-DB עולה עם seed דטרמיניסטי: 2 tenants, 3 משתמשים, ~40 גופים, 500 בקשות

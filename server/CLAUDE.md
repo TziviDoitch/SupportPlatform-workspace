@@ -66,7 +66,7 @@ Caller identity (S5 seam, S8 authoritative): `ICurrentUser` (`Application/Identi
 header and resolves the seeded `users` row; a missing/unknown header falls back to the seeded
 `sarah` **row** — never to a hard-coded identity: with no `users` row to resolve, it throws. Send
 `X-User: <username>` from tests/clients to act as someone else. **No JWT / `/api/auth/login`** —
-that stays the production target (`docs/ARCHITECTURE.md` §8.1, decision 13).
+that stays the production target (`docs/ARCHITECTURE.md` §8.1, Decision Log).
 
 Authorization (S8):
 - **Tenant is authoritative from identity.** `TenantAccessGuard.EnsureTenant(requestedTenantId)`
@@ -83,7 +83,7 @@ Authorization (S8):
 Data access is through repositories (`Infrastructure/Repositories/`), not direct `DbContext`:
 - `IRepository<T>` (`Application/Common/Interfaces`) — read-only (`ListAllAsync`) for a small set
   loaded whole; `TenantRepository` implements it. **No generic write abstraction, no `EfRepository<T>`
-  base** (decision 14).
+  base** (`docs/ARCHITECTURE.md` §10, Decision Log).
 - `ISupportRequestRepository.Query()` returns the no-tracking `IQueryable<SupportRequest>` the
   search engine composes filters onto (replaces the S2 `DbContext` injection in `SearchQueryExecutor`).
 - `MetadataRepository` / `SavedQueryRepository` (S1/S5) keep their own purpose-built interfaces.
@@ -179,7 +179,7 @@ The connection string is read from `ConnectionStrings:SqlServer` (env `Connectio
   district in the seed is recognised with no code change. `HebrewText` does the crude stemming —
   strip one ending, then attached particles; both sides of a comparison go through it, so the
   stems only have to be *consistent*, not linguistically right. It is **deliberately limited**:
-  there is no viable Hebrew NLP library for .NET 8 (`ARCHITECTURE.md` §10 decision 12), and forms
+  there is no viable Hebrew NLP library for .NET 8 (`ARCHITECTURE.md` §10, Decision Log), and forms
   it cannot reduce surface in `unresolved` rather than being guessed at. Don't reach for a
   morphology dependency without revisiting that decision.
 - Never invent a value, and never swallow one. A word that cannot be mapped goes to `unresolved`;
