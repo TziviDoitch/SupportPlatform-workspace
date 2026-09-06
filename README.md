@@ -132,6 +132,19 @@ Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = Dyn
 כל בקשה מחזירה `X-Correlation-Id`; כל שגיאה היא `application/problem+json` (RFC 7807) —
 ראו [`docs/contracts/error-model.md`](docs/contracts/error-model.md).
 
+### החלטות מפתח
+
+תמצית ההחלטות ההנדסיות הגדולות. כל אחת עם חלופה ומחיר ב-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §10 (Decision Log — 12 החלטות).
+
+- **`QueryDefinition` אובייקט קנוני יחיד** — הטופס בונה, ה-NL parser מפיק, השאילתה השמורה *היא* הוא, מנוע ה-SQL מתרגם, מנסח השאלה קורא. מבנה אחד, חמישה צרכנים, אפס תרגום כפול. (§10.3)
+- **4 שכבות, תלות חד-כיוונית, `Application` לא מכיר EF** — הלוגיקה ומנוע השאילתות מבודדים מ-framework; הפרדת אחריות שנבדקת בטסטים. (§10.2)
+- **`DynamicQueryBuilder` דרך whitelist מ-`filter_field_registry` בלבד** — בלי `switch`, reflection או ביטויים מחרוזתיים; שדה זר נדחה לפני הרצה. גם בטיחות injection וגם הרחבה בלי קוד. (§10.4)
+- **בידוד multi-tenant fail-closed** — Global Query Filter של EF: בלי tenant context מוגדר מוחזרות אפס שורות, לא "הכל". `TenantAccessGuard` דוחה tenant זר ב-403. (§10.5)
+- **SQL Server ל-PoC, PostgreSQL כיעד פרודקשן** — בחירה פרגמטית (היכרות/רישוי) מול הנכון לטווח ארוך; המעבר זול בכוונה — כל הגישה דרך EF `IQueryable`, בלי SQL גולמי. (§10.1)
+- **זהות דרך כותרת `X-User` (auth stub), לא JWT** — קיצור PoC מוצהר; האכיפה כבר ב-service (`TenantAccessGuard` + כלל role אחד), היעד OIDC/JWT מול IdP מרכזי. (§10.9)
+- **NL מבוסס-חוקים דטרמיניסטי, נבחר ב-configuration** — אין ספריית NLP עברית בת-קיימא ל-.NET 8; מילה שלא מופתה נכנסת ל-`unresolved`, לא מנוחשת. ספק LLM עתידי = אותו `INlQueryProvider`, שינוי קונפיג בלבד. (§10.10, §10.11)
+- **חתכים רוחביים נכנסים עם הצרכן הראשון** — logging, correlation id, error model ו-cache נכנסו ב-S2 יחד עם `/search`, לא כתשתית ספקולטיבית מוקדמת. (§10.8)
+
 ---
 
 ## בחירות טכנולוגיות ונימוקים
