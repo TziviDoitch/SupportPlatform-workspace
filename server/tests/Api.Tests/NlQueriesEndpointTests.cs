@@ -45,7 +45,7 @@ public class NlQueriesEndpointTests(TestApiFactory factory) : IClassFixture<Test
     [Fact]
     public async Task Reports_words_it_could_not_map_instead_of_inventing_filters()
     {
-        var root = await Parse("""{ "text": "כמה בקשות הוגשו על ידי אשכולות אזוריים" }""", HttpStatusCode.OK);
+        var root = await Parse("""{ "text": "כמה בקשות התקבלו על ידי אשכולות אזוריים" }""", HttpStatusCode.OK);
 
         Assert.Empty(root.GetProperty("definition").GetProperty("filters").EnumerateObject());
         Assert.True(root.GetProperty("unresolved").GetArrayLength() > 0);

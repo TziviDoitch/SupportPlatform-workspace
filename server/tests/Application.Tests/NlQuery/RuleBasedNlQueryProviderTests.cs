@@ -64,6 +64,26 @@ public class RuleBasedNlQueryProviderTests
     }
 
     [Fact]
+    public async Task A_multi_word_label_claims_its_words_before_a_shorter_one_can()
+    {
+        // "אירועי תרבות" and "תרבות" are both domains — the longer label has to win, or the
+        // question resolves to plain culture and "אירועי" is left unresolved.
+        var (def, _, unresolved) = await Parse("בקשות באירועי תרבות");
+
+        Assert.Equal(["cultural-events"], Codes(def, "supportDomain"));
+        Assert.Empty(unresolved);
+    }
+
+    [Fact]
+    public async Task A_multi_word_label_matches_across_fields()
+    {
+        var (def, _, _) = await Parse("בקשות של רשות מקומית בתחום הספורט");
+
+        Assert.Equal(["municipality"], Codes(def, "bodyType"));
+        Assert.Equal(["sport"], Codes(def, "supportDomain"));
+    }
+
+    [Fact]
     public async Task Several_values_for_one_field_become_an_in_list()
     {
         var (def, _, _) = await Parse("בקשות בתרבות ובספורט");
@@ -128,7 +148,7 @@ public class RuleBasedNlQueryProviderTests
     [Fact]
     public async Task Unrecognised_words_are_reported_and_no_value_is_invented()
     {
-        var (def, confidence, unresolved) = await Parse("כמה בקשות הוגשו על ידי אשכולות אזוריים");
+        var (def, confidence, unresolved) = await Parse("כמה בקשות התקבלו על ידי אשכולות אזוריים");
 
         Assert.Empty(def.Filters);
         Assert.Empty(def.Segmentation);

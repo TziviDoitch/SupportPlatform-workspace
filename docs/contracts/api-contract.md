@@ -23,7 +23,7 @@
 | 2 | GET | `/api/metadata?tenantId=` | yes | Reference lists + filter field registry (feeds the dynamic form) |
 | 3 | POST | `/api/search` | yes | Run a `QueryDefinition`, get rows + aggregations + question text |
 | 4 | POST | `/api/nl-queries/parse` | yes | Free text → `QueryDefinition` + interpretation |
-| 5 | GET/POST/PUT/DELETE | `/api/saved-queries[/{id}]` | yes | CRUD over saved queries, scoped to owner + tenant |
+| 5 | GET/POST/PUT/DELETE | `/api/saved-queries[/{id}]` | yes | CRUD over saved queries, scoped to owner + tenant (`admin` reads/deletes the whole tenant) |
 | 6 | POST | `/api/saved-queries/{id}/run` | yes | Re-run a saved query; response identical to `/api/search` |
 
 ---
@@ -116,7 +116,7 @@ Response `200`:
 ```json
 {
   "definition": { "...": "a QueryDefinition" },
-  "interpretationText": "חיפוש בקשות ... בתחום תרבות ... סטטוס מאושר ... שנת 2024",
+  "interpretationText": "חיפוש בקשות ... בתחום תרבות ... סטטוס אושרה ... שנת 2024",
   "confidence": 0.82,
   "unresolved": ["district"]
 }
@@ -150,17 +150,21 @@ A saved query record:
 
 | Method | Path | Body in | Response |
 |---|---|---|---|
-| GET | `/api/saved-queries` | – | `200` — array of records for the caller (own + tenant scope) |
-| GET | `/api/saved-queries/{id}` | – | `200` — one record; `404` if not found in scope |
+| GET | `/api/saved-queries` | – | `200` — own records (analyst) or all tenant records (`admin`) |
+| GET | `/api/saved-queries/{id}` | – | `200` — one record, if owned or caller is `admin`; else `404` |
 | POST | `/api/saved-queries` | `{ "name": "...", "definition": { } }` | `201` — created record |
 | PUT | `/api/saved-queries/{id}` | `{ "name": "...", "definition": { } }` | `200` — updated record; `404` out of scope |
-| DELETE | `/api/saved-queries/{id}` | – | `204`; `404` out of scope |
+| DELETE | `/api/saved-queries/{id}` | – | `204`; `403` another user's query without the `admin` role; `404` outside the tenant |
 
-Scoping: a caller sees and mutates only queries they own within their tenant.
-Acting on another user's query → `404` (not `403`, to avoid leaking existence).
+Scoping: an analyst sees and mutates only queries they own within their tenant.
+An `admin` additionally sees (`GET` list + by id) and deletes every query in their own
+tenant — reads and deletes share the same owner-or-admin visibility rule, so nothing an
+admin can open is hidden from the list. Update and re-run stay owner-only. Acting on a
+query outside that visibility → `404` (not `403`, to avoid leaking existence), except
+DELETE of a colleague's query by a non-admin, which is `403`.
 `definition` is validated exactly like `/api/search` on POST/PUT.
 
-Errors: `400` invalid `name`/`definition`, `401`, `404` out of scope.
+Errors: `400` invalid `name`/`definition`, `401`, `403` delete without the role, `404` out of scope.
 
 ---
 

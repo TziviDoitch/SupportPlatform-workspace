@@ -24,11 +24,11 @@ public sealed class SavedQueryService(
 
     public async Task<IReadOnlyList<SavedQueryDto>> List(CancellationToken ct = default)
     {
-        var rows = await repo.List(user.Username, user.TenantId, ct);
+        var rows = await repo.ListForRole(user.Username, user.Role, user.TenantId, ct);
         return rows.Select(Map).ToList();
     }
 
-    public async Task<SavedQueryDto> Get(Guid id, CancellationToken ct = default) => Map(await Require(id, ct));
+    public async Task<SavedQueryDto> Get(Guid id, CancellationToken ct = default) => Map(await RequireVisible(id, ct));
 
     public async Task<SavedQueryDto> Create(SaveSavedQueryRequest request, CancellationToken ct = default)
     {
@@ -67,10 +67,14 @@ public sealed class SavedQueryService(
 
     public async Task Delete(Guid id, CancellationToken ct = default)
     {
-        // Scope first (out-of-scope stays a 404), then the role rule: deleting requires 'admin'.
-        var entity = await Require(id, ct);
-        if (!string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
-            throw new ForbiddenException("Deleting a saved query requires the 'admin' role.");
+        // Owners delete their own queries; deleting a colleague's requires 'admin'. The tenant
+        // boundary stays a 404 either way, so existence outside the tenant is not leaked.
+        var entity = await repo.FindInTenant(id, user.TenantId, ct)
+            ?? throw new NotFoundException($"Saved query '{id}' was not found.");
+
+        var isOwner = string.Equals(entity.OwnerUsername, user.Username, StringComparison.OrdinalIgnoreCase);
+        if (!isOwner && !string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
+            throw new ForbiddenException("Deleting another user's saved query requires the 'admin' role.");
 
         await repo.Remove(entity, ct);
         await repo.Save(ct);
@@ -93,6 +97,18 @@ public sealed class SavedQueryService(
     private async Task<SavedQuery> Require(Guid id, CancellationToken ct) =>
         await repo.Find(id, user.Username, user.TenantId, ct)
         ?? throw new NotFoundException($"Saved query '{id}' was not found.");
+
+    private async Task<SavedQuery> RequireVisible(Guid id, CancellationToken ct)
+    {
+        var entity = await repo.FindInTenant(id, user.TenantId, ct)
+            ?? throw new NotFoundException($"Saved query '{id}' was not found.");
+
+        var isOwner = string.Equals(entity.OwnerUsername, user.Username, StringComparison.OrdinalIgnoreCase);
+        if (!isOwner && !string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
+            throw new NotFoundException($"Saved query '{id}' was not found.");
+
+        return entity;
+    }
 
     private async Task<QueryDefinition> Validated(SaveSavedQueryRequest request, CancellationToken ct)
     {

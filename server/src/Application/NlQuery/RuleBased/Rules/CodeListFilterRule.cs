@@ -11,14 +11,20 @@ internal static class CodeListFilterRule
     {
         foreach (var entry in meta.Registry.Where(e => e.Kind == FieldKind.CodeList))
         {
-            var codes = meta.Snapshot.ReferenceList(entry.ReferenceList)
+            var items = meta.Snapshot.ReferenceList(entry.ReferenceList);
+
+            // Longest label first: "אירועי תרבות" has to claim both its words before plain
+            // "תרבות" can take one of them. The result keeps the reference list's own order.
+            var matched = items
+                .OrderByDescending(item => HebrewText.Stems(item.Label).Count)
                 .Where(item => text.TryClaim(HebrewText.Stems(item.Label)) ||
                                text.TryClaim(HebrewText.Stems(item.Code)))
                 .Select(item => item.Code)
-                .ToList();
+                .ToHashSet();
 
-            if (codes.Count > 0)
-                filters[entry.Id] = new FilterValue.Codes(codes);
+            if (matched.Count > 0)
+                filters[entry.Id] = new FilterValue.Codes(
+                    [.. items.Select(i => i.Code).Where(matched.Contains)]);
         }
     }
 }

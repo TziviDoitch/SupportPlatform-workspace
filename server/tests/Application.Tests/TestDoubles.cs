@@ -31,6 +31,14 @@ internal sealed class FakeSavedQueryRepository : ISavedQueryRepository
 {
     public List<SavedQuery> Items { get; } = [];
 
+    public Task<IReadOnlyList<SavedQuery>> ListForRole(string username, string role, string tenantId, CancellationToken ct = default)
+    {
+        var query = Items.Where(q => q.TenantId == tenantId);
+        if (!string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(q => q.OwnerUsername == username);
+        return Task.FromResult<IReadOnlyList<SavedQuery>>(query.ToList());
+    }
+
     public Task<IReadOnlyList<SavedQuery>> List(string ownerUsername, string tenantId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<SavedQuery>>(
             Items.Where(q => q.OwnerUsername == ownerUsername && q.TenantId == tenantId).ToList());
@@ -38,6 +46,9 @@ internal sealed class FakeSavedQueryRepository : ISavedQueryRepository
     public Task<SavedQuery?> Find(Guid id, string ownerUsername, string tenantId, CancellationToken ct = default) =>
         Task.FromResult(Items.FirstOrDefault(q =>
             q.Id == id && q.OwnerUsername == ownerUsername && q.TenantId == tenantId));
+
+    public Task<SavedQuery?> FindInTenant(Guid id, string tenantId, CancellationToken ct = default) =>
+        Task.FromResult(Items.FirstOrDefault(q => q.Id == id && q.TenantId == tenantId));
 
     public Task Add(SavedQuery query, CancellationToken ct = default)
     {

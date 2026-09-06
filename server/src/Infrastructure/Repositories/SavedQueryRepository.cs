@@ -7,11 +7,21 @@ namespace SupportPlatform.Infrastructure.Repositories;
 
 public sealed class SavedQueryRepository(SupportPlatformDbContext db) : ISavedQueryRepository
 {
+    public async Task<IReadOnlyList<SavedQuery>> ListForRole(
+        string username, string role, string tenantId, CancellationToken ct = default)
+    {
+        var query = db.SavedQueries.Where(q => q.TenantId == tenantId);
+
+        if (!string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(q => q.OwnerUsername == username);
+
+        var rows = await query.AsNoTracking().ToListAsync(ct);
+        return rows.OrderByDescending(q => q.CreatedAt).ToList();
+    }
+
     public async Task<IReadOnlyList<SavedQuery>> List(
         string ownerUsername, string tenantId, CancellationToken ct = default)
     {
-        // Order client-side: the SQLite test provider can't ORDER BY DateTimeOffset, and a single
-        // user's saved-query list is small.
         var rows = await Scoped(ownerUsername, tenantId).AsNoTracking().ToListAsync(ct);
         return rows.OrderByDescending(q => q.CreatedAt).ToList();
     }
@@ -19,6 +29,9 @@ public sealed class SavedQueryRepository(SupportPlatformDbContext db) : ISavedQu
     public Task<SavedQuery?> Find(
         Guid id, string ownerUsername, string tenantId, CancellationToken ct = default) =>
         Scoped(ownerUsername, tenantId).FirstOrDefaultAsync(q => q.Id == id, ct);
+
+    public Task<SavedQuery?> FindInTenant(Guid id, string tenantId, CancellationToken ct = default) =>
+        db.SavedQueries.FirstOrDefaultAsync(q => q.Id == id && q.TenantId == tenantId, ct);
 
     public async Task Add(SavedQuery query, CancellationToken ct = default) =>
         await db.SavedQueries.AddAsync(query, ct);

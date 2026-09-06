@@ -66,11 +66,22 @@ public class SavedQueryServiceTests
     {
         var created = await Service().Create(Request());
 
-        // Same tenant, different owner — scope is owner AND tenant.
         _user = new FakeCurrentUser("dan", "culture-sport-admin");
 
         await Assert.ThrowsAsync<NotFoundException>(() => Service().Get(created.Id));
         Assert.Empty(await Service().List());
+    }
+
+    [Fact]
+    public async Task Admin_sees_colleagues_records_in_list()
+    {
+        var created = await Service().Create(Request());
+
+        _user = new FakeCurrentUser("dan", "culture-sport-admin", "admin");
+
+        var listed = await Service().List();
+        Assert.Single(listed);
+        Assert.Equal(created.Id, listed[0].Id);
     }
 
     [Fact]
@@ -88,10 +99,9 @@ public class SavedQueryServiceTests
     }
 
     [Fact]
-    public async Task Delete_removes_the_record_and_audits()
+    public async Task Delete_removes_the_owners_own_record_and_audits()
     {
-        _user = new FakeCurrentUser("dan", "culture-sport-admin", "admin");
-        var created = await Service().Create(Request());
+        var created = await Service().Create(Request()); // default user: sarah, role 'analyst'
 
         await Service().Delete(created.Id);
 
@@ -100,10 +110,22 @@ public class SavedQueryServiceTests
     }
 
     [Fact]
-    public async Task Delete_by_a_non_admin_is_forbidden_and_keeps_the_record()
+    public async Task Delete_of_a_colleagues_record_is_allowed_for_an_admin()
     {
-        var created = await Service().Create(Request()); // default user: sarah, role 'analyst'
+        var created = await Service().Create(Request()); // owned by sarah
 
+        _user = new FakeCurrentUser("dan", "culture-sport-admin", "admin");
+        await Service().Delete(created.Id);
+
+        Assert.Empty(_repo.Items);
+    }
+
+    [Fact]
+    public async Task Delete_of_a_colleagues_record_is_forbidden_for_a_non_admin()
+    {
+        var created = await Service().Create(Request()); // owned by sarah
+
+        _user = new FakeCurrentUser("noa", "culture-sport-admin"); // same tenant, role 'analyst'
         await Assert.ThrowsAsync<ForbiddenException>(() => Service().Delete(created.Id));
 
         Assert.Single(_repo.Items);
