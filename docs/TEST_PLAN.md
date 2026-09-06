@@ -51,7 +51,7 @@
 | 3.2 | הרצה מחדש | ברשימה, "הרץ" על שורה | מוצגים כותרת סיכום + `ResultsPanel` (גרף + טבלה) במצב **read-only** — בלי pager ובלי כותרות מיון לחיצות (הרצה מחדש לא מקבלת override של הגדרה); `lastRunAt`/`lastRunRowCount` מתעדכנים. |
 | 3.3 | שם ריק | "שמור שאילתה" עם שם רווחים בלבד | `400` ProblemDetails; toast שגיאה; לא נשמר. |
 | 3.4 | מחיקה ע"י הבעלים | כ-`sarah` (analyst) צרו שאילתה ומחקו אותה | `204`; נעלמת מהרשימה — מחיקת שאילתה משלך אינה דורשת role. |
-| 3.5 | **קצה: admin מוחק שאילתה של עמית** | כ-`sarah` צרו שאילתה; כ-`dan` (admin, אותו tenant) `DELETE /api/saved-queries/{id}` | `204` למחיקה, אבל `GET` על אותו מזהה עדיין `404` — ה-scope לקריאה נשאר owner + tenant. |
+| 3.5 | **קצה: admin רואה ומוחק שאילתה של עמית** | כ-`sarah` צרו שאילתה; כ-`dan` (admin, אותו tenant) `GET /api/saved-queries/{id}` ואז `DELETE` | `GET` מחזיר `200` (admin רואה גם מה שאינו שלו), `DELETE` מחזיר `204`. |
 | 3.6 | **קצה: tenant אחר** | כ-`michal` (tenant אחר) נסו למחוק שאילתה של `sarah` | `404` (לא `403`) — קיום השורה מעבר לגבול ה-tenant לא מודלף. |
 
 ## 4. שאלה חופשית / NL (`/nl-query`)
@@ -84,5 +84,6 @@
 | אפס תוצאות | `SearchQueryExecutorTests.A_filter_that_matches_no_rows_returns_a_zero_bucket` |
 | שדה זר (לא ב-Registry) | `DynamicQueryBuilderTests.An_unknown_field_id_is_rejected_before_any_handler_runs` |
 | NL לא מזוהה | `NlQueriesEndpointTests.Reports_words_it_could_not_map_instead_of_inventing_filters` |
-| מחיקת שאילתה של אחר | `SavedQueriesEndpointTests.Another_users_saved_query_is_a_404_*` · `Delete_by_an_analyst_is_a_problem_details_403_*` |
+| admin רואה/מוחק שאילתה של עמית | `SavedQueriesEndpointTests.Admin_reads_all_queries_and_can_delete_colleagues` · `SavedQueryServiceTests.Admin_sees_colleagues_records_in_list` · `Delete_of_a_colleagues_record_is_allowed_for_an_admin` |
+| analyst לא רואה/מוחק שאילתה של עמית | `SavedQueryServiceTests.Another_users_record_is_not_found_within_the_same_tenant` · `Delete_of_a_colleagues_record_is_forbidden_for_a_non_admin` |
 | happy-path מלא | `HappyPathIntegrationTests.Identity_metadata_search_save_run_and_parse_compose` |

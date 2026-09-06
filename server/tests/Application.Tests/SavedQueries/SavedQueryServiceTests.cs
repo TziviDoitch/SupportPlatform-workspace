@@ -66,11 +66,22 @@ public class SavedQueryServiceTests
     {
         var created = await Service().Create(Request());
 
-        // Same tenant, different owner — scope is owner AND tenant.
         _user = new FakeCurrentUser("dan", "culture-sport-admin");
 
         await Assert.ThrowsAsync<NotFoundException>(() => Service().Get(created.Id));
         Assert.Empty(await Service().List());
+    }
+
+    [Fact]
+    public async Task Admin_sees_colleagues_records_in_list()
+    {
+        var created = await Service().Create(Request());
+
+        _user = new FakeCurrentUser("dan", "culture-sport-admin", "admin");
+
+        var listed = await Service().List();
+        Assert.Single(listed);
+        Assert.Equal(created.Id, listed[0].Id);
     }
 
     [Fact]

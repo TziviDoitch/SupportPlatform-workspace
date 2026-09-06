@@ -24,11 +24,11 @@ public sealed class SavedQueryService(
 
     public async Task<IReadOnlyList<SavedQueryDto>> List(CancellationToken ct = default)
     {
-        var rows = await repo.List(user.Username, user.TenantId, ct);
+        var rows = await repo.ListForRole(user.Username, user.Role, user.TenantId, ct);
         return rows.Select(Map).ToList();
     }
 
-    public async Task<SavedQueryDto> Get(Guid id, CancellationToken ct = default) => Map(await Require(id, ct));
+    public async Task<SavedQueryDto> Get(Guid id, CancellationToken ct = default) => Map(await RequireVisible(id, ct));
 
     public async Task<SavedQueryDto> Create(SaveSavedQueryRequest request, CancellationToken ct = default)
     {
@@ -97,6 +97,18 @@ public sealed class SavedQueryService(
     private async Task<SavedQuery> Require(Guid id, CancellationToken ct) =>
         await repo.Find(id, user.Username, user.TenantId, ct)
         ?? throw new NotFoundException($"Saved query '{id}' was not found.");
+
+    private async Task<SavedQuery> RequireVisible(Guid id, CancellationToken ct)
+    {
+        var entity = await repo.FindInTenant(id, user.TenantId, ct)
+            ?? throw new NotFoundException($"Saved query '{id}' was not found.");
+
+        var isOwner = string.Equals(entity.OwnerUsername, user.Username, StringComparison.OrdinalIgnoreCase);
+        if (!isOwner && !string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
+            throw new NotFoundException($"Saved query '{id}' was not found.");
+
+        return entity;
+    }
 
     private async Task<QueryDefinition> Validated(SaveSavedQueryRequest request, CancellationToken ct)
     {

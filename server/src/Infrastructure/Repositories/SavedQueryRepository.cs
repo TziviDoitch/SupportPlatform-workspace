@@ -7,11 +7,21 @@ namespace SupportPlatform.Infrastructure.Repositories;
 
 public sealed class SavedQueryRepository(SupportPlatformDbContext db) : ISavedQueryRepository
 {
+    public async Task<IReadOnlyList<SavedQuery>> ListForRole(
+        string username, string role, string tenantId, CancellationToken ct = default)
+    {
+        var query = db.SavedQueries.Where(q => q.TenantId == tenantId);
+
+        if (!string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(q => q.OwnerUsername == username);
+
+        var rows = await query.AsNoTracking().ToListAsync(ct);
+        return rows.OrderByDescending(q => q.CreatedAt).ToList();
+    }
+
     public async Task<IReadOnlyList<SavedQuery>> List(
         string ownerUsername, string tenantId, CancellationToken ct = default)
     {
-        // Order client-side: the SQLite test provider can't ORDER BY DateTimeOffset, and a single
-        // user's saved-query list is small.
         var rows = await Scoped(ownerUsername, tenantId).AsNoTracking().ToListAsync(ct);
         return rows.OrderByDescending(q => q.CreatedAt).ToList();
     }

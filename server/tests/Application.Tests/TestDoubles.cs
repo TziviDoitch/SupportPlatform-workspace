@@ -31,6 +31,14 @@ internal sealed class FakeSavedQueryRepository : ISavedQueryRepository
 {
     public List<SavedQuery> Items { get; } = [];
 
+    public Task<IReadOnlyList<SavedQuery>> ListForRole(string username, string role, string tenantId, CancellationToken ct = default)
+    {
+        var query = Items.Where(q => q.TenantId == tenantId);
+        if (!string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(q => q.OwnerUsername == username);
+        return Task.FromResult<IReadOnlyList<SavedQuery>>(query.ToList());
+    }
+
     public Task<IReadOnlyList<SavedQuery>> List(string ownerUsername, string tenantId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<SavedQuery>>(
             Items.Where(q => q.OwnerUsername == ownerUsername && q.TenantId == tenantId).ToList());

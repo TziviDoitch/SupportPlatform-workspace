@@ -84,9 +84,9 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 |---|---|---|---|
 | **Metadata** | מומש | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
 | **Search** | מומש | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
-| **Identity** | מומש (auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + כלל role אחד (מחיקת שאילתה של משתמש אחר דורשת `admin`) | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
+| **Identity** | מומש (auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + RBAC על שאילתות שמורות: `admin` רואה ומוחק את כל ה-tenant, לא רק את שלו | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
 | **Search** (dedup) | מומש | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
-| **SavedQueries** | מומש | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
+| **SavedQueries** | מומש | CRUD scoped ל-owner+tenant (analyst) / tenant כולו (`admin`) + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
 | **NlQuery** | מומש | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryProvider`; מנתח דטרמיניסטי, בלי LLM חיצוני | `NlQueriesController` · `NlQueryService` · `RuleBasedNlQueryProvider` + `RuleBased/Rules/` (§4.7, §6.3) |
 | **Audit** | מומש | `IAuditService.Record(...)` — קריאות מפורשות ב-services (לא interceptor) על mutations + search | `AuditService` (Infrastructure) → `audit_log` (§5.2) |
 
@@ -254,14 +254,16 @@ Infrastructure = גישת נתונים בלבד (EF, builder, handlers, החלת
 **זהות הקורא (seam).** `ICurrentUser` (Application: `Username` / `TenantId` / `Role` /
 `CorrelationId`) עם מימוש `HttpCurrentUser` (Api) שקורא את הכותרת `X-User` ומאתר את שורת
 ה-`users` ה-seeded; כותרת חסרה או לא מוכרת → ברירת המחדל `sarah`. זה חוזה ה-PoC
-מ-`api-contract.md` §Auth; JWT ובדיקת role אמיתית — S8. אין הרשאה מעבר ל-scoping של
-owner + tenant.
+מ-`api-contract.md` §Auth; JWT ובדיקת role אמיתית — S8. ה-`Role` נאכף כלל RBAC אחד על
+שאילתות שמורות (למטה).
 
 **`saved_queries`.** `SavedQueryService` (Application) מבצע CRUD + `run`; `SavedQueryRepository`
-(Infrastructure) מסנן **תמיד** לפי `OwnerUsername` + `TenantId`. גישה לרשומה מחוץ ל-scope →
-`NotFoundException` → 404 (לא 403 — לא מדליף קיום, `api-contract.md` §5). ה-`definition`
-נשמר כ-JSON קנוני + `DefinitionHash`, ומאומת ב-POST/PUT דרך אותו `IValidator<QueryDefinition>`
-כמו `/api/search`. `run` מריץ דרך `ISearchService`, מעדכן `LastRunAt` / `LastRunRowCount`.
+(Infrastructure) מסנן לפי `TenantId` תמיד, ולפי `OwnerUsername` **גם** — חוץ מ-`admin`, שרואה
+ומוחק את כל רשומות ה-tenant (`ListForRole` / `FindInTenant`). `Update`/`Run` נשארים
+owner-only. גישה לרשומה מחוץ ל-scope הנראה → `NotFoundException` → 404 (לא 403 — לא
+מדליף קיום, `api-contract.md` §5). ה-`definition` נשמר כ-JSON קנוני + `DefinitionHash`,
+ומאומת ב-POST/PUT דרך אותו `IValidator<QueryDefinition>` כמו `/api/search`. `run` מריץ
+דרך `ISearchService`, מעדכן `LastRunAt` / `LastRunRowCount`.
 
 **Dedup (`DESIGN_QA` §5).** `SearchService` מחשב `DefinitionHasher.Hash` (מפתחות filters,
 codes ו-metrics ממוינים; `segmentation`/`sort` נשמרים כסדרם) ומשתמש בו כמפתח `IMemoryCache`.
@@ -441,12 +443,14 @@ Fallback §7.6 המוצהר ונשארים יעד production.
   `MetadataService`, `NlQueryService`. `tenantId` בגוף/query שאינו של הקורא → **403 `forbidden`**
   (`error-model.md`); חסר → מושלם מזהות הקורא. `?tenantId=` נשאר בחוזה (`api-contract.md` §2)
   אך כבר **לא נאמן** — הוא מאומת, לא סומך. ה-Global Query Filter (§5.1) הוא שכבת ההגנה השנייה.
-- **כלל role אחד** שמדגים הפרדת גופים מעל data-scoping: מחיקת שאילתה **של משתמש אחר** דורשת
-  role `admin` (`SavedQueryService.Delete` — אחרי גבול ה-tenant, כדי לא להדליף קיום; בעלים
-  מוחק את שלו, analyst על רשומה של עמית → 403). שאר
-  ה-endpoints לא נבדקים ל-role ב-PoC (`DESIGN_QA.md` §3).
-- **`SavedQuery`:** ה-scoping (owner + tenant) כבר נאכף ב-S5 ב-`SavedQueryRepository`; on save
-  ה-`TenantId` של ה-definition נכפה לזה של הקורא. גישה חוצת-scope נשארת 404 (לא 403).
+- **כלל RBAC אחד** שמדגים הפרדת גופים מעל data-scoping: `admin` רואה (`List`/`Get`) ומוחק
+  את **כל** שאילתות ה-tenant, לא רק את שלו (`SavedQueryService` — אחרי גבול ה-tenant, כדי
+  לא להדליף קיום); analyst מוגבל לשלו, ומקבל 404 על רשומה של עמית (403 רק על ניסיון
+  מחיקה מפורש). `Update`/`Run` נשארים owner-only גם ל-`admin`. שאר ה-endpoints לא נבדקים
+  ל-role ב-PoC (`DESIGN_QA.md` §3).
+- **`SavedQuery`:** ה-scoping הבסיסי (owner + tenant) נאכף ב-`SavedQueryRepository`; `admin`
+  מרחיב את ה-scope הנראה/נמחק לכל ה-tenant. on save ה-`TenantId` של ה-definition נכפה לזה
+  של הקורא. גישה חוצת-scope נשארת 404 (לא 403).
 
 ### 8.2 בדיקות
 
@@ -641,7 +645,8 @@ Correlation Id + Serilog + ProblemDetails נכנסו יחד עם `POST /api/sear
 ### 9. זהות דרך `X-User`, scoping ב-service ולא ב-interceptor
 
 `ICurrentUser` נגזר מכותרת `X-User` מול ה-seed users (auth stub, בלי JWT — §8.1).
-ה-scoping (owner + tenant) נאכף מפורשות ב-`SavedQueryService`, וה-audit נכתב בקריאות
+ה-scoping (owner + tenant, מורחב ל-tenant כולו עבור `admin`) נאכף מפורשות
+ב-`SavedQueryService`, וה-audit נכתב בקריאות
 `IAuditService.Record` מפורשות מה-use-case — נראה בקוד, נושא payload סמנטי, לא נכתב על
 כתיבות פנימיות. **נדחה:** (א) JWT + `login` — הנפקת token וניהול secret שאינם נמדדים,
 מחליף seam שעובד; (ב) EF `SaveChanges` interceptor ל-audit — "קסום", קשה לצרף לו

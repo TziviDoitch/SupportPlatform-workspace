@@ -124,7 +124,7 @@ Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = Dyn
 |---|---|---|
 | `GET` | `/api/metadata?tenantId=` | רשימות ייחוס + `filterFieldRegistry` (מזין את הטופס) |
 | `POST` | `/api/search` | הרצת `QueryDefinition` → `questionText` / `rows` / `aggregations` / `page` / `executionMeta` |
-| `GET/POST/PUT/DELETE` | `/api/saved-queries[/{id}]` | CRUD, scoped ל-owner+tenant; DELETE של שאילתת משתמש אחר דורש role `admin` |
+| `GET/POST/PUT/DELETE` | `/api/saved-queries[/{id}]` | CRUD, scoped ל-owner+tenant; `admin` רואה ומוחק את כל השאילתות ב-tenant, לא רק את שלו |
 | `POST` | `/api/saved-queries/{id}/run` | הרצה חוזרת; תגובה כמו `/search` |
 | `POST` | `/api/nl-queries/parse` | טקסט חופשי → `{ definition, interpretationText, confidence, unresolved }` |
 | `GET` | `/health` | `200 Healthy` |
@@ -291,7 +291,7 @@ Unit על מנוע השאילתות (כולל דחיית שדה זר), אגרג�
 | פילוחים — מחוז · סוג גוף · שנת תמיכה · תחום תמיכה | מומש (4/4) | `Segmentable` ב-`DbSeeder`; אגרגציה ב-`SearchQueryExecutor` |
 | ניסוח שאלה קריאה מהפרמטרים | מומש | `QuestionTextRenderer` — תבנית עברית קנונית ("כמה בקשות תמיכה עם … בפילוח לפי …?"), נעולה בטסט. הערה: תבנית **ספירה**; לניסוח "הצג את כלל הבקשות" ראו השורה האחרונה |
 | הצגת נתונים — טבלה + גרף בסיסי | מומש | `features/results/ResultsTable/` + `ResultsChart/` (Chart.js), מתחלף לפי הפילוח |
-| שמירת שאילתות — שמור / עדכן / מחק / הרץ מחדש | מומש | `/api/saved-queries` CRUD + `/{id}/run`. עדכון `definition` דרך שמירה מחדש; שינוי שם ב-`RenameQueryModal`. מחיקה: הבעלים מוחק את שלו ללא role נוסף; מחיקת שאילתה של משתמש אחר דורשת `admin` |
+| שמירת שאילתות — שמור / עדכן / מחק / הרץ מחדש | מומש | `/api/saved-queries` CRUD + `/{id}/run`. עדכון `definition` דרך שמירה מחדש; שינוי שם ב-`RenameQueryModal`. `admin` רואה (`GET` רשימה + לפי מזהה) ומוחק את כל שאילתות ה-tenant, לא רק את שלו; analyst מוגבל לשלו. עדכון והרצה חוזרת נשארים owner-only |
 | תשאול בשפה חופשית — פירוש / המרה / הצגת פרשנות / הרצה | מומש | `RuleBasedNlQueryProvider` (דטרמיניסטי) → `QueryDefinition` → `InterpretationPanel` → כפתור "הרץ" |
 | החלפה פשוטה בין ספקי AI | מומש | `INlQueryProvider` + keyed DI, נבחר ב-`NlQuery:Provider`. `DESIGN_QA.md` §6 |
 | ארכיטקטורה — מבנה / חלוקת אחריות / שכבות / מודולריות / הרחבה | מומש + מתועד | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) §1–§4, §7 |

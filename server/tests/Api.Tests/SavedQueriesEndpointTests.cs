@@ -76,15 +76,19 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     }
 
     [Fact]
-    public async Task Delete_of_a_colleagues_record_is_allowed_for_an_admin()
+    public async Task Admin_reads_all_queries_and_can_delete_colleagues()
     {
-        // 'dan' is the seeded admin in culture-sport-admin: he may delete sarah's query, but the
-        // read scope is unchanged — it is still not his to read.
-        var id = (await Create(Client("sarah"), "admin may delete")).GetProperty("id").GetString();
+        var id = (await Create(Client("sarah"), "admin can see and delete")).GetProperty("id").GetString();
         var dan = Client("dan");
 
-        Assert.Equal(HttpStatusCode.NotFound, (await dan.GetAsync($"/api/saved-queries/{id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await dan.DeleteAsync($"/api/saved-queries/{id}")).StatusCode);
+        var list = JsonDocument.Parse(await dan.GetStringAsync("/api/saved-queries")).RootElement;
+        Assert.Contains(list.EnumerateArray(), e => e.GetProperty("id").GetString() == id);
+
+        var get = await dan.GetAsync($"/api/saved-queries/{id}");
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+
+        var deleted = await dan.DeleteAsync($"/api/saved-queries/{id}");
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
     }
 
     [Fact]
@@ -95,20 +99,6 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
         var asMichal = await Client("michal").GetAsync($"/api/saved-queries/{id}");
 
         Assert.Equal(HttpStatusCode.NotFound, asMichal.StatusCode);
-    }
-
-    [Fact]
-    public async Task Another_users_saved_query_is_a_404_within_the_same_tenant()
-    {
-        // dan and sarah are both in culture-sport-admin — the read scope is owner AND tenant, not
-        // tenant alone. (Deleting is the one admin exception — covered above.)
-        var id = (await Create(Client("sarah"), "sarah only")).GetProperty("id").GetString();
-        var dan = Client("dan");
-
-        Assert.Equal(HttpStatusCode.NotFound, (await dan.GetAsync($"/api/saved-queries/{id}")).StatusCode);
-
-        var danList = JsonDocument.Parse(await dan.GetStringAsync("/api/saved-queries")).RootElement;
-        Assert.DoesNotContain(danList.EnumerateArray(), e => e.GetProperty("id").GetString() == id);
     }
 
     [Fact]
