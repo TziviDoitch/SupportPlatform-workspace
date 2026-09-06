@@ -25,7 +25,7 @@ public class QuestionTextRendererTests
         var text = _renderer.Render(def, TestMetadata.Snapshot);
 
         Assert.Equal(
-            "כמה בקשות תמיכה עם סוג גוף: עמותה, תחום תמיכה: תרבות, סטטוס: מאושר, "
+            "כמה בקשות תמיכה עם סוג גוף: עמותה, תחום תמיכה: תרבות, סטטוס: אושרה, "
             + "שנת תמיכה: 2023–2025, בפילוח לפי שנת תמיכה?",
             text);
     }

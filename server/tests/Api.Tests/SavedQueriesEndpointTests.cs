@@ -62,10 +62,10 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     }
 
     [Fact]
-    public async Task Delete_by_an_admin_removes_the_record()
+    public async Task Delete_by_the_owner_removes_the_record()
     {
-        // 'dan' is the seeded admin in culture-sport-admin; deleting a saved query requires 'admin'.
-        var client = Client("dan");
+        // 'sarah' is a plain analyst — deleting her own saved query needs no extra role.
+        var client = Client("sarah");
         var id = (await Create(client, "to delete")).GetProperty("id").GetString();
 
         var deleted = await client.DeleteAsync($"/api/saved-queries/{id}");
@@ -76,19 +76,15 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     }
 
     [Fact]
-    public async Task Delete_by_an_analyst_is_a_problem_details_403_and_keeps_the_record()
+    public async Task Delete_of_a_colleagues_record_is_allowed_for_an_admin()
     {
-        var client = Client("sarah"); // seeded role 'analyst'
-        var id = (await Create(client, "analyst cannot delete")).GetProperty("id").GetString();
+        // 'dan' is the seeded admin in culture-sport-admin: he may delete sarah's query, but the
+        // read scope is unchanged — it is still not his to read.
+        var id = (await Create(Client("sarah"), "admin may delete")).GetProperty("id").GetString();
+        var dan = Client("dan");
 
-        var response = await client.DeleteAsync($"/api/saved-queries/{id}");
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        var root = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
-        Assert.EndsWith("/forbidden", root.GetProperty("type").GetString());
-
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/saved-queries/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await dan.GetAsync($"/api/saved-queries/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await dan.DeleteAsync($"/api/saved-queries/{id}")).StatusCode);
     }
 
     [Fact]
@@ -104,12 +100,12 @@ public class SavedQueriesEndpointTests(TestApiFactory factory) : IClassFixture<T
     [Fact]
     public async Task Another_users_saved_query_is_a_404_within_the_same_tenant()
     {
-        // dan and sarah are both in culture-sport-admin — scope is owner AND tenant, not tenant alone.
+        // dan and sarah are both in culture-sport-admin — the read scope is owner AND tenant, not
+        // tenant alone. (Deleting is the one admin exception — covered above.)
         var id = (await Create(Client("sarah"), "sarah only")).GetProperty("id").GetString();
         var dan = Client("dan");
 
         Assert.Equal(HttpStatusCode.NotFound, (await dan.GetAsync($"/api/saved-queries/{id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await dan.DeleteAsync($"/api/saved-queries/{id}")).StatusCode);
 
         var danList = JsonDocument.Parse(await dan.GetStringAsync("/api/saved-queries")).RootElement;
         Assert.DoesNotContain(danList.EnumerateArray(), e => e.GetProperty("id").GetString() == id);

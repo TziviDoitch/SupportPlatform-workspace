@@ -12,6 +12,13 @@ services:
       - "1433:1433"
     volumes:
       - mssql-data:/var/opt/mssql
+    healthcheck:
+      # sqlcmd moved to mssql-tools18 mid-2022; accept either path. -C trusts the self-signed cert.
+      test: ["CMD-SHELL", "SQLCMD=$$(ls /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools/bin/sqlcmd 2>/dev/null | head -1); $$SQLCMD -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   api:
     build:
@@ -22,8 +29,10 @@ services:
       ConnectionStrings__SqlServer: "Server=db,1433;Database=SupportPlatform;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False"
     ports:
       - "5080:8080"
+    restart: on-failure
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   client:
     build:

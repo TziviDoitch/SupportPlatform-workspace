@@ -84,7 +84,7 @@ Api ──▶ Infrastructure   (composition root בלבד — Program.cs)
 |---|---|---|---|
 | **Metadata** | מומש | `GET /api/metadata` — רשימות ייחוס + `filterFieldRegistry` שמזינים את הטופס הדינמי ואת ה-whitelist | `MetadataController` · `MetadataService` · `MetadataRepository` |
 | **Search** | מומש | `POST /api/search` — ולידציה של `QueryDefinition`, בניית `IQueryable` בטוח, aggregation, משפט שאלה, `executionMeta` | `SearchController` · `SearchService` · `DynamicQueryBuilder` + `Filters/` + `SearchQueryExecutor` |
-| **Identity** | מומש (auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + כלל role אחד (מחיקת שאילתה שמורה דורשת `admin`) | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
+| **Identity** | מומש (auth stub) | `X-User` → זיהוי משתמש → `TenantId` + `Role` סמכותיים → `TenantAccessGuard` (tenant זר בגוף/query = 403) + כלל role אחד (מחיקת שאילתה של משתמש אחר דורשת `admin`) | `ICurrentUser` + `TenantAccessGuard` + `Roles` (Application) · `HttpCurrentUser` (Api, קורא `X-User`). בלי JWT/`AuthController` — יעד production (§8.1) |
 | **Search** (dedup) | מומש | `definitionHash` קנוני → `IMemoryCache` עם TTL → `executionMeta.cacheHit` | `SearchService` + `DefinitionHasher` + `SearchCacheOptions` (§5.2) |
 | **SavedQueries** | מומש | CRUD scoped ל-owner+tenant + `POST /{id}/run` + `last_run`; out-of-scope → 404 | `SavedQueriesController` · `SavedQueryService` · `SavedQueryRepository` (§5.2) |
 | **NlQuery** | מומש | `POST /api/nl-queries/parse` — טקסט חופשי → `QueryDefinition` דרך `INlQueryProvider`; מנתח דטרמיניסטי, בלי LLM חיצוני | `NlQueriesController` · `NlQueryService` · `RuleBasedNlQueryProvider` + `RuleBased/Rules/` (§4.7, §6.3) |
@@ -441,8 +441,9 @@ Fallback §7.6 המוצהר ונשארים יעד production.
   `MetadataService`, `NlQueryService`. `tenantId` בגוף/query שאינו של הקורא → **403 `forbidden`**
   (`error-model.md`); חסר → מושלם מזהות הקורא. `?tenantId=` נשאר בחוזה (`api-contract.md` §2)
   אך כבר **לא נאמן** — הוא מאומת, לא סומך. ה-Global Query Filter (§5.1) הוא שכבת ההגנה השנייה.
-- **כלל role אחד** שמדגים הפרדת גופים מעל data-scoping: מחיקת שאילתה שמורה דורשת role `admin`
-  (`SavedQueryService.Delete` — אחרי בדיקת ה-scope, כדי לא להדליף קיום; analyst → 403). שאר
+- **כלל role אחד** שמדגים הפרדת גופים מעל data-scoping: מחיקת שאילתה **של משתמש אחר** דורשת
+  role `admin` (`SavedQueryService.Delete` — אחרי גבול ה-tenant, כדי לא להדליף קיום; בעלים
+  מוחק את שלו, analyst על רשומה של עמית → 403). שאר
   ה-endpoints לא נבדקים ל-role ב-PoC (`DESIGN_QA.md` §3).
 - **`SavedQuery`:** ה-scoping (owner + tenant) כבר נאכף ב-S5 ב-`SavedQueryRepository`; on save
   ה-`TenantId` של ה-definition נכפה לזה של הקורא. גישה חוצת-scope נשארת 404 (לא 403).

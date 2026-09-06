@@ -79,8 +79,8 @@ cd path\to\SupportPlatform     # שורש הריפו — התיקייה שמכי
 ### משתמשי seed
 
 אין מסך התחברות ב-PoC. הזהות היא כותרת `X-User` (ברירת מחדל `sarah`); הלקוח שולח
-אותה מ-`client/src/api/config.ts`. לפעולה כמשתמש אחר — שנו את הערך שם, או שלחו את
-הכותרת ידנית (Swagger / `server/src/Api/SupportPlatform.Api.http`).
+אותה מ-`client/src/api/config.ts`. להחלפת משתמש — **בורר המשתמש בהדר** (הבחירה נשמרת
+ב-`localStorage`), או שליחת הכותרת ידנית (Swagger / `server/src/Api/SupportPlatform.Api.http`).
 
 | שם משתמש | tenant | role | סיסמה (דמו) |
 |---|---|---|---|
@@ -124,7 +124,7 @@ Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = Dyn
 |---|---|---|
 | `GET` | `/api/metadata?tenantId=` | רשימות ייחוס + `filterFieldRegistry` (מזין את הטופס) |
 | `POST` | `/api/search` | הרצת `QueryDefinition` → `questionText` / `rows` / `aggregations` / `page` / `executionMeta` |
-| `GET/POST/PUT/DELETE` | `/api/saved-queries[/{id}]` | CRUD, scoped ל-owner+tenant; DELETE דורש role `admin` |
+| `GET/POST/PUT/DELETE` | `/api/saved-queries[/{id}]` | CRUD, scoped ל-owner+tenant; DELETE של שאילתת משתמש אחר דורש role `admin` |
 | `POST` | `/api/saved-queries/{id}/run` | הרצה חוזרת; תגובה כמו `/search` |
 | `POST` | `/api/nl-queries/parse` | טקסט חופשי → `{ definition, interpretationText, confidence, unresolved }` |
 | `GET` | `/health` | `200 Healthy` |
@@ -177,9 +177,11 @@ connection string, והרצת המיגרציות מחדש.
 secret store מנוהל, observability מנוהל), ול-**רכיבי קוד-פתוח בלי רישוי** כדי להימנע
 מ-lock-in בקנה מידה. ה-API כבר **חסר-מצב** (הזהות בכל בקשה, בלי session), ולכן
 מתאים ל-scaling אופקי ול-Blue/Green. **Auth:** כותרת `X-User` היא קיצור PoC מוצהר;
-היעד הוא OIDC/JWT מול IdP מרכזי (Azure AD / IdP ממשלתי). **Container:** Docker
-Compose מרים את הכול בפקודה אחת מקומית; בפרודקשן — container hosting מנוהל ל-API,
-static hosting ל-Client, ו-DB מנוהל (לא Compose). פירוט: [`docs/DEVOPS.md`](docs/DEVOPS.md).
+היעד הוא OIDC/JWT מול IdP מרכזי (Azure AD / IdP ממשלתי). **Container:** `infra/docker-compose.yml`
+מרים את הכול בפקודה אחת (חלופה ל-`run-local.ps1` למי שיש Docker Desktop); `db` נושא
+`healthcheck` (`sqlcmd SELECT 1`) ו-`api` ממתין ל-`service_healthy`, כך שהרצה קרה
+ראשונה לא מתחילה לפני ש-SQL Server מקבל חיבורים. בפרודקשן — container hosting מנוהל
+ל-API, static hosting ל-Client, ו-DB מנוהל (לא Compose). פירוט: [`docs/DEVOPS.md`](docs/DEVOPS.md).
 
 ---
 
@@ -204,9 +206,12 @@ run-local.ps1   הרצה ידנית מול LocalDB (Windows, בלי Docker)
   ב-`dotnet run` ב-Development, `Program.cs` מריץ `Migrate()` ואז `DbSeeder.Seed()`.
   ידנית: `dotnet tool restore` ואז
   `dotnet dotnet-ef database update --project src/Infrastructure --startup-project src/Infrastructure`.
-- **seed** (`DbSeeder`): דטרמיניסטי (RNG seed קבוע) ו-idempotent. 2 tenants, 3 משתמשים,
-  ~40 גופים, 500 בקשות בהתפלגות מכוונת (320 `culture-sport-admin` / 180 `welfare-admin`;
-  שנים 30/40/30; סטטוס 55/25/20). סיסמאות seed נשמרות כ-hash בלבד (`SeedPasswordHasher`, PBKDF2).
+- **seed** (`DbSeeder`): דטרמיניסטי (RNG seed קבוע) ו-idempotent (no-op אם יש כבר
+  שורות). 2 tenants, 3 משתמשים, ~40 גופים, 500 בקשות בהתפלגות מכוונת
+  (320 `culture-sport-admin` / 180 `welfare-admin`; שנים 30/40/30; סטטוס 15/20/45/20).
+  רשימות הייחוס מכילות את הערכים שהמטלה מונה: 4 סוגי גוף, 5 תחומי תמיכה, 4 סטטוסים,
+  3 מחוזות — נעול בטסט `DbSeederTests.Reference_lists_carry_the_values_the_assignment_enumerates`.
+  סיסמאות seed נשמרות כ-hash בלבד (`SeedPasswordHasher`, PBKDF2).
 - **ישויות:** `support_requests` · `submitting_bodies` · `reference_domains/body_types/statuses/districts`
   · `filter_field_registry` · `tenants` · `users` · `saved_queries` · `audit_log`.
 - **הרחבה בלי קוד:** הוספת תחום/סטטוס/מחוז = שורת נתונים ב-`reference_*`. הודגם
@@ -237,7 +242,6 @@ run-local.ps1   הרצה ידנית מול LocalDB (Windows, בלי Docker)
 | אימות אמיתי (JWT / IdP / `/api/auth/login`) | לא מומש | יעד production; ה-PoC משתמש בתפר `X-User`. אין נתיב שמחזיר `401`. |
 | CI/CD, Deployment אוטומטי, IaC | מתואר בלבד | המטלה קובעת לגבי DevOps "אין צורך לממש בפועל". התכנון המלא ב-[`docs/DEVOPS.md`](docs/DEVOPS.md). אין `.github/workflows/`. |
 | metadata ורשימות ייחוס פר-tenant | לא מומש — החלטה מודעת | `filter_field_registry` ו-`reference_*` גלובליות. בידוד **הנתונים** מלא ואינו נפגע; בידוד הייחוס מחייב PK מורכב + ארבעה FK מורכבים — שינוי מודל, לא הוספת עמודה. `DESIGN_QA.md` §2. |
-| `docker compose` — `healthcheck` על `db` + `restart` policy | חסר | הרצה קרה ראשונה עלולה להיות racy; `up` שני פותר. |
 | Client ב-Docker | Vite dev server, לא build סטטי | קיצור דרך מכוון ל-PoC (`client/Dockerfile`). |
 | `IMemoryCache` dedup | per-instance | PoC single-node (`DESIGN_QA.md` §5). |
 | כתיבות audit | `SaveChanges` נפרד לכל אירוע, לא טרנזקציוני | PoC (`DESIGN_QA.md` §7). |
@@ -249,7 +253,7 @@ run-local.ps1   הרצה ידנית מול LocalDB (Windows, בלי Docker)
 ## בדיקות
 
 ```bash
-cd server && dotnet test SupportPlatform.sln     # 158 בדיקות
+cd server && dotnet test SupportPlatform.sln     # 165 בדיקות
 cd client && npm test                             # 56 בדיקות (vitest)
 cd client && npm run lint                         # oxlint
 ```
@@ -270,11 +274,11 @@ Unit על מנוע השאילתות (כולל דחיית שדה זר), אגרג�
 
 | דרישה במטלה | סטטוס | היכן |
 |---|---|---|
-| חיפוש — גוף מגיש / תחום תמיכה / סטטוס / שנה בודדת / טווח שנים | מומש | `filter_field_registry` + `reference_*`; `FilterValue` |
+| חיפוש — גוף מגיש / תחום תמיכה / סטטוס / שנה בודדת / טווח שנים | מומש | `filter_field_registry` + `reference_*`; `FilterValue`. רשימות הייחוס נושאות את כל הערכים שהמטלה מונה (4 סוגי גוף, 5 תחומי תמיכה, 4 סטטוסים) — נעול בטסט `DbSeederTests` |
 | פילוחים — מחוז · סוג גוף · שנת תמיכה · תחום תמיכה | מומש (4/4) | `Segmentable` ב-`DbSeeder`; אגרגציה ב-`SearchQueryExecutor` |
 | ניסוח שאלה קריאה מהפרמטרים | מומש | `QuestionTextRenderer` — תבנית עברית קנונית ("כמה בקשות תמיכה עם … בפילוח לפי …?"), נעולה בטסט. הערה: תבנית **ספירה**; לניסוח "הצג את כלל הבקשות" ראו השורה האחרונה |
 | הצגת נתונים — טבלה + גרף בסיסי | מומש | `features/results/ResultsTable/` + `ResultsChart/` (Chart.js), מתחלף לפי הפילוח |
-| שמירת שאילתות — שמור / עדכן / מחק / הרץ מחדש | מומש | `/api/saved-queries` CRUD + `/{id}/run`. עדכון `definition` דרך שמירה מחדש; שינוי שם ב-`RenameQueryModal` |
+| שמירת שאילתות — שמור / עדכן / מחק / הרץ מחדש | מומש | `/api/saved-queries` CRUD + `/{id}/run`. עדכון `definition` דרך שמירה מחדש; שינוי שם ב-`RenameQueryModal`. מחיקה: הבעלים מוחק את שלו ללא role נוסף; מחיקת שאילתה של משתמש אחר דורשת `admin` |
 | תשאול בשפה חופשית — פירוש / המרה / הצגת פרשנות / הרצה | מומש | `RuleBasedNlQueryProvider` (דטרמיניסטי) → `QueryDefinition` → `InterpretationPanel` → כפתור "הרץ" |
 | החלפה פשוטה בין ספקי AI | מומש | `INlQueryProvider` + keyed DI, נבחר ב-`NlQuery:Provider`. `DESIGN_QA.md` §6 |
 | ארכיטקטורה — מבנה / חלוקת אחריות / שכבות / מודולריות / הרחבה | מומש + מתועד | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) §1–§4, §7 |

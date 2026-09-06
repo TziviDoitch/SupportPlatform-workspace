@@ -12,6 +12,9 @@ public class HebrewTextTests
     [InlineData("מחוז", "במחוז")]    // two stacked particles
     [InlineData("שנת", "שנה")]       // ending stripped before the particle
     [InlineData("תחום", "בתחום")]
+    [InlineData("נדחתה", "נדחו")]        // two endings stripped
+    [InlineData("מוזיאון", "מוזיאונים")] // final form folded before the plural is stripped
+    [InlineData("אושרה", "שאושרו")]
     public void Reduces_forms_of_the_same_word_to_one_stem(string a, string b) =>
         Assert.Equal(HebrewText.Normalize(a), HebrewText.Normalize(b));
 
