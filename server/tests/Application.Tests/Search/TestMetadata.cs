@@ -12,18 +12,24 @@ internal static class TestMetadata
         Domains:
         [
             new ReferenceDomain { Code = "culture", Label = "תרבות" },
-            new ReferenceDomain { Code = "sport", Label = "ספורט" }
+            new ReferenceDomain { Code = "sport", Label = "ספורט" },
+            new ReferenceDomain { Code = "museums", Label = "מוזיאונים" },
+            new ReferenceDomain { Code = "libraries", Label = "ספריות" },
+            new ReferenceDomain { Code = "cultural-events", Label = "אירועי תרבות" }
         ],
         BodyTypes:
         [
             new ReferenceBodyType { Code = "association", Label = "עמותה" },
-            new ReferenceBodyType { Code = "company", Label = "חברה" }
+            new ReferenceBodyType { Code = "municipality", Label = "רשות מקומית" },
+            new ReferenceBodyType { Code = "society", Label = "אגודה" },
+            new ReferenceBodyType { Code = "cultural-institution", Label = "מוסד תרבות" }
         ],
         Statuses:
         [
-            new ReferenceStatus { Code = "approved", Label = "מאושר" },
+            new ReferenceStatus { Code = "submitted", Label = "הוגשה" },
             new ReferenceStatus { Code = "pending", Label = "בבדיקה" },
-            new ReferenceStatus { Code = "rejected", Label = "נדחה" }
+            new ReferenceStatus { Code = "approved", Label = "אושרה" },
+            new ReferenceStatus { Code = "rejected", Label = "נדחתה" }
         ],
         Districts:
         [

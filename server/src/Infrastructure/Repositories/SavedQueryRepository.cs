@@ -20,6 +20,9 @@ public sealed class SavedQueryRepository(SupportPlatformDbContext db) : ISavedQu
         Guid id, string ownerUsername, string tenantId, CancellationToken ct = default) =>
         Scoped(ownerUsername, tenantId).FirstOrDefaultAsync(q => q.Id == id, ct);
 
+    public Task<SavedQuery?> FindInTenant(Guid id, string tenantId, CancellationToken ct = default) =>
+        db.SavedQueries.FirstOrDefaultAsync(q => q.Id == id && q.TenantId == tenantId, ct);
+
     public async Task Add(SavedQuery query, CancellationToken ct = default) =>
         await db.SavedQueries.AddAsync(query, ct);
 

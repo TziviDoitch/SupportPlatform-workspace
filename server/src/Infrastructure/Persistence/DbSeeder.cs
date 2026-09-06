@@ -13,14 +13,32 @@ public static class DbSeeder
     // Demo credential documented in docs/contracts/api-contract.md §1 — not a secret.
     private const string DemoPassword = "pass";
 
+    // The reference values the assignment enumerates, verbatim. Adding one is a row here and
+    // nothing else — see docs/EXTENSIBILITY_DEMO.md.
     private static readonly (string Code, string Label)[] Domains =
-        [("culture", "תרבות"), ("sport", "ספורט")];
+    [
+        ("culture", "תרבות"),
+        ("sport", "ספורט"),
+        ("museums", "מוזיאונים"),
+        ("libraries", "ספריות"),
+        ("cultural-events", "אירועי תרבות")
+    ];
 
     private static readonly (string Code, string Label)[] BodyTypes =
-        [("association", "עמותה"), ("company", "חברה")];
+    [
+        ("association", "עמותה"),
+        ("municipality", "רשות מקומית"),
+        ("society", "אגודה"),
+        ("cultural-institution", "מוסד תרבות")
+    ];
 
     private static readonly (string Code, string Label)[] Statuses =
-        [("approved", "מאושר"), ("pending", "בבדיקה"), ("rejected", "נדחה")];
+    [
+        ("submitted", "הוגשה"),
+        ("pending", "בבדיקה"),
+        ("approved", "אושרה"),
+        ("rejected", "נדחתה")
+    ];
 
     private static readonly (string Code, string Label)[] Districts =
         [("north", "צפון"), ("center", "מרכז"), ("south", "דרום")];
@@ -139,7 +157,7 @@ public static class DbSeeder
             {
                 var type = Pick(rng, BodyTypes).Code;
                 var district = Pick(rng, Districts).Code;
-                var prefix = type == "association" ? "עמותת" : "חברת";
+                var prefix = NamePrefix(type);
                 bodies.Add(new SubmittingBody
                 {
                     Id = DeterministicGuid($"body:{tenant}:{i}"),
@@ -171,8 +189,8 @@ public static class DbSeeder
             {
                 var body = tenantBodies[rng.Next(tenantBodies.Length)];
                 var year = Weighted(rng, Years, [0.30, 0.40, 0.30]);
-                var status = Weighted(rng, Statuses, [0.55, 0.25, 0.20]).Code;
-                var domain = Weighted(rng, Domains, [0.60, 0.40]).Code;
+                var status = Weighted(rng, Statuses, [0.15, 0.20, 0.45, 0.20]).Code;
+                var domain = Weighted(rng, Domains, [0.34, 0.26, 0.16, 0.14, 0.10]).Code;
 
                 var requested = rng.Next(10, 501) * 1000m;
                 var approved = status switch
@@ -195,6 +213,15 @@ public static class DbSeeder
             }
         }
     }
+
+    // Construct form of the body type, so a seeded name reads naturally ("עמותת דוגמה cul-01").
+    private static string NamePrefix(string bodyTypeCode) => bodyTypeCode switch
+    {
+        "association" => "עמותת",
+        "municipality" => "עיריית",
+        "society" => "אגודת",
+        _ => "מוסד"
+    };
 
     private static T Pick<T>(Random rng, T[] items) => items[rng.Next(items.Length)];
 

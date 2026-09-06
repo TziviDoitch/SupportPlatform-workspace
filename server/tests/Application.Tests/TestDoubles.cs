@@ -39,6 +39,9 @@ internal sealed class FakeSavedQueryRepository : ISavedQueryRepository
         Task.FromResult(Items.FirstOrDefault(q =>
             q.Id == id && q.OwnerUsername == ownerUsername && q.TenantId == tenantId));
 
+    public Task<SavedQuery?> FindInTenant(Guid id, string tenantId, CancellationToken ct = default) =>
+        Task.FromResult(Items.FirstOrDefault(q => q.Id == id && q.TenantId == tenantId));
+
     public Task Add(SavedQuery query, CancellationToken ct = default)
     {
         Items.Add(query);

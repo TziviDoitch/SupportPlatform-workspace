@@ -19,9 +19,9 @@ public class MetadataEndpointTests(TestApiFactory factory) : IClassFixture<TestA
         Assert.Equal("culture-sport-admin", root.GetProperty("tenantId").GetString());
 
         var references = root.GetProperty("references");
-        Assert.Equal(2, references.GetProperty("domains").GetArrayLength());
-        Assert.Equal(2, references.GetProperty("bodyTypes").GetArrayLength());
-        Assert.Equal(3, references.GetProperty("statuses").GetArrayLength());
+        Assert.Equal(5, references.GetProperty("domains").GetArrayLength());
+        Assert.Equal(4, references.GetProperty("bodyTypes").GetArrayLength());
+        Assert.Equal(4, references.GetProperty("statuses").GetArrayLength());
         Assert.Equal(3, references.GetProperty("districts").GetArrayLength());
 
         var domainCodes = references.GetProperty("domains").EnumerateArray()

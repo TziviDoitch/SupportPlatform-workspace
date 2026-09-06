@@ -36,9 +36,9 @@ docker compose up --build
 
 עצירה: `docker compose down` (`-v` מוחק גם את נתוני ה‑DB).
 
-> **הערה:** אין `healthcheck` על `db` ו-`api` תלוי בו ב-`depends_on` פשוט. בהרצה קרה
-> ראשונה ה-api עלול לעלות לפני ש-SQL Server מקבל חיבורים ולקרוס; `docker compose up`
-> שני עולה תקין. (שיפור מתוכנן — ראו [מגבלות](#מגבלות).)
+> **הערה:** ל-`db` יש `healthcheck` (`sqlcmd SELECT 1`) ו-`api` ממתין ל-
+> `condition: service_healthy`, כך שהרצה קרה ראשונה לא מתחילה לפני ש-SQL Server מקבל
+> חיבורים. משיכת ה-image של SQL Server בפעם הראשונה עשויה לקחת מספר דקות.
 
 ### ב. הרצה ידנית (בלי Docker)
 
@@ -53,8 +53,8 @@ docker compose up --build
 ### משתמשי seed
 
 אין מסך התחברות ב-PoC. הזהות היא כותרת `X-User` (ברירת מחדל `sarah`); הלקוח שולח
-אותה מ-`client/src/api/config.ts`. לפעולה כמשתמש אחר — שנו את הערך שם, או שלחו את
-הכותרת ידנית (Swagger / `server/src/Api/SupportPlatform.Api.http`).
+אותה מ-`client/src/api/config.ts`. להחלפת משתמש — **בורר המשתמש בהדר** (הבחירה נשמרת
+ב-`localStorage`), או שליחת הכותרת ידנית (Swagger / `server/src/Api/SupportPlatform.Api.http`).
 
 | שם משתמש | tenant | role | סיסמה (דמו) |
 |---|---|---|---|
@@ -97,7 +97,7 @@ Infrastructure  EF Core DbContext, repositories, migrations, seed; Search/ = Dyn
 |---|---|---|
 | `GET` | `/api/metadata?tenantId=` | רשימות ייחוס + `filterFieldRegistry` (מזין את הטופס) |
 | `POST` | `/api/search` | הרצת `QueryDefinition` → `questionText` / `rows` / `aggregations` / `page` / `executionMeta` |
-| `GET/POST/PUT/DELETE` | `/api/saved-queries[/{id}]` | CRUD, scoped ל-owner+tenant; DELETE דורש role `admin` |
+| `GET/POST/PUT/DELETE` | `/api/saved-queries[/{id}]` | CRUD, scoped ל-owner+tenant; DELETE של שאילתת משתמש אחר דורש role `admin` |
 | `POST` | `/api/saved-queries/{id}/run` | הרצה חוזרת; תגובה כמו `/search` |
 | `POST` | `/api/nl-queries/parse` | טקסט חופשי → `{ definition, interpretationText, confidence, unresolved }` |
 | `GET` | `/health` | `200 Healthy` |
@@ -152,7 +152,9 @@ run-local.ps1   הרצה ידנית מול LocalDB (Windows, בלי Docker)
   `dotnet dotnet-ef database update --project src/Infrastructure --startup-project src/Infrastructure`.
 - **seed** (`DbSeeder`): דטרמיניסטי (RNG seed קבוע) ו-idempotent (no-op אם יש כבר
   שורות). 2 tenants, 3 משתמשים, ~40 גופים, 500 בקשות בהתפלגות מכוונת
-  (320 `culture-sport-admin` / 180 `welfare-admin`; שנים 30/40/30; סטטוס 55/25/20).
+  (320 `culture-sport-admin` / 180 `welfare-admin`; שנים 30/40/30; סטטוס 15/20/45/20).
+  רשימות הייחוס מכילות את הערכים שהמטלה מונה: 4 סוגי גוף, 5 תחומי תמיכה, 4 סטטוסים,
+  3 מחוזות — נעול בטסט `DbSeederTests.Reference_lists_carry_the_values_the_assignment_enumerates`.
   סיסמאות seed נשמרות כ-hash בלבד (`SeedPasswordHasher`, PBKDF2).
 - **ישויות:** `support_requests` · `submitting_bodies` · `reference_domains/body_types/statuses/districts`
   · `filter_field_registry` · `tenants` · `users` · `saved_queries` · `audit_log`.
@@ -185,7 +187,6 @@ run-local.ps1   הרצה ידנית מול LocalDB (Windows, בלי Docker)
 | אימות אמיתי (JWT / IdP / `/api/auth/login`) | לא מומש | יעד production; ה-PoC משתמש בתפר `X-User`. אין נתיב שמחזיר `401`. |
 | תצוגת רשומות גולמית (`resultKind: "list"`) | לא מומש | S7-b — שינוי חוזה מוקפא; האגרגציה מכסה את הצורך. |
 | CI/CD, Deployment אוטומטי, IaC (`.github/workflows/` וכו') | לא מומש — מתואר בלבד | המטלה קובעת לגבי DevOps "אין צורך לממש בפועל". התכנון המלא ב-[`docs/DEVOPS.md`](docs/DEVOPS.md); מגבלות ההיקף מפורטות שם §6. |
-| `docker compose` — `healthcheck` על `db` + `restart` policy | חסר | הרצה קרה ראשונה עלולה להיות racy; `up` שני פותר. |
 | Client ב-Docker | Vite dev server, לא build סטטי מאחורי שרת | קיצור דרך מכוון ל-PoC (`client/Dockerfile`). |
 | `IMemoryCache` dedup | per-instance | PoC single-node (`DESIGN_QA.md` §5). |
 | כתיבות audit | `SaveChanges` נפרד לכל אירוע, לא טרנזקציוני | PoC (`DESIGN_QA.md` §7). |
@@ -197,7 +198,7 @@ run-local.ps1   הרצה ידנית מול LocalDB (Windows, בלי Docker)
 ## בדיקות
 
 ```bash
-cd server && dotnet test SupportPlatform.sln     # 158 בדיקות
+cd server && dotnet test SupportPlatform.sln     # 165 בדיקות
 cd client && npm test                             # 56 בדיקות (vitest)
 cd client && npm run lint                         # oxlint
 ```
@@ -221,9 +222,9 @@ Unit על מנוע השאילתות (כולל דחיית שדה זר), אגרג�
 
 | דרישה | סטטוס | היכן |
 |---|---|---|
-| סינון לפי **גוף מגיש** (עמותה / רשות מקומית / אגודה / מוסד תרבות) | מומש | שדה `bodyType` ב-`filter_field_registry`; ערכים ב-`reference_body_types` |
-| סינון לפי **תחום תמיכה** (תרבות / ספורט / מוזיאונים / ספריות / אירועים) | מומש | שדה `supportDomain`; ערכים ב-`reference_domains` |
-| סינון לפי **סטטוס בקשה** (הוגשה / בבדיקה / אושרה / נדחתה) | מומש | שדה `status`; ערכים ב-`reference_statuses` |
+| סינון לפי **גוף מגיש** (עמותה / רשות מקומית / אגודה / מוסד תרבות) | מומש | שדה `bodyType` ב-`filter_field_registry`; כל ארבעת הערכים ב-seed (`reference_body_types`) |
+| סינון לפי **תחום תמיכה** (תרבות / ספורט / מוזיאונים / ספריות / אירועים) | מומש | שדה `supportDomain`; כל חמשת הערכים ב-seed (`reference_domains`) |
+| סינון לפי **סטטוס בקשה** (הוגשה / בבדיקה / אושרה / נדחתה) | מומש | שדה `status`; כל ארבעת הערכים ב-seed (`reference_statuses`) |
 | סינון לפי **שנת תמיכה — שנה בודדת** | מומש | `supportYear`, `FilterValue.YearSingle` |
 | סינון לפי **שנת תמיכה — טווח שנים** | מומש | `supportYear`, `FilterValue.YearRange` |
 | **פילוחים** — מחוז · סוג גוף · שנת תמיכה · תחום תמיכה | מומש (4 מתוך 4) | `Segmentable = true` ב-`DbSeeder`; אגרגציה ב-`SearchQueryExecutor` |
@@ -232,7 +233,7 @@ Unit על מנוע השאילתות (כולל דחיית שדה זר), אגרג�
 | **הצגת גרף בסיסי** | מומש | `client/src/features/results/ResultsChart/` (Chart.js), מתחלף לפי הפילוח |
 | **שמירת שאילתה** | מומש | `POST /api/saved-queries` · `SaveQueryButton` |
 | **עדכון שאילתה** | מומש | `PUT /api/saved-queries/{id}` מעדכן שם **ו-**`definition`. בלקוח נחשף שינוי שם (`RenameQueryModal`); עדכון ה-`definition` נעשה דרך שמירה מחדש מהחיפוש |
-| **מחיקת שאילתה** | מומש | `DELETE /api/saved-queries/{id}` — דורש role `admin` |
+| **מחיקת שאילתה** | מומש | `DELETE /api/saved-queries/{id}` — הבעלים מוחק את שלו; מחיקת שאילתה של משתמש אחר דורשת role `admin` |
 | **הרצה מחדש של שאילתה** | מומש | `POST /api/saved-queries/{id}/run` → מציג `ResultsSection` מלא |
 | **תשאול בשפה חופשית — פירוש השאלה** | מומש | `RuleBasedNlQueryProvider` (מבוסס חוקים, דטרמיניסטי) |
 | **המרה למבנה השאילתה** | מומש | הפלט הוא `QueryDefinition` — אותו אובייקט שהטופס בונה |

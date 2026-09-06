@@ -116,7 +116,7 @@ Response `200`:
 ```json
 {
   "definition": { "...": "a QueryDefinition" },
-  "interpretationText": "חיפוש בקשות ... בתחום תרבות ... סטטוס מאושר ... שנת 2024",
+  "interpretationText": "חיפוש בקשות ... בתחום תרבות ... סטטוס אושרה ... שנת 2024",
   "confidence": 0.82,
   "unresolved": ["district"]
 }
@@ -154,13 +154,15 @@ A saved query record:
 | GET | `/api/saved-queries/{id}` | – | `200` — one record; `404` if not found in scope |
 | POST | `/api/saved-queries` | `{ "name": "...", "definition": { } }` | `201` — created record |
 | PUT | `/api/saved-queries/{id}` | `{ "name": "...", "definition": { } }` | `200` — updated record; `404` out of scope |
-| DELETE | `/api/saved-queries/{id}` | – | `204`; `404` out of scope |
+| DELETE | `/api/saved-queries/{id}` | – | `204`; `403` another user's query without the `admin` role; `404` outside the tenant |
 
 Scoping: a caller sees and mutates only queries they own within their tenant.
 Acting on another user's query → `404` (not `403`, to avoid leaking existence).
+DELETE is the one exception: an `admin` may delete a colleague's query in the same
+tenant (`204`), a non-admin gets `403`, and anything outside the tenant stays `404`.
 `definition` is validated exactly like `/api/search` on POST/PUT.
 
-Errors: `400` invalid `name`/`definition`, `401`, `404` out of scope.
+Errors: `400` invalid `name`/`definition`, `401`, `403` delete without the role, `404` out of scope.
 
 ---
 

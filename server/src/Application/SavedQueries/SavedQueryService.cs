@@ -67,10 +67,14 @@ public sealed class SavedQueryService(
 
     public async Task Delete(Guid id, CancellationToken ct = default)
     {
-        // Scope first (out-of-scope stays a 404), then the role rule: deleting requires 'admin'.
-        var entity = await Require(id, ct);
-        if (!string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
-            throw new ForbiddenException("Deleting a saved query requires the 'admin' role.");
+        // Owners delete their own queries; deleting a colleague's requires 'admin'. The tenant
+        // boundary stays a 404 either way, so existence outside the tenant is not leaked.
+        var entity = await repo.FindInTenant(id, user.TenantId, ct)
+            ?? throw new NotFoundException($"Saved query '{id}' was not found.");
+
+        var isOwner = string.Equals(entity.OwnerUsername, user.Username, StringComparison.OrdinalIgnoreCase);
+        if (!isOwner && !string.Equals(user.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase))
+            throw new ForbiddenException("Deleting another user's saved query requires the 'admin' role.");
 
         await repo.Remove(entity, ct);
         await repo.Save(ct);
